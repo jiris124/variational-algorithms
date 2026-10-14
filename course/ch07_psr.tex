@@ -86,8 +86,8 @@
 \begin{frame}\ft{Zero-order optimization}
 \ona{Methods that use only function values fall into two classes: mesh-based methods that compare evaluations along predefined directions, and model-based methods that approximate derivatives from evaluations and then run a gradient-type iteration. Two model-based classics, each using a random direction $\boldsymbol\Delta_k$ and a perturbation $c_k \to 0$:}
 \begin{align}
-    \text{SPSA \cite{spall1992multivariate}:}\quad & [\boldsymbol g_k]_i \sim \frac{F(\boldsymbol\theta_k + c_k\boldsymbol\Delta_k,\xi_k^1) - F(\boldsymbol\theta_k - c_k\boldsymbol\Delta_k,\xi_k^2)}{2c_k[\boldsymbol\Delta_k]_i}, \label{eq:ch07:spsa}\\
-    \text{Two-point (2PFA) \cite{duchi2015optimal}:}\quad & \boldsymbol g_k \sim \frac{F(\boldsymbol\theta_k + c_k\boldsymbol\Delta_k,\xi_k^1) - F(\boldsymbol\theta_k,\xi_k^2)}{c_k}\,\boldsymbol\Delta_k, \label{eq:ch07:2pfa}
+    \text{SPSA \citep{spall1992multivariate}:}\quad & [\boldsymbol g_k]_i \sim \frac{F(\boldsymbol\theta_k + c_k\boldsymbol\Delta_k,\xi_k^1) - F(\boldsymbol\theta_k - c_k\boldsymbol\Delta_k,\xi_k^2)}{2c_k[\boldsymbol\Delta_k]_i}, \label{eq:ch07:spsa}\\
+    \text{Two-point (2PFA) \citep{duchi2015optimal}:}\quad & \boldsymbol g_k \sim \frac{F(\boldsymbol\theta_k + c_k\boldsymbol\Delta_k,\xi_k^1) - F(\boldsymbol\theta_k,\xi_k^2)}{c_k}\,\boldsymbol\Delta_k, \label{eq:ch07:2pfa}
 \end{align}
 \ona{followed by $\boldsymbol\theta_{k+1} = \boldsymbol\theta_k - \alpha_k\boldsymbol g_k$. Two evaluations per iteration regardless of the dimension, versus $2L$ for the PSR, which is why SPSA is popular for VQAs.}
 \end{frame}

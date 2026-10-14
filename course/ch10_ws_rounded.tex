@@ -31,7 +31,7 @@
     \end{equation}
     the semidefinite relaxation of \Chap~\chref{C.Motivation}, solvable to any fixed precision in polynomial time, even for $\Sigma$ with $10^{13}$ entries on a laptop.
 \end{itemize}
-\ona{MaxCut is the special case $\Sigma_{ij} = -w_{ij}$, and its \eqref{eq:ch10:sdp} is the Goemans--Williamson relaxation with its $\alpha_{\rm GW}\approx 0.878$ rounding, tight under the Unique Games Conjecture; with real-valued weights the hardness factor is $11/13$ \cite{charikar2004maximizing}.}
+\ona{MaxCut is the special case $\Sigma_{ij} = -w_{ij}$, and its \eqref{eq:ch10:sdp} is the Goemans--Williamson relaxation with its $\alpha_{\rm GW}\approx 0.878$ rounding, tight under the Unique Games Conjecture; with real-valued weights the hardness factor is $11/13$ \citep{charikar2004maximizing}.}
 \end{frame}
 
 \begin{frame}\ft{Encoding a cut as a product state}
@@ -50,7 +50,7 @@
 \begin{frame}\ft{What can be gained, and what cannot}
 \begin{itemize}\setlength\itemsep{0.3em}
     \item MaxCut with positive weights: GW's $\alpha_{\rm GW} \approx 0.878$ is optimal under the Unique Games Conjecture, and no polynomial-time algorithm beats $16/17$ unless $\mathbf P = \mathbf{NP}$ (\Chap~\chref{C.Inapprox}).
-    \item MaxCut with real weights, i.e., general QUBO: the guarantee of SDP rounding and the hardness factor become $11/13$ \cite{charikar2004maximizing}; the dashed lines in the plots below mark it.
+    \item MaxCut with real weights, i.e., general QUBO: the guarantee of SDP rounding and the hardness factor become $11/13$ \citep{charikar2004maximizing}; the dashed lines in the plots below mark it.
     \item Under the UGC, no warm-started variant can improve on the classical guarantee unless quantum computers solve \textbf{NP}-hard problems in polynomial time. If the UGC is false, both classical and quantum improvements may be possible, and then a quantum circuit that starts from the SDP solution is a natural candidate.
     \item What a warm start \emph{does} deliver regardless: the classical ratio for any angles, and empirically better cuts on many instances.
 \end{itemize}
@@ -71,8 +71,8 @@ Depth-one WS-QAOA warm-started from a GW cut with the modified mixer and $\varep
 \end{frame}
 
 \begin{frame}\ft{Warm-start recursive QAOA}
-\ona{Rounding in the classical pre-processing combines naturally with recursive QAOA (RQAOA) \cite{Bravyi2020}: at each recursion, run several depth-one WS-QAOAs, each initialised with a different GW cut (the $M$ best of $N$), aggregate the resulting distributions, form the correlation matrix $\mathcal M_{ij} = \langle Z_iZ_j\rangle$, and eliminate the variable with the largest $|\mathcal M_{ij}|$ by $z_i \leftarrow \sgn(\mathcal M_{ij})z_j$; recurse until $n_{\rm stop}$ variables remain and solve those exactly. Depth-one correlators are classically computable from the two-qubit reduced density matrices, which is what makes the simulations below possible.}
-\figslide[height=0.4\textheight]{figures/warmstart/figure03.pdf}{Warm-start RQAOA for MaxCut \cite{egger2021warm}: several WS-QAOAs initialised from GW cuts are aggregated into the correlation matrix that RQAOA uses to eliminate one variable per round.}{fig:ch10:wsrqaoa}
+\ona{Rounding in the classical pre-processing combines naturally with recursive QAOA (RQAOA) \citep{Bravyi2020}: at each recursion, run several depth-one WS-QAOAs, each initialised with a different GW cut (the $M$ best of $N$), aggregate the resulting distributions, form the correlation matrix $\mathcal M_{ij} = \langle Z_iZ_j\rangle$, and eliminate the variable with the largest $|\mathcal M_{ij}|$ by $z_i \leftarrow \sgn(\mathcal M_{ij})z_j$; recurse until $n_{\rm stop}$ variables remain and solve those exactly. Depth-one correlators are classically computable from the two-qubit reduced density matrices, which is what makes the simulations below possible.}
+\figslide[height=0.4\textheight]{figures/warmstart/figure03.pdf}{Warm-start RQAOA for MaxCut \citep{egger2021warm}: several WS-QAOAs initialised from GW cuts are aggregated into the correlation matrix that RQAOA uses to eliminate one variable per round.}{fig:ch10:wsrqaoa}
 \end{frame}
 
 \begin{frame}\ft{A stochastic-analysis viewpoint on rounding}
@@ -89,7 +89,7 @@ Depth-one WS-QAOA warm-started from a GW cut with the modified mixer and $\varep
 \begin{frame}\ft{Rounded warm start: MaxCut}
 \ona{Ten fully connected 30-node graphs with weights in $\{-10,\dots,10\}$, five GW cuts each, depth one, $(\beta_1,\gamma_1)$ from a grid scan in $\gamma_1$ with an analytic fit in $\beta_1$ followed by COBYLA. The median energy relative to the maximum cut is $0.907$ at $\varepsilon = 0$ (the GW cut itself) and rises to $0.929$ at $\varepsilon = 0.25$ (Fig.~\ref{fig:ch01:eps}): warm-started quantum optimization can outperform the rounding it started from. With the unmodified mixer of \Chap~\chref{C.WSContinuous} this does not happen.}
 \ona{WS-RQAOA on 100 graphs per family ($n = 20, 30$; sparse $\pm1$ weights or fully connected random weights), $N = 10$ GW cuts, $M = 5$ best, $\varepsilon = 0.25$, $n_{\rm stop} = n/2$: warm-start RQAOA finds the maximum cut more often than standard RQAOA, than the best GW cut, and than a classical recursion on GW correlations (Fig.~\ref{fig:ch01:maxcut}). The optimum $\beta_1^\star = \pi/2$, $\gamma_1^\star = 0$ is found systematically, so when RQAOA fails it is because depth one cannot capture the correlations of the maximum cut.}
-\figslide[height=0.4\textheight]{figures/warmstart/figure09.pdf}{(a) A six-node instance; energy landscape over $(\beta_1,\gamma_1)$ for depth-one (b) and depth-three (c) WS-QAOA from the cut 001111 of size 23 (maximum 27), $\varepsilon = 0.25$; (d) the ten most probable cuts of the optimised depth-three state \cite{egger2021warm}.}{fig:ch10:landscape}
+\figslide[height=0.4\textheight]{figures/warmstart/figure09.pdf}{(a) A six-node instance; energy landscape over $(\beta_1,\gamma_1)$ for depth-one (b) and depth-three (c) WS-QAOA from the cut 001111 of size 23 (maximum 27), $\varepsilon = 0.25$; (d) the ten most probable cuts of the optimised depth-three state \citep{egger2021warm}.}{fig:ch10:landscape}
 \end{frame}
 
 \begin{frame}\ft{Deeper circuits}

@@ -40,6 +40,11 @@
 \input{beamermacros}
 \input{coursemacros}
 
+% Beamer keeps hyperref's empty default of \hyper@natlinkbreak, which discards natbib's
+% separator between author and year: \citet printed "Lee et al.2023]" and \citep
+% "[Lee et al.2023]". Restore it so that the separator is typeset.
+\makeatletter\AtBeginDocument{\def\hyper@natlinkbreak#1#2{#1}}\makeatother
+
 % Theorem-like environments with the names used in amsmacros.tex (article mode),
 % so that the same chapter source compiles in both modes.
 \ifcsname c@thm\endcsname\else\expandafter\let\csname thm\endcsname\relax\expandafter\let\csname endthm\endcsname\relax\newtheorem{thm}{Theorem}\fi

@@ -9,7 +9,7 @@
 \lecture{The Variational Quantum Eigensolver}{Lect05}
 \chapter{The Variational Quantum Eigensolver}\label{C.VQE}
 
-\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. Parts are adapted from our course on quantum computing \cite{aspman2024quantum}.}
+\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{The variational principle}
 
@@ -40,14 +40,14 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
 \end{frame}
 
 \begin{frame}\ft{VQE for molecules}
-\ona{The variational quantum eigensolver \cite{peruzzo2014variational} is the VQA for the electronic-structure problem of \Chap~\chref{C.Motivation}: $H$ is the second-quantised molecular Hamiltonian mapped to qubits, with $\mathcal O(N^4)$ Pauli terms for $N$ orbitals, and the goal is the ground-state energy. Design choices:}
+\ona{The variational quantum eigensolver \citep{peruzzo2014variational} is the VQA for the electronic-structure problem of \Chap~\chref{C.Motivation}: $H$ is the second-quantised molecular Hamiltonian mapped to qubits, with $\mathcal O(N^4)$ Pauli terms for $N$ orbitals, and the goal is the ground-state energy. Design choices:}
 \begin{description}\setlength\itemsep{0.2em}
     \item[Initial state] the Hartree--Fock determinant $\ket{\Psi_0}$, a computational basis state, whose energy is already the mean-field energy; the variational circuit adds correlation.
     \item[Chemically inspired ansatz] unitary coupled cluster with singles and doubles (UCCSD), $U(\vartheta) = e^{T(\vartheta) - T(\vartheta)^\dagger}$ with excitation operators $T$; exact in a limit, deep in practice.
-    \item[Hardware-efficient ansatz] layers of single-qubit rotations and native entangling gates \cite{kandala2017hardware}; shallow and expressive, but problem-agnostic.
+    \item[Hardware-efficient ansatz] layers of single-qubit rotations and native entangling gates \citep{kandala2017hardware}; shallow and expressive, but problem-agnostic.
     \item[Measurement] group commuting Pauli terms; the shot count to reach precision $\epsilon$ scales as $(\sum_k|h_k|)^2/\epsilon^2$ in the worst case.
 \end{description}
-\ona{On hardware, VQE has produced ground-state energies of small molecules (H$_2$, LiH, BeH$_2$) to chemical accuracy after error mitigation \cite{kandala2017hardware}. Its scaling to larger molecules is the subject of \Chap~\chref{C.EQA}.}
+\ona{On hardware, VQE has produced ground-state energies of small molecules (H$_2$, LiH, BeH$_2$) to chemical accuracy after error mitigation \citep{kandala2017hardware}. Its scaling to larger molecules is the subject of \Chap~\chref{C.EQA}.}
 \end{frame}
 
 \begin{frame}\ft{VQE as state preparation for early fault-tolerant algorithms}
@@ -57,7 +57,7 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
     \item hand $\ket{\phi_0}$ to a ground-state property estimation routine that uses Hadamard tests of $e^{-ijH}$ and $O$ with classical Fourier post-processing, and returns $\braket{\psi_0|O|\psi_0}$ to accuracy $\epsilon$ with maximal evolution time $\widetilde{\mathcal O}(\gamma^{-1})$, regardless of how good $\ket{\phi_0}$ is, at total cost $\widetilde{\mathcal O}(\gamma^{-1}\epsilon^{-2}\eta^{-2})$ (\Chap~\chref{C.Motivation}).
 \end{enumerate}
 \ona{The variational state need not be accurate; it needs overlap. This reframes the goal of VQE from ``find the ground state'' to ``find a state with non-negligible $\eta$'', which is a lower bar, and connects to the warm starts of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, where the initial state likewise needs only a good overlap with the optimum. Example properties: entries $D_{pq} = \braket{\psi_0|a_p^\dagger a_q|\psi_0}$ of the one-particle reduced density matrix, hence charge densities and dipole moments, each a combination of four Pauli-string expectations.}
-\onp{VQE supplies overlap $\eta$; a Fourier-based post-processing of Hadamard tests supplies the guarantee \cite{zhang2022computing}. The variational state need not be accurate, only overlapping.}
+\onp{VQE supplies overlap $\eta$; a Fourier-based post-processing of Hadamard tests supplies the guarantee \citep{zhang2022computing}. The variational state need not be accurate, only overlapping.}
 \end{frame}
 
 \begin{frame}\ft{Exercise}
@@ -87,11 +87,11 @@ Similarly, for VQAs after selecting stop criteria (usually number of iterations)
 \ona{\textbf{VQAs are not approximation algorithms}.}
 However, one may argue that VQAs cannot be viewed as \emph{approximation algorithms}. The reason is that an approximation algorithm for a problem $P$ is a polynomial-time algorithm that computes a solution within a guaranteed factor of the optimum for \emph{every} instance of the problem. For example, the Goemans--Williamson algorithm is an approximation algorithm which for Max-Cut provides an instance-independent performance ratio of $0.878$; such a result does not exist for VQAs in general.
 
-\ona{There are exceptions: for MaxCut on 3-regular graphs, depth-one QAOA achieves ratio at least $0.692$ \cite{farhi2014quantum}, and warm-started QAOA inherits the ratio of the relaxation it starts from \cite{egger2021warm}; see \Chaps~\chref{C.QAOA} and~\chref{C.WSRounded}.}
+\ona{There are exceptions: for MaxCut on 3-regular graphs, depth-one QAOA achieves ratio at least $0.692$ \citep{farhi2014quantum}, and warm-started QAOA inherits the ratio of the relaxation it starts from \citep{egger2021warm}; see \Chaps~\chref{C.QAOA} and~\chref{C.WSRounded}.}
 \end{frame}
 
 \begin{frame}\ft{Barren plateaus}
-\ona{A second obstacle, besides local minima, is the \emph{barren plateau} \cite{Clean_2018_BarrenPlateaus}: for sufficiently random, deep, problem-agnostic circuits, the gradient of $C$ has zero mean and a variance that decays exponentially in the number of qubits,}
+\ona{A second obstacle, besides local minima, is the \emph{barren plateau} \citep{Clean_2018_BarrenPlateaus}: for sufficiently random, deep, problem-agnostic circuits, the gradient of $C$ has zero mean and a variance that decays exponentially in the number of qubits,}
 \begin{equation}
     \mathrm{Var}\Big[\frac{\partial C}{\partial\vartheta_i}\Big] \in \mathcal O(2^{-n}),
 \end{equation}

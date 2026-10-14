@@ -44,7 +44,7 @@
 \end{frame}
 
 \begin{frame}\ft{Evaluation time versus graph size}
-\figslide[height=0.55\textheight]{figures/numerics/figure15.pdf}{Time to evaluate $\langle H_C\rangle$ of depth-ten QAOA as a function of the number of edges, colour giving the number of nodes \cite{marecek2026angles}: (a),(b) Quimb MPS without and with the SAT remapping time, (c),(d) Qiskit Aer MPS, (e) Pauli propagation, (f) the SAT remapping alone.}{fig:ch09:evaltime}
+\figslide[height=0.55\textheight]{figures/numerics/figure15.pdf}{Time to evaluate $\langle H_C\rangle$ of depth-ten QAOA as a function of the number of edges, colour giving the number of nodes \citep{marecek2026angles}: (a),(b) Quimb MPS without and with the SAT remapping time, (c),(d) Qiskit Aer MPS, (e) Pauli propagation, (f) the SAT remapping alone.}{fig:ch09:evaltime}
 \end{frame}
 
 \section{No budget rescues the worst case: training is NP-hard}
@@ -109,15 +109,15 @@ For $\tau \ll 1$ the second term is negligible and $\gamma = \pi/(2\tau)$ is opt
 
 \begin{frame}\ft{Three ways to set angles without a closed loop}
 \ona{Recall the QAOA state $\ket{\psi(\boldsymbol\theta)} = \prod_{k=1}^p U_M(\beta_k)U_C(\gamma_k)\ket{+}^{\otimes n}$ and its energy $\langle H_C\rangle$. Closed-loop optimization of $\boldsymbol\theta$ on hardware is (i) slow, given clock speeds and queueing; (ii) impossible to check, since at utility scale $\langle H_C\rangle$ cannot be simulated exactly; and (iii) \textbf{NP}-hard in the worst case, with many local optima even at $p=1$. Figure~\ref{fig:ch07:strategies} shows the alternatives:}
-\figslide[height=0.5\textheight]{figures/numerics/figure1.pdf}{Angle setting at utility scale \cite{marecek2026angles}. Angles are found classically, by evaluating the energy on (a) representative structured problems, (b) small representative instances with exact energy, or (c) the utility-scale instance with an approximate energy; they are transferred to the QAOA circuit (e) for the utility-scale instance (d), and only the final sampling (f) runs on hardware.}{fig:ch07:strategies}
+\figslide[height=0.5\textheight]{figures/numerics/figure1.pdf}{Angle setting at utility scale \citep{marecek2026angles}. Angles are found classically, by evaluating the energy on (a) representative structured problems, (b) small representative instances with exact energy, or (c) the utility-scale instance with an approximate energy; they are transferred to the QAOA circuit (e) for the utility-scale instance (d), and only the final sampling (f) runs on hardware.}{fig:ch07:strategies}
 \end{frame}
 
 \begin{frame}\ft{A taxonomy of angle-setting methods}
 \ona{Some 30 methods from the literature fall into four classes, with many methods belonging to several:}
 \begin{description}\setlength\itemsep{0.2em}
     \item[Physics-inspired] angles follow an annealing schedule: Trotterised quantum annealing (TQA), linear ramps with two slopes $(\Delta_\beta,\Delta_\gamma)$, spectral-gap-informed ramps, counterdiabatic and feedback-based (FALQON) schedules. No energy evaluation needed unless the slopes are optimised.
-    \item[Parameter transfer] optimal angles concentrate across similar instances: fixed angles for MaxCut on $k$-regular graphs \cite{Wurtz2021}, transfer from small to large instances, rescaling for weighted problems, surrogate models. Require a database of good angles.
-    \item[Iterative] initialise depth $p+1$ from depth $p$: Interp.\ and Fourier \cite{Zhou2020}, transition states, basin hopping. Smooth schedules, good quality, but repeated optimizations.
+    \item[Parameter transfer] optimal angles concentrate across similar instances: fixed angles for MaxCut on $k$-regular graphs \citep{Wurtz2021}, transfer from small to large instances, rescaling for weighted problems, surrogate models. Require a database of good angles.
+    \item[Iterative] initialise depth $p+1$ from depth $p$: Interp.\ and Fourier \citep{Zhou2020}, transition states, basin hopping. Smooth schedules, good quality, but repeated optimizations.
     \item[Machine learning] predict angles from instances: clustering, regression from $p=1$ to $p>1$, reinforcement learning, diffusion models, graph attention networks. Only as good as their training data.
 \end{description}
 \ona{Superscripts in what follows: $\dagger$ no optimization to the instance, no superscript only method parameters (e.g., slopes) optimised, $\star$ every angle optimised, always with COBYLA.}
@@ -138,7 +138,7 @@ For $\tau \ll 1$ the second term is negligible and $\gamma = \pi/(2\tau)$ is opt
 
 \begin{frame}\ft{Methodology}
 \begin{itemize}\setlength\itemsep{0.2em}
-    \item \textbf{Methods:} Interp., Fourier, TQA, recursive transition states (RTS), linear ramps, fixed angles \cite{Wurtz2021}, parameter transfer; 34 configurations, 79\,908 training chains.
+    \item \textbf{Methods:} Interp., Fourier, TQA, recursive transition states (RTS), linear ramps, fixed angles \citep{Wurtz2021}, parameter transfer; 34 configurations, 79\,908 training chains.
     \item \textbf{Problems:} MaxCut and Maximum Independent Set (MIS) on Erd\H{o}s--R\'enyi (ER), heavy-hex (HH, the IBM qubit topology), line-based (LB, a line plus SWAP layers) and random-regular (RR) graphs; small set (20--21 nodes) for SV, large set (50--144 nodes) for MPS and PP; plus low-autocorrelation binary sequences (LABS) up to 21 spins.
     \item \textbf{Depths:} $p \le 10$, since noise limits what can be executed.
     \item \textbf{Metrics:} energy or approximation ratio (against CPLEX optima), \emph{and} the wall-clock cost of finding the angles.
@@ -147,26 +147,26 @@ For $\tau \ll 1$ the second term is negligible and $\gamma = \pi/(2\tau)$ is opt
 \end{frame}
 
 \begin{frame}\ft{Quality: which method is best?}
-\figslide[height=0.55\textheight]{figures/numerics/figure5.pdf}{Proportion of the 37 graphs on which each method gives the best angles, per depth and per energy evaluator \cite{marecek2026angles}. Linear ramps and Interp.\ win most often; fixed angles are best when available but exist for only a quarter of the graph-depth pairs.}{fig:ch07:best}
+\figslide[height=0.55\textheight]{figures/numerics/figure5.pdf}{Proportion of the 37 graphs on which each method gives the best angles, per depth and per energy evaluator \citep{marecek2026angles}. Linear ramps and Interp.\ win most often; fixed angles are best when available but exist for only a quarter of the graph-depth pairs.}{fig:ch07:best}
 \end{frame}
 
 \begin{frame}\ft{Quality: method rankings depend on the problem class}
-\figslide[height=0.5\textheight]{figures/numerics/figure6.pdf}{Energy versus depth for MIS (a) and MaxCut (b) on ten 40-node random 3-regular graphs, PP evaluator \cite{marecek2026angles}. Fourier is the worst on MaxCut but among the best on MIS; MaxCut fixed angles do not transfer to MIS.}{fig:ch07:misvsmc}
+\figslide[height=0.5\textheight]{figures/numerics/figure6.pdf}{Energy versus depth for MIS (a) and MaxCut (b) on ten 40-node random 3-regular graphs, PP evaluator \citep{marecek2026angles}. Fourier is the worst on MaxCut but among the best on MIS; MaxCut fixed angles do not transfer to MIS.}{fig:ch07:misvsmc}
 \ona{At $p = 10$, approximation ratios of $94$--$98\%$ are typical for the best methods on MaxCut, $80$--$88\%$ for the worst; Fourier and TQA underperform on MaxCut, and RTS did not finish at utility scale. Iterative methods are sensitive to their $p=1$ initialisation, especially on LABS whose depth-one landscape has narrow basins; linear ramps sidestep this by parametrising the schedule globally and cost $5\%$ of the compute time.}
 \end{frame}
 
 \begin{frame}\ft{Validation I: do approximate energies find good angles?}
-\figslide[height=0.5\textheight]{figures/numerics/figure7.pdf}{40-qubit 3-regular MaxCut: energy of angles optimised with PP and MPS (solid) and their exact statevector energy (dotted), for (a) fixed angles and (b) TQA \cite{marecek2026angles}.}{fig:ch07:ppmpssv}
+\figslide[height=0.5\textheight]{figures/numerics/figure7.pdf}{40-qubit 3-regular MaxCut: energy of angles optimised with PP and MPS (solid) and their exact statevector energy (dotted), for (a) fixed angles and (b) TQA \citep{marecek2026angles}.}{fig:ch07:ppmpssv}
 \ona{The MPS energies are systematically below the truth, yet the angles they produce are as good as, and at larger depth better than, those from PP when re-evaluated exactly, and the MPS optimization was $1.5$--$3$ times faster. Accuracy of the evaluator and quality of the resulting angles are different things.}
 \end{frame}
 
 \begin{frame}\ft{Validation II: landscapes on 144 qubits}
-\figslide[height=0.45\textheight]{figures/numerics/figure8.pdf}{Energy landscape of depth-five linear-ramp QAOA over the two slopes for a 144-qubit heavy-hex MaxCut problem: (a) MPS, (b) PP, (c) \emph{ibm\_fez} with 1000 shots per point \cite{marecek2026angles}. Crosses mark each method's maximum.}{fig:ch07:landscape}
+\figslide[height=0.45\textheight]{figures/numerics/figure8.pdf}{Energy landscape of depth-five linear-ramp QAOA over the two slopes for a 144-qubit heavy-hex MaxCut problem: (a) MPS, (b) PP, (c) \emph{ibm\_fez} with 1000 shots per point \citep{marecek2026angles}. Crosses mark each method's maximum.}{fig:ch07:landscape}
 \ona{The two classical evaluations took 42 minutes on a 96-core node; the hardware scan took 3 minutes. Here PP is the closer approximation to the QPU landscape.}
 \end{frame}
 
 \begin{frame}\ft{Validation III: hardware ratios versus estimated ratios}
-\figslide[height=0.5\textheight]{figures/numerics/figure9.pdf}{Hardware approximation ratio on \emph{ibm\_boston} against the estimated ratio from training, ten 144-node heavy-hex graphs, $p=5$ (a) and $p=10$ (b) \cite{marecek2026angles}. Correlations: 0.66 and 0.61 for MPS, 0.93 and 0.89 for PP.}{fig:ch07:hw}
+\figslide[height=0.5\textheight]{figures/numerics/figure9.pdf}{Hardware approximation ratio on \emph{ibm\_boston} against the estimated ratio from training, ten 144-node heavy-hex graphs, $p=5$ (a) and $p=10$ (b) \citep{marecek2026angles}. Correlations: 0.66 and 0.61 for MPS, 0.93 and 0.89 for PP.}{fig:ch07:hw}
 \ona{Estimated and hardware ratios correlate positively, though hardware ratios are lower due to noise. Interp.\ and re-optimised fixed angles with PP perform best on both axes. Fourier with PP reports a high estimated ratio, but the QPU shows this outperformance is fake: its hardware ratios are the lowest. At $p=10$ most methods become statistically indistinguishable on hardware, even though they are distinguishable in estimated ratio: near the noise limit, it matters little how the angles were trained.}
 \end{frame}
 
@@ -174,13 +174,13 @@ For $\tau \ll 1$ the second term is negligible and $\gamma = \pi/(2\tau)$ is opt
 
 \begin{frame}\ft{Quality against cost}
 \ona{Define the total duration $T_{\rm total} = T_{\rm AS} + T_{\rm QPU}$: the angle-setting time (mostly classical energy evaluations inside COBYLA, cumulative over depths for iterative methods) plus the sampling time $Q\,t_{\rm shot}$. Figure~\ref{fig:ch07:perf} places every strategy in the plane of cost and hardware quality.}
-\figslide[height=0.45\textheight]{figures/numerics/figure10.pdf}{Hardware approximation ratio against total duration for ten 144-node heavy-hex instances at (a) $p=5$ and (b) $p=10$ \cite{marecek2026angles}.}{fig:ch07:perf}
+\figslide[height=0.45\textheight]{figures/numerics/figure10.pdf}{Hardware approximation ratio against total duration for ten 144-node heavy-hex instances at (a) $p=5$ and (b) $p=10$ \citep{marecek2026angles}.}{fig:ch07:perf}
 \ona{Physics-inspired and transfer methods finish within $10^3$ s at ratios of $82$--$85\%$; iterative methods exceed $10^4$ s for a modest, sometimes unmeasurable, improvement on hardware.}
 \end{frame}
 
 \begin{frame}\ft{The Pareto frontier and the window sticker}
-\figslide[height=0.45\textheight]{figures/numerics/figure12.pdf}{Actionable Pareto frontier for 144-node heavy-hex MaxCut when the angles are trained on the quantum computer itself, emulated by an MPS sampler, under (a) shot time only and (b) a 6 s submission overhead per circuit \cite{marecek2026angles}. Solid: emulation; dotted: measured on \emph{ibm\_boston}.}{fig:ch07:pareto}
-\ona{Following the Stochastic Benchmark framework \cite{Neira2024}, one fits a \emph{prescription} for each method on training instances and evaluates it on test instances. Without latency, fixed angles dominate small budgets and instance-tailored fixed angles the rest. With today's 6 s latency per circuit submission, parameter transfer wins intermediate budgets and the same best ratio needs two orders of magnitude more time. Producing such a plot for real cost $5\times10^9$ emulated shots; on hardware, the submission overhead alone would take years.}
+\figslide[height=0.45\textheight]{figures/numerics/figure12.pdf}{Actionable Pareto frontier for 144-node heavy-hex MaxCut when the angles are trained on the quantum computer itself, emulated by an MPS sampler, under (a) shot time only and (b) a 6 s submission overhead per circuit \citep{marecek2026angles}. Solid: emulation; dotted: measured on \emph{ibm\_boston}.}{fig:ch07:pareto}
+\ona{Following the Stochastic Benchmark framework \citep{Neira2024}, one fits a \emph{prescription} for each method on training instances and evaluates it on test instances. Without latency, fixed angles dominate small budgets and instance-tailored fixed angles the rest. With today's 6 s latency per circuit submission, parameter transfer wins intermediate budgets and the same best ratio needs two orders of magnitude more time. Producing such a plot for real cost $5\times10^9$ emulated shots; on hardware, the submission overhead alone would take years.}
 \end{frame}
 
 \section{Operational guidance}

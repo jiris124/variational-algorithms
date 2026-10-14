@@ -20,7 +20,7 @@
 \end{equation}
 \ona{not the vector $x$ itself: reading out all $N$ amplitudes would cost $\Omega(N)$. The output is useful for computing expectations $\braket{x|M|x}$, overlaps, or sampling from $|x_i|^2$.}
 \begin{itemize}\setlength\itemsep{0.2em}
-    \item The HHL algorithm \cite{harrow2009quantum} prepares $\ket x$ in time $\mathrm{poly}(\log N,\kappa,1/\epsilon)$ for sparse $A$ with condition number $\kappa$, given oracles for $A$ and a state-preparation routine for $\ket b$; improvements bring the $\kappa$ and $\epsilon$ dependence to near-optimal \cite{childs2017quantum}.
+    \item The HHL algorithm \citep{harrow2009quantum} prepares $\ket x$ in time $\mathrm{poly}(\log N,\kappa,1/\epsilon)$ for sparse $A$ with condition number $\kappa$, given oracles for $A$ and a state-preparation routine for $\ket b$; improvements bring the $\kappa$ and $\epsilon$ dependence to near-optimal \citep{childs2017quantum}.
     \item Caveats: the oracles, the state preparation, the read-out, and the $\kappa$ dependence each can erase the exponential advantage; the algorithm needs fault tolerance.
 \end{itemize}
 \ona{VQLS is the near-term, heuristic alternative: a variational ansatz for $\ket x$ and a cost that vanishes exactly at the solution.}
