@@ -9,12 +9,12 @@
 \lecture{The Quantum Approximate Optimization Algorithm}{Lect06}
 \chapter{The Quantum Approximate Optimization Algorithm}\label{C.QAOA}
 
-\ona{This \chap{} defines QAOA \cite{farhi2014quantum}, the variational algorithm for combinatorial optimization that the rest of the course studies, establishes that training it is \textbf{NP}-hard \cite{bittel2021training}, and then proves that it nevertheless converges as the depth grows, following the elementary proof of \citet{binkowski2023elementary}, which also covers the constrained \emph{quantum alternating operator ansatz} \cite{hadfield2019quantum}. The first part is adapted from our course on quantum computing \cite{aspman2024quantum}.}
+\ona{This \chap{} defines QAOA \citep{farhi2014quantum}, the variational algorithm for combinatorial optimization that the rest of the course studies, establishes that training it is \textbf{NP}-hard \citep{bittel2021training}, and then proves that it nevertheless converges as the depth grows, following the elementary proof of \citet{binkowski2023elementary}, which also covers the constrained \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum}. The first part is adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{Quantum Approximate Optimization Algorithm}\label{sec:ch06:qaoa}
 
 \begin{frame}\ft{Quantum Approximate Optimization Algorithm}
-Variational quantum algorithms can be thought of as quantum randomized algorithms as well, and find many interesting applications. One of the very first applications that sparked the interest of the community is in the context of the Max-Cut problem. Farhi \emph{et al.} introduced the quantum approximate optimization algorithm (QAOA) \cite{farhi2014quantum} as a candidate algorithm to improve upon Max-Cut best bounds, although it is well understood that unless $\textbf{P}=\textbf{NP}$, this is $\textbf{NP}$-hard to achieve. Nevertheless, there is nothing that forbids VQAs to achieve exponential speedups in theory, thus a lot of hope is placed upon them.
+Variational quantum algorithms can be thought of as quantum randomized algorithms as well, and find many interesting applications. One of the very first applications that sparked the interest of the community is in the context of the Max-Cut problem. Farhi \emph{et al.} introduced the quantum approximate optimization algorithm (QAOA) \citep{farhi2014quantum} as a candidate algorithm to improve upon Max-Cut best bounds, although it is well understood that unless $\textbf{P}=\textbf{NP}$, this is $\textbf{NP}$-hard to achieve. Nevertheless, there is nothing that forbids VQAs to achieve exponential speedups in theory, thus a lot of hope is placed upon them.
 \end{frame}
 
 \begin{frame}\ft{MAXCUT}
@@ -40,8 +40,8 @@ Variational quantum algorithms can be thought of as quantum randomized algorithm
 \item[Task] Determine a subset $ S \subseteq V $ that maximizes the size of the cut $ |E(S, V \backslash S)| $, which corresponds to maximizing $ \sum_{i \in S, j \in V \backslash S} A_{i j} $.
 \end{description}
 \end{probl}
-    The decision version of the MaxCut problem is \textbf{NP}-complete\ona{ \cite{Garey1976}}.
-The optimization version is \textbf{APX}-hard \ona{\cite{lee2021classifying}} with the optimal (classical) ratio $\alpha_{\rm{max}}=\alpha_{\rm{GW}} \approx 0.878$ of the Goemans--Williamson algorithm \ona{\cite{Goemans1995}} under the assumption that the \emph{Unique Games Conjecture} (UGC) is true. Thus, under UGC, finding a polynomial time algorithm that improves upon the Goemans--Williamson bound is itself a \textbf{NP}-hard problem. However, if the UGC is false, it has been proven that $\alpha_{\max } \leq \frac{16}{17} \approx 0.941$\ona{ \cite{Hstad2001}}.
+    The decision version of the MaxCut problem is \textbf{NP}-complete\ona{ \citep{Garey1976}}.
+The optimization version is \textbf{APX}-hard \ona{\citep{lee2021classifying}} with the optimal (classical) ratio $\alpha_{\rm{max}}=\alpha_{\rm{GW}} \approx 0.878$ of the Goemans--Williamson algorithm \ona{\citep{Goemans1995}} under the assumption that the \emph{Unique Games Conjecture} (UGC) is true. Thus, under UGC, finding a polynomial time algorithm that improves upon the Goemans--Williamson bound is itself a \textbf{NP}-hard problem. However, if the UGC is false, it has been proven that $\alpha_{\max } \leq \frac{16}{17} \approx 0.941$\ona{ \citep{Hstad2001}}.
 \end{frame}
 
 \begin{frame}\ft{MAXCUT as an Ising Hamiltonian}
@@ -58,18 +58,18 @@ The optimization version is \textbf{APX}-hard \ona{\cite{lee2021classifying}} wi
 \end{frame}
 
 \begin{frame}\ft{Depth one is classically easy}
-\ona{At $p=1$, the expectation of each edge term $\braket{Z_iZ_j}$ depends only on the neighbourhoods of $i$ and $j$, and has a closed form \cite{farhi2014quantum,Wang2018}. For a $D$-regular triangle-free graph,}
+\ona{At $p=1$, the expectation of each edge term $\braket{Z_iZ_j}$ depends only on the neighbourhoods of $i$ and $j$, and has a closed form \citep{farhi2014quantum,Wang2018}. For a $D$-regular triangle-free graph,}
 \begin{equation}
     \frac{F_1(\beta,\gamma)}{|E|} = -\frac{1}{2} - \frac{1}{4}\sin(4\beta)\sin(\gamma)\cos^{D-1}(\gamma),
 \end{equation}
 \ona{which for $D=3$ is optimised at $\beta = \pi/8$, $\gamma = \arctan(1/\sqrt2)$ and gives the ratio $0.6924$ of \citet{farhi2014quantum}. Two consequences: (i) depth-one landscapes can be scanned exactly on a classical computer, which is how iterative angle-setting methods of \Chap~\chref{C.PerIteration} are initialised; (ii) depth one alone is far from GW's $0.878$.}
-\onp{\begin{itemize}\item closed form per edge; for 3-regular triangle-free graphs the optimum ratio is $0.6924$ \cite{farhi2014quantum}; \item depth-one landscapes are exactly computable classically \cite{Wang2018}, and far from GW.\end{itemize}}
+\onp{\begin{itemize}\item closed form per edge; for 3-regular triangle-free graphs the optimum ratio is $0.6924$ \citep{farhi2014quantum}; \item depth-one landscapes are exactly computable classically \citep{Wang2018}, and far from GW.\end{itemize}}
 \end{frame}
 
 \section{VQAs are NP-hard to train}
 
 \begin{frame}\ft{VQAs are \textbf{NP}-hard to train}
-An interesting result was given by Bittel and Kliesch \cite{bittel2021training}. To describe this seminal work we can outsource the quantum computation to an oracle $\mathcal{O}$ to avoid potential computational complications associated with the quantum circuit.
+An interesting result was given by \citet{bittel2021training}. To describe this seminal work we can outsource the quantum computation to an oracle $\mathcal{O}$ to avoid potential computational complications associated with the quantum circuit.
 \begin{probl}[VQA minimization, oracular formulation]\label{p:ch06:VQAoracle}\hfill
 \begin{description}[noitemsep,leftmargin=0.5cm,font=\normalfont]
 \item[Instance] A set of Hermitian generators $\{ H_i \}_{i=1,\ldots, L}$ and an observable $O$, given in terms of the Pauli basis representation, acting on $\mathcal{H}$.
@@ -99,14 +99,14 @@ $
 
 \begin{frame}\ft{VQAs are \textbf{NP}-hard to train}
 \ona{Minima of real valued functions are given by real numbers that may not have an efficient numerical representation. However, it is commonly said that a minimization problem is solved if it is solved to exponential precision, which is the convention we also use. The intuitive notion is that the hardness does not come from the difficulty of representing the minimum.}
-The result is robust \cite{bittel2021training}: it persists
+The result is robust \citep{bittel2021training}: it persists
 \begin{itemize}
     \item when the ansatz uses only logarithmically many qubits,
     \item when it consists of a single layer,
     \item when it is built from free-fermionic gates,
     \item and when time evolution is continuous rather than digitised.
 \end{itemize}
-Moreover, no polynomial-time algorithm can guarantee an additive optimization error $\Delta < (1-\alpha_{\max})/2$ for QAOA on every instance, where $\alpha_{\max}$ is the best polynomial-time approximation ratio of the underlying problem. \ona{The landscape contains many \emph{persistent} local minima with values bounded away from the optimum \cite{bittel2021training}; see \Chap~\chref{C.PerIteration} for how this is coped with in practice.}
+Moreover, no polynomial-time algorithm can guarantee an additive optimization error $\Delta < (1-\alpha_{\max})/2$ for QAOA on every instance, where $\alpha_{\max}$ is the best polynomial-time approximation ratio of the underlying problem. \ona{The landscape contains many \emph{persistent} local minima with values bounded away from the optimum \citep{bittel2021training}; see \Chap~\chref{C.PerIteration} for how this is coped with in practice.}
 \end{frame}
 
 
@@ -137,11 +137,11 @@ Moreover, no polynomial-time algorithm can guarantee an additive optimization er
 \begin{equation}\label{eq:ch06c:interp}
     H_{\rm lin(H_{\rm init}, C)}(t) \coloneqq (1-t)\,H_{\rm init} + t\,C, \qquad t \in [0,1],
 \end{equation}
-\ona{slowed down by a parameter $T$: the actual evolution is under $H(s/T)$ for $s \in [0,T]$. The \emph{quantum approximate optimization algorithm} \cite{farhi2014quantum} fixes $\ket\iota = \ket{+}^{\otimes N}$, the non-degenerate highest-energy state of $B = \sum_n X^{(n)}$, and prepares}
+\ona{slowed down by a parameter $T$: the actual evolution is under $H(s/T)$ for $s \in [0,T]$. The \emph{quantum approximate optimization algorithm} \citep{farhi2014quantum} fixes $\ket\iota = \ket{+}^{\otimes N}$, the non-degenerate highest-energy state of $B = \sum_n X^{(n)}$, and prepares}
 \begin{equation}\label{eq:ch06c:qaoa}
     \ket{\vec\beta,\vec\gamma} \coloneqq \Big(\prod_{q=1}^{p} U_B(\beta_q) U_C(\gamma_q)\Big)\ket{+}^{\otimes N}, \qquad U_B(\beta) = e^{-i\beta B},\ U_C(\gamma) = e^{-i\gamma C},
 \end{equation}
-\ona{optimising $F_p(\vec\beta,\vec\gamma) = \braket{\vec\beta,\vec\gamma|C|\vec\beta,\vec\gamma}$. The \emph{quantum alternating operator ansatz} \cite{hadfield2019quantum} replaces $U_B$ by a problem-specific mixer $U_M$ that (i) preserves feasibility, $U_M(\beta)\mathcal S \subseteq \mathcal S$, and (ii) mixes fully: for all feasible $\ket{\boldsymbol z},\ket{\boldsymbol z'}$ there are $r, \beta$ with $\braket{\boldsymbol z|U_M^r(\beta)|\boldsymbol z'} \ne 0$.}
+\ona{optimising $F_p(\vec\beta,\vec\gamma) = \braket{\vec\beta,\vec\gamma|C|\vec\beta,\vec\gamma}$. The \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum} replaces $U_B$ by a problem-specific mixer $U_M$ that (i) preserves feasibility, $U_M(\beta)\mathcal S \subseteq \mathcal S$, and (ii) mixes fully: for all feasible $\ket{\boldsymbol z},\ket{\boldsymbol z'}$ there are $r, \beta$ with $\braket{\boldsymbol z|U_M^r(\beta)|\boldsymbol z'} \ne 0$.}
 \onp{QAA: adiabatic evolution along \eqref{eq:ch06c:interp}. QAOA: discrete alternation \eqref{eq:ch06c:qaoa}. Alternating operator ansatz: any feasibility-preserving, fully mixing $U_M$ instead of $U_B$.}
 \end{frame}
 
@@ -196,7 +196,7 @@ where $U_T$ is the quasi-adiabatic evolution along the linear interpolation betw
 \ona{Work in $\mathcal L(\mathcal S)$ with matrices in the computational basis, and let $\lambda_{\max}(t)$ be the largest eigenvalue of $H(t) \coloneqq (1-t)B|_{\mathcal S} + tC|_{\mathcal S}$.}
 \begin{enumerate}\setlength\itemsep{0.2em}
     \item \emph{Non-degeneracy for $t<1$.} For $0 \le t_0 < 1$, $(1-t_0)B|_{\mathcal S}$ is irreducible and non-negative; $C$ is diagonal, and w.l.o.g.\ has non-negative spectrum (shift both $B$ and $C$ by $-\lambda_{\min}\one$, which changes the evolution by a global phase). By Corollary~\ref{cor:ch06c:irred}, $H(t_0)$ is non-negative and irreducible, so by Perron--Frobenius $\lambda_{\max}(t_0)$ is non-degenerate.
-    \item \emph{Analytic continuation.} $t \mapsto H(t)$ is analytic and symmetric, so by Kato's perturbation theory \cite{Kato1995} the eigenvalues can be sorted into analytic curves $\lambda_m(t)$ whose spectral projections $\mathbb P_m(t)$ are analytic away from the discrete set $L$ of crossings and have removable singularities there; the continuations $P_m$ are projections of constant rank with $H(t)P_m(t) = \lambda_m(t)P_m(t)$ for all $t$.
+    \item \emph{Analytic continuation.} $t \mapsto H(t)$ is analytic and symmetric, so by Kato's perturbation theory \citep{Kato1995} the eigenvalues can be sorted into analytic curves $\lambda_m(t)$ whose spectral projections $\mathbb P_m(t)$ are analytic away from the discrete set $L$ of crossings and have removable singularities there; the continuations $P_m$ are projections of constant rank with $H(t)P_m(t) = \lambda_m(t)P_m(t)$ for all $t$.
     \item \emph{Identify the top curve.} Let $\lambda_1(0) = \lambda_{\max}(0)$. Since $\lambda_{\max}(t_0)$ is non-degenerate on $[0,1)$, $\lambda_1 \equiv \lambda_{\max}$ there, and by continuity also at $t = 1$. Its projection $P_1$ satisfies the hypotheses of Theorem~\ref{thm:ch06c:adiabatic}.
     \item \emph{Conclude.} $P_1(0)\ket\iota = \ket\iota$, so $\lim_T (\one - P_1(1))U_T(1)\ket\iota = 0$, i.e.,
     $\lim_T U_T(1)\ket\iota = P_1(1)\lim_T U_T(1)\ket\iota$, which lies in $\operatorname{im} P_1(1) \subseteq \mathcal S_{\max}$. \qed

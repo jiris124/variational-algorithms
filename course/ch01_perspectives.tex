@@ -385,8 +385,8 @@ hardness & $\mathbf{QMA}$-hard in general & $\mathbf{NP}$-hard; $\mathbf{APX}$-h
 \begin{equation}\label{eq:ch01:sdp}
     \mathrm{SDP} = \max\ \frac12\sum_{(i,j)\in E} w_{ij}\,(1 - Y_{ij}) \quad\text{s.t.}\quad Y \succeq 0,\ \ Y_{ii} = 1\ (i \in V),
 \end{equation}
-\ona{a linear objective over the intersection of the convex cone of positive semidefinite matrices with an affine subspace: a \emph{semidefinite program}. It is convex, and interior-point methods solve it to any fixed precision in polynomial time. The cuts are exactly the \emph{rank-one} feasible points $Y = zz^\top$; the relaxation drops the rank constraint, which is the only non-convex one.}
-\onp{Linear objective, convex feasible set (PSD cone $\cap$ affine subspace): solvable to any precision in polynomial time. Cuts $=$ rank-one feasible $Y = zz^\top$; the relaxation drops the rank constraint.}
+\ona{a linear objective over the intersection of the convex cone of positive semidefinite matrices with an affine subspace: a \emph{semidefinite program}. It is convex, and interior-point methods solve it to any fixed precision in polynomial time. The cuts are exactly the \emph{rank-one} feasible points $Y = zz^\top$; the relaxation drops the rank constraint, which is the only non-convex one. The relaxation has a precursor in the eigenvalue bounds on the maximum cut of \citet{mohar1990eigenvalues}: the largest eigenvalue of the Laplacian $L$ of $G$ gives $\mathrm{OPT} \le \frac n4\lambda_{\max}(L)$, and shifting $L$ by a diagonal correction $\mathrm{diag}(u)$ with $\sum_iu_i = 0$ preserves the bound. By semidefinite duality, the best of these bounds, $\min_u \frac n4\lambda_{\max}(L+\mathrm{diag}(u))$, equals $\mathrm{SDP}$. The contribution of \citet{Goemans1995} was the rounding and its analysis, which follow.}
+\onp{Linear objective, convex feasible set (PSD cone $\cap$ affine subspace): solvable to any precision in polynomial time. Cuts $=$ rank-one feasible $Y = zz^\top$; the relaxation drops the rank constraint. Precursor: eigenvalue bounds \citep{mohar1990eigenvalues}.}
 \end{frame}
 
 \begin{frame}\ft{The feasible set is a spectrahedron}

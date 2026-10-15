@@ -28,7 +28,7 @@
 
 \begin{frame}\ft{Bias in a two-qubit experiment}
 \onp{\begin{center}\includegraphics[height=0.4\textheight]{figures/itercomp/qca1.png}\hspace{0.5cm}\includegraphics[height=0.4\textheight]{figures/itercomp/rqca1.png}\end{center}{\tiny Measurement statistics of a Bell state: noise-free simulation (left) and \texttt{ibmq\_santiago} (right). The outcomes $01$ and $10$ appear with non-zero frequency independently of the number of shots: the estimator is biased.}}
-\ona{\begin{figure}[htb]\centering\includegraphics[width=0.42\linewidth]{figures/itercomp/qca1.png}\hfill\includegraphics[width=0.42\linewidth]{figures/itercomp/rqca1.png}\caption{Measurement statistics of a Bell state prepared by a Hadamard and a CNOT: noise-free simulation (left) and IBM's five-qubit device \texttt{ibmq\_santiago} (right) \cite{kungurtsev2022iteration}. The outcomes $01$ and $10$ appear with non-zero frequency independently of the number of shots, so the sample mean of any observable is biased.}\label{fig:ch06:bell}\end{figure}}
+\ona{\begin{figure}[htb]\centering\includegraphics[width=0.42\linewidth]{figures/itercomp/qca1.png}\hfill\includegraphics[width=0.42\linewidth]{figures/itercomp/rqca1.png}\caption{Measurement statistics of a Bell state prepared by a Hadamard and a CNOT: noise-free simulation (left) and IBM's five-qubit device \texttt{ibmq\_santiago} (right) \citep{kungurtsev2022iteration}. The outcomes $01$ and $10$ appear with non-zero frequency independently of the number of shots, so the sample mean of any observable is biased.}\label{fig:ch06:bell}\end{figure}}
 \end{frame}
 
 \begin{frame}\ft{The noise model}
@@ -57,7 +57,7 @@
 \begin{equation}\label{eq:ch06:smooth}
     f_c(\boldsymbol\theta) = \mathbb E_{\boldsymbol\Delta\sim\mathcal N(0,\one)} f(\boldsymbol\theta + c\boldsymbol\Delta).
 \end{equation}
-\ona{Existing guarantees assume unbiased evaluations \cite{ghadimi2013stochastic} or strong convexity \cite{granichin2014simultaneous}, neither of which holds for VQAs.}
+\ona{Existing guarantees assume unbiased evaluations \citep{ghadimi2013stochastic} or strong convexity \citep{granichin2014simultaneous}, neither of which holds for VQAs.}
 \end{frame}
 
 \section{Iteration complexity with bias}
@@ -81,7 +81,7 @@ With diminishing steps $\alpha_k = \alpha/k^\gamma$, $\gamma \in (1/2,1]$, and a
 \end{frame}
 
 \begin{frame}\ft{The optimal perturbation}
-\figslide[height=0.55\textheight]{figures/itercomp/cstar.pdf}{Logarithm of the optimal perturbation $c^*$ of the two-point approximation as a function of the bias $b$ and the number of parameters $p$ \cite{kungurtsev2022iteration}: more bias calls for coarser perturbations, more parameters for finer ones.}{fig:ch06:cstar}
+\figslide[height=0.55\textheight]{figures/itercomp/cstar.pdf}{Logarithm of the optimal perturbation $c^*$ of the two-point approximation as a function of the bias $b$ and the number of parameters $p$ \citep{kungurtsev2022iteration}: more bias calls for coarser perturbations, more parameters for finer ones.}{fig:ch06:cstar}
 \end{frame}
 
 \begin{frame}\ft{SPSA with bias}
@@ -100,11 +100,11 @@ and analogously for diminishing steps.
 \end{frame}
 
 \begin{frame}\ft{The bound surface for SPSA}
-\figslide[height=0.55\textheight]{figures/itercomp/exp.pdf}{The right-hand side of \eqref{eq:ch06:spsabound} for $L = 8$, $\alpha = 4$, $\sigma = 1$, $K = 10^5$, as a function of bias $b$ and perturbation $c$, logarithmic scale \cite{kungurtsev2022iteration}. For each bias there is an optimal perturbation size.}{fig:ch06:exp}
+\figslide[height=0.55\textheight]{figures/itercomp/exp.pdf}{The right-hand side of \eqref{eq:ch06:spsabound} for $L = 8$, $\alpha = 4$, $\sigma = 1$, $K = 10^5$, as a function of bias $b$ and perturbation $c$, logarithmic scale \citep{kungurtsev2022iteration}. For each bias there is an optimal perturbation size.}{fig:ch06:exp}
 \end{frame}
 
 \begin{frame}\ft{Parameter-shift rule with bias}
-\ona{Without bias, the parameter-shift rule is an exact gradient, so with shot noise it is an unbiased stochastic gradient; the device bias then puts us exactly in the setting of biased stochastic gradient descent \cite{ajalloeian2020convergence}, with bias bounded by $\zeta^2 = b$ and no gradient-proportional terms. Hence, for constant step $\alpha \le 1/L$,}
+\ona{Without bias, the parameter-shift rule is an exact gradient, so with shot noise it is an unbiased stochastic gradient; the device bias then puts us exactly in the setting of biased stochastic gradient descent \citep{ajalloeian2020convergence}, with bias bounded by $\zeta^2 = b$ and no gradient-proportional terms. Hence, for constant step $\alpha \le 1/L$,}
 \begin{equation}\label{eq:ch06:psrbound}
     \frac1K\sum_{k=1}^K\|\nabla f(\boldsymbol\theta_k)\|^2 \le \frac{2F}{K\alpha} + \alpha L\sigma^2 + b,
 \end{equation}
@@ -124,16 +124,16 @@ and analogously for diminishing steps.
 
 \begin{frame}\ft{Set-up: MaxCut on a 4-regular graph}
 \ona{The test case is depth-one QAOA for MaxCut on a four-vertex instance, Fig.~\ref{fig:ch06:qaoa}, simulated with Qiskit Aer with a custom noise model: depolarising channels of strength $10^{-3}$ per single-qubit gate and $10^{-2}$ per CNOT, and a read-out assignment matrix $P$. Two read-out models are used: a random sparse row-stochastic $P_{\rm rand}$, and a realistic single-bit-flip model built from the published assignment probabilities $p(1|0)$, $p(0|1)$ of IBM devices (\texttt{armonk}, \texttt{lima}, \texttt{bogota}, \dots), whose asymmetry $\tilde b = |p(0|1) - p(1|0)|$ ranges from $0.004$ to $0.14$.}
-\figslide[height=0.35\textheight]{figures/itercomp/qaoa4.pdf}{The QAOA circuit for 4 qubits; one layer is marked, and dots denote its repetition to the desired depth \cite{kungurtsev2022iteration}.}{fig:ch06:qaoa}
+\figslide[height=0.35\textheight]{figures/itercomp/qaoa4.pdf}{The QAOA circuit for 4 qubits; one layer is marked, and dots denote its repetition to the desired depth \citep{kungurtsev2022iteration}.}{fig:ch06:qaoa}
 \end{frame}
 
 \begin{frame}\ft{SPSA under biased read-out}
-\figslide[height=0.55\textheight]{figures/itercomp/spsa_comb.png}{Noisy objective values along SPSA iterations for four values of the estimated bias $\hat b$, perturbation $c = 0.01$ \cite{kungurtsev2022iteration}. The bias is estimated by fitting a mixture of a normal and a uniform distribution to the empirical distribution of objective values. In line with Theorem~\ref{thm:ch06:spsa}, the iteration complexity grows with the bias.}{fig:ch06:spsacomb}
+\figslide[height=0.55\textheight]{figures/itercomp/spsa_comb.png}{Noisy objective values along SPSA iterations for four values of the estimated bias $\hat b$, perturbation $c = 0.01$ \citep{kungurtsev2022iteration}. The bias is estimated by fitting a mixture of a normal and a uniform distribution to the empirical distribution of objective values. In line with Theorem~\ref{thm:ch06:spsa}, the iteration complexity grows with the bias.}{fig:ch06:spsacomb}
 \end{frame}
 
 \begin{frame}\ft{SPSA on the noise models of three IBM devices}
 \onp{\begin{center}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_arm.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_lima.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_bog.png}\end{center}{\tiny Five SPSA runs each, mean (crosses) and one standard deviation (shaded), with the read-out models of \texttt{armonk}, \texttt{lima}, and \texttt{bogota}.}}
-\ona{\begin{figure}[htb]\centering\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_arm.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_lima.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_bog.png}\caption{Objective values of five SPSA runs, their mean (crosses) and one standard deviation (shaded), under the read-out noise models of \texttt{ibmq\_armonk}, \texttt{ibmq\_lima}, and \texttt{ibmq\_bogota} \cite{kungurtsev2022iteration}. The device with the largest read-out asymmetry, \texttt{bogota}, converges to the highest noise-dominated level.}\label{fig:ch06:devices}\end{figure}}
+\ona{\begin{figure}[htb]\centering\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_arm.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_lima.png}\includegraphics[width=0.32\linewidth]{figures/itercomp/spsa_bog.png}\caption{Objective values of five SPSA runs, their mean (crosses) and one standard deviation (shaded), under the read-out noise models of \texttt{ibmq\_armonk}, \texttt{ibmq\_lima}, and \texttt{ibmq\_bogota} \citep{kungurtsev2022iteration}. The device with the largest read-out asymmetry, \texttt{bogota}, converges to the highest noise-dominated level.}\label{fig:ch06:devices}\end{figure}}
 \end{frame}
 
 \begin{frame}\ft{SPSA versus two-point versus parameter shift}
@@ -141,7 +141,7 @@ and analogously for diminishing steps.
 \onp{\begin{center}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_spsa_c01_a01.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_2pfa_c01_a01.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_psr_a01.pdf}\end{center}{\tiny Large step $\alpha = 0.1$, large perturbation $c = 0.1$: SPSA (left), two-point (centre), parameter shift (right).}}
 \ona{\begin{figure}[htb]\centering\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_spsa_c01_a01.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_2pfa_c01_a01.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_psr_a01.pdf}\\
 \includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_spsa_c01_a0001.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_2pfa_c01_a0001.pdf}\includegraphics[width=0.32\linewidth]{figures/itercomp/cmp_psr_a0001.pdf}
-\caption{Representative runs of SPSA (left), two-point approximation (centre) and parameter-shift rule (right) with perturbation $c = 0.1$; top row step size $\alpha = 0.1$, bottom row $\alpha = 0.001$ \cite{kungurtsev2022iteration}.}\label{fig:ch06:compare}\end{figure}}
+\caption{Representative runs of SPSA (left), two-point approximation (centre) and parameter-shift rule (right) with perturbation $c = 0.1$; top row step size $\alpha = 0.1$, bottom row $\alpha = 0.001$ \citep{kungurtsev2022iteration}.}\label{fig:ch06:compare}\end{figure}}
 \begin{itemize}\setlength\itemsep{0.1em}
     \item \emph{Large step, large perturbation:} SPSA converges as fast as the exact-gradient PSR, though to a noisier region with higher bias; 2PFA is slower and far less robust, with late iterates exceeding the starting value.
     \item \emph{Small step, large perturbation}, the safe regime: SPSA converges even faster than PSR; all three decrease steadily, 2PFA being the noisiest.

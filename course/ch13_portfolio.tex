@@ -9,13 +9,13 @@
 \lecture{Applications: Variational Solvers for Markowitz Portfolio Management}{Lect13}
 \chapter{Applications: Variational Solvers for Markowitz Portfolio Management}\label{C.Portfolio}
 
-\ona{This \chap{} takes the portfolio problem of \citet{Markowitz1952}, the running example of \Chap~\chref{C.WSContinuous}, and treats it as an application: what the problem is, in increasing levels of realism following the survey \cite{abbas2024challenges}, how it is encoded for variational solvers, what warm-started QAOA delivers on it \cite{egger2021warm}, and how this compares with what the industry actually needs.}
+\ona{This \chap{} takes the portfolio problem of \citet{Markowitz1952}, the running example of \Chap~\chref{C.WSContinuous}, and treats it as an application: what the problem is, in increasing levels of realism following the survey \citep{abbas2024challenges}, how it is encoded for variational solvers, what warm-started QAOA delivers on it \citep{egger2021warm}, and how this compares with what the industry actually needs.}
 
 \section{Mean--variance portfolio selection}
 
 \begin{frame}\ft{Level 1: Markowitz}
 \onp{\footnotesize}
-\ona{Modern portfolio theory \cite{Markowitz1952} formalises diversification as a mean--variance trade-off. A risk-averse investor in a one-period frictionless market chooses fractions $x \in \R^N$ of a budget to invest in $N$ assets with estimated expected returns $\mu \in \R^N$ and positive semidefinite covariance $\Sigma \in \R^{N\times N}$. Three equivalent formulations:}
+\ona{Modern portfolio theory \citep{Markowitz1952} formalises diversification as a mean--variance trade-off. A risk-averse investor in a one-period frictionless market chooses fractions $x \in \R^N$ of a budget to invest in $N$ assets with estimated expected returns $\mu \in \R^N$ and positive semidefinite covariance $\Sigma \in \R^{N\times N}$. Three equivalent formulations:}
 \begin{align}
     &\min_{x}\ \tfrac12x^\top\Sigma x \quad \text{s.t.}\ \mu^\top x \ge r_{\min},\ \boldsymbol1^\top x = 1,\ x \in \mathcal S;\\
     &\max_x\ \mu^\top x - \tfrac\lambda2x^\top\Sigma x\quad \text{s.t.}\ \boldsymbol1^\top x = 1,\ x \in \mathcal S,
@@ -59,20 +59,20 @@
 
 \begin{frame}\ft{Standard versus warm-started QAOA}
 \ona{Recall from \Chap~\chref{C.WSContinuous} the simulations of \citet{egger2021warm} on six-asset instances: the probability of sampling the optimal portfolio from the optimised trial state is more than five times higher with a warm start at every depth $p \le 5$, and the warm-started energy reaches $E_0$ at $p = 2$ (Fig.~\ref{fig:ch13:pevo}). Standard QAOA reaches $E_0$ at $p=3$ but still samples the optimum rarely: the low energy comes from satisfying the budget penalty, not from finding the best portfolio.}
-\figslide[height=0.5\textheight]{figures/warmstart/figure04.pdf}{(a) Probability of sampling the optimal portfolio and (b) energy of the optimised trial state versus depth, standard QAOA (orange), warm-start QAOA (green), warm initial state with standard mixer (blue) \cite{egger2021warm}.}{fig:ch13:pevo}
+\figslide[height=0.5\textheight]{figures/warmstart/figure04.pdf}{(a) Probability of sampling the optimal portfolio and (b) energy of the optimised trial state versus depth, standard QAOA (orange), warm-start QAOA (green), warm initial state with standard mixer (blue) \citep{egger2021warm}.}{fig:ch13:pevo}
 \end{frame}
 
 \begin{frame}\ft{250 instances at depth one}
-\figslide[height=0.5\textheight]{figures/warmstart/figure05.pdf}{Depth-one QAOA on 250 random portfolio instances \cite{egger2021warm}. (a) Optimised energy relative to $E_0$ with (orange) and without (blue) warm start. (b) Remaining gap of the warm start relative to that of the cold start, against the overlap of the relaxed and binary optima.}{fig:ch13:depth1}
+\figslide[height=0.5\textheight]{figures/warmstart/figure05.pdf}{Depth-one QAOA on 250 random portfolio instances \citep{egger2021warm}. (a) Optimised energy relative to $E_0$ with (orange) and without (blue) warm start. (b) Remaining gap of the warm start relative to that of the cold start, against the overlap of the relaxed and binary optima.}{fig:ch13:depth1}
 \ona{At depth one the cold start is stuck at $0.74\,E_0$ on every instance, while the warm start reaches the optimum on a large fraction, the more so the closer the relaxed and binary optima are. On noisy hardware, depth one is what one can run, and dense all-to-all $H_C$ make depth expensive: this is the regime where the warm start matters most.}
 \end{frame}
 
 \begin{frame}\ft{Other variational approaches to portfolios}
 \begin{itemize}\setlength\itemsep{0.25em}
-    \item \textbf{Constrained ansätze:} the quantum alternating operator ansatz with $XY$ mixers preserves the budget exactly and compares favourably with penalty-based QAOA on trading and investment constraints \cite{Hodson2019}; Zeno-dynamics projections onto the feasible subspace \cite{herman23}.
-    \item \textbf{Alternative objectives:} the Conditional Value at Risk aggregates only the best $\alpha$-fraction of samples \cite{Barkoutsos2020}, which is natural for a risk-averse investor and robust to noise.
-    \item \textbf{Annealing and tensor networks:} dynamic portfolio optimization over 8 years of data for 52 assets compared quantum annealing, VQE and a tensor-network optimizer after dimensionality reduction \cite{mugel22}.
-    \item \textbf{Cardinality-constrained QAOA} on hardware \cite{Brandhofer2023}: solution quality as a function of qubit number and depth.
+    \item \textbf{Constrained ansätze:} the quantum alternating operator ansatz with $XY$ mixers preserves the budget exactly and compares favourably with penalty-based QAOA on trading and investment constraints \citep{Hodson2019}; Zeno-dynamics projections onto the feasible subspace \citep{herman23}.
+    \item \textbf{Alternative objectives:} the Conditional Value at Risk aggregates only the best $\alpha$-fraction of samples \citep{Barkoutsos2020}, which is natural for a risk-averse investor and robust to noise.
+    \item \textbf{Annealing and tensor networks:} dynamic portfolio optimization over 8 years of data for 52 assets compared quantum annealing, VQE and a tensor-network optimizer after dimensionality reduction \citep{mugel22}.
+    \item \textbf{Cardinality-constrained QAOA} on hardware \citep{Brandhofer2023}: solution quality as a function of qubit number and depth.
 \end{itemize}
 \ona{All of these operate at Level 1. The main limitation of current approaches is the neglect of uncertainty in the inputs, of time-dependent correlations, and of the instability of the optimization; the QUBO with penalties only approximately encodes the constraints and requires post-processing. Bridging to Levels 2 and 3 is the research direction.}
 \end{frame}

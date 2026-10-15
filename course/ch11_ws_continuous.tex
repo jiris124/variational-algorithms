@@ -29,7 +29,7 @@
 
 \begin{frame}\ft{The warm initial state and circuit}
 \onp{\begin{center}\includegraphics[height=0.45\textheight]{figures/warmstart/figure01.pdf}\hspace{0.5cm}\includegraphics[height=0.3\textheight]{figures/warmstart/figure02.pdf}\end{center}}
-\ona{\begin{figure}[htb]\centering\includegraphics[width=0.42\linewidth]{figures/warmstart/figure01.pdf}\hfill\includegraphics[width=0.5\linewidth]{figures/warmstart/figure02.pdf}\caption{Left: initial state $R_Y(\theta_i)\ket0$ on the Bloch sphere; the dashed line from $\ket0$ to $\ket1$ is the interval $[0,1]$, the red line the relaxed solution $c_i^\star$, and $\varepsilon$ restricts the allowed angles; the orange path is the evolution under the mixer at $c_i^\star = 0$, $\varepsilon = 0.25$, $\beta = \pi/2$. Right: the WS-QAOA circuit \cite{egger2021warm}.}\label{fig:ch11:bloch}\end{figure}}
+\ona{\begin{figure}[htb]\centering\includegraphics[width=0.42\linewidth]{figures/warmstart/figure01.pdf}\hfill\includegraphics[width=0.5\linewidth]{figures/warmstart/figure02.pdf}\caption{Left: initial state $R_Y(\theta_i)\ket0$ on the Bloch sphere; the dashed line from $\ket0$ to $\ket1$ is the interval $[0,1]$, the red line the relaxed solution $c_i^\star$, and $\varepsilon$ restricts the allowed angles; the orange path is the evolution under the mixer at $c_i^\star = 0$, $\varepsilon = 0.25$, $\beta = \pi/2$. Right: the WS-QAOA circuit \citep{egger2021warm}.}\label{fig:ch11:bloch}\end{figure}}
 \ona{\label{fig:ch11:circuit}}
 \end{frame}
 
@@ -49,13 +49,13 @@
 \section{Simulations}
 
 \begin{frame}\ft{Continuous warm start: portfolio optimization}
-\ona{The test problem is portfolio selection \cite{Markowitz1952} with a budget: $\min_x q\,x^\top\Sigma x - \mu^\top x$ subject to $\boldsymbol 1^\top x = B$, with $n = 6$ assets, $B = 3$, $q = 2$, the constraint enforced by a penalty $\lambda(\boldsymbol 1^\top x - B)^2$, $\lambda = 3$. Covariances and returns come from simulated price series; $c^\star$ from CPLEX; angles from COBYLA seeded uniformly in $\pm2\pi$; statevector simulation.}
-\figslide[height=0.5\textheight]{figures/warmstart/figure04.pdf}{(a) Probability of sampling the optimal portfolio and (b) energy of the optimised state versus depth for standard QAOA, WS-QAOA, and the warm initial state with the standard mixer; medians and quartiles over ten seeds \cite{egger2021warm}.}{fig:ch11:pevo}
+\ona{The test problem is portfolio selection \citep{Markowitz1952} with a budget: $\min_x q\,x^\top\Sigma x - \mu^\top x$ subject to $\boldsymbol 1^\top x = B$, with $n = 6$ assets, $B = 3$, $q = 2$, the constraint enforced by a penalty $\lambda(\boldsymbol 1^\top x - B)^2$, $\lambda = 3$. Covariances and returns come from simulated price series; $c^\star$ from CPLEX; angles from COBYLA seeded uniformly in $\pm2\pi$; statevector simulation.}
+\figslide[height=0.5\textheight]{figures/warmstart/figure04.pdf}{(a) Probability of sampling the optimal portfolio and (b) energy of the optimised state versus depth for standard QAOA, WS-QAOA, and the warm initial state with the standard mixer; medians and quartiles over ten seeds \citep{egger2021warm}.}{fig:ch11:pevo}
 \end{frame}
 
 \begin{frame}\ft{Continuous warm start: 250 instances and annealing}
 \ona{At depth one on 250 random instances, standard QAOA piles up at $0.74\,E_0$ while WS-QAOA spreads up to $E_0$, with the gain largest when relaxed and binary optima overlap (Fig.~\ref{fig:ch01:depth1} in \Chap~\chref{C.Motivation}). From the annealing viewpoint, Trotterised evolution from the mixer ground state needs less time $T$ and fewer steps $N$ with the warm-start mixer than with the transverse field:}
-\figslide[height=0.45\textheight]{figures/warmstart/figure06.pdf}{Normalised energy after Trotterised annealing with the warm-start mixer (a) and the equal-superposition mixer (b), as a function of total time $T$ and number of steps $N$; (c) time-resolved energy at the marked points \cite{egger2021warm}.}{fig:ch11:anneal}
+\figslide[height=0.45\textheight]{figures/warmstart/figure06.pdf}{Normalised energy after Trotterised annealing with the warm-start mixer (a) and the equal-superposition mixer (b), as a function of total time $T$ and number of steps $N$; (c) time-resolved energy at the marked points \citep{egger2021warm}.}{fig:ch11:anneal}
 \end{frame}
 
 \section{Comparison and outlook}

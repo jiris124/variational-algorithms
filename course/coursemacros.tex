@@ -66,3 +66,12 @@
 
 % QR codes (used where the course code is first presented)
 \usepackage{qrcode}
+
+% Annotations in figures, after the style of Needham's "Visual Differential Geometry and Forms":
+% brief italic comments with arrows pointing at the key elements.
+%   \node[note] (a) at (x,y) {comment};  \draw[notearrow] (a) -- (target);
+\definecolor{annot}{RGB}{0,95,115}
+\tikzset{
+  note/.style={font=\scriptsize\itshape, text=annot, align=left, inner sep=1pt},
+  notearrow/.style={-{Stealth[length=4pt,width=3pt]}, annot, semithick, shorten >=1.5pt, shorten <=1pt},
+}

@@ -8,41 +8,408 @@
 \ona{ \setcounter{chapter}{3} } % ONE LESS
 \lecture{Adiabatic Quantum Computing and Quantum Annealing}{Lect04}
 \chapter{Adiabatic Quantum Computing and Quantum Annealing}\label{C.Annealing}
+\ona{\sloppy}
 
-\ona{This \chap{} introduces the adiabatic paradigm from which QAOA descends, and then follows \citet{nagaj2012quantum}, \emph{Quantum Speedup by Quantum Annealing}, to show that quantum annealing can be exponentially faster than any classical algorithm on an oracular problem, and, remarkably, that it can be so even when the minimum spectral gap is exponentially small.}
+\ona{This \chap{} introduces the adiabatic paradigm, from which QAOA descends. We begin with the physical idea, that a quantum system kept in its lowest state while its Hamiltonian is changed slowly ends in the lowest state of the final Hamiltonian, and with the condition that ``slowly'' must satisfy: the time required grows as the inverse square of the smallest gap between the two lowest energy levels. We see this on the simplest example, a two-level avoided crossing, and on adiabatic search, where the right schedule recovers Grover's quadratic speedup. We then follow \citet{nagaj2012quantum}, \emph{Quantum Speedup by Quantum Annealing}, through the proof that quantum annealing can be exponentially faster than any classical algorithm on an oracle problem, and that it can be so even when the smallest gap is exponentially small. We give the structure of the proof in full, but quote the finite-$n$ estimates of the spectrum from the supplementary material of the paper, with a heuristic explanation of the main one. This is the result promised in \Chap~\chref{C.EQA}. The convergence of the adiabatic algorithm in general, without any assumption on the gap, is proved in \Chap~\chref{C.QAOA}.}
 
 \section{The adiabatic paradigm}
 
-\begin{frame}\ft{Quantum annealing and adiabatic quantum computing}
-\ona{Quantum annealing is a heuristic to solve problems in optimization. The method consists of preparing a low-energy or ground state $\ket\psi$ of a quantum system such that, after a simple measurement, the optimal solution is obtained with large probability. $\ket\psi$ is prepared by following an \emph{annealing schedule}: a parametrised Hamiltonian path}
+\begin{frame}\ft{From simulated to quantum annealing}
+\ona{\emph{Simulated annealing} looks for the minimum of a function by a random walk at a temperature that is lowered slowly, so that the walk can climb out of local minima early on and settles into a deep minimum at the end. \emph{Quantum annealing} replaces thermal fluctuations by quantum ones: the walker can tunnel through barriers rather than climb over them. The idea was proposed for continuous optimization by \citet{FINNILA1994343}, and for Ising models, the form used in combinatorial optimization, by \citet{kadowaki1998quantum}. Independently, \citet{farhi2000quantumAdiabatic} proposed \emph{adiabatic quantum computation} (AQC), in which the evolution is slow enough for the system to stay in its ground state, and applied it to random instances of an $\mathbf{NP}$-complete problem \citep{farhi2001quantum}. The common framework is a path of Hamiltonians}
 \begin{equation}\label{eq:ch04:path}
     H(s) = (1-s)\,H_{\rm init} + s\, H_{\rm final}, \qquad s = s(t) \in [0,1],
 \end{equation}
-\ona{whose initial ground state is easy to prepare and whose final ground state encodes the solution. A ground state of $H_{\rm init}$ is transformed into $\ket\psi$ by varying $s$ slowly.}
+\ona{whose initial ground state is easy to prepare and whose final ground state encodes the solution. The function $s(t)$, increasing from $0$ to $1$ over a total time $T$, is the \emph{annealing schedule}.}
 \begin{itemize}\setlength\itemsep{0.2em}
-    \item For optimization, $H_{\rm final} = H_C$ is diagonal and $H_{\rm init} = -\sum_j X_j$ with ground state $\ket{+}^{\otimes n}$; this is the continuous-time ancestor of QAOA, whose angles are a discretisation of $s(t)$ (\Chap~\chref{C.QAOA}).
-    \item The Hamiltonians along the path are \emph{stoquastic}: off-diagonal entries are non-positive in the computational basis, so there is no numerical sign problem, and quantum Monte Carlo can simulate them classically in many cases.
+    \item For optimization, $H_{\rm final} = H_C$ is the diagonal cost Hamiltonian of \Chap~\chref{C.Motivation}, and $H_{\rm init} = -\sum_j X_j$, the \emph{transverse field}, with ground state $\ket{+}^{\otimes n}$, the uniform superposition over all bit strings. QAOA is a discretisation of this evolution, its angles playing the role of $s(t)$ (\Chap~\chref{C.QAOA}).
+    \item These Hamiltonians are \emph{stoquastic}: their off-diagonal entries in the computational basis are real and non-positive \citep{bravyi2008complexity}. By the Perron--Frobenius theorem a ground state can then be chosen with non-negative amplitudes, so there is no \emph{sign problem}, and quantum Monte Carlo can often sample from them classically \citep{santoro2002theory}.
 \end{itemize}
+\ona{Whether a quantum device can do substantially better than such classical simulations of annealing is the question this \chap{} answers, in one setting.}
+\end{frame}
+
+\begin{frame}\ft{Over the barrier, or through it}
+\ona{The difference between the two kinds of annealing is easiest to see on a landscape with two valleys (Fig.~\ref{fig:ch04:tunnel}). A thermal walker in the shallower valley escapes only by climbing over the barrier, which takes time exponential in its height divided by the temperature. A quantum system can also tunnel through the barrier, with an amplitude that decays exponentially in its width times the square root of its height. Tall but thin barriers therefore favour quantum annealing, and wide ones do not, which is one reason why no general advantage is expected.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.34\linewidth}}\onp{\gdef\plotH{0.32\linewidth}}
+\begin{axis}[width=0.55\linewidth,height=\plotH,clip=false,axis lines=left,xtick=\empty,ytick=\empty,xlabel={configuration},ylabel={cost},xmin=-2.2,xmax=2.2,ymin=-1.6,ymax=1.1,samples=200,no markers,domain=-2.15:2.15]
+  \addplot[very thick,black] {x^4/4 - x^2 + 0.25*x};
+  \fill[blue!70!black] (axis cs:1.37,-0.62) circle (3pt);
+  \draw[-{Latex},very thick,red!70!black] (axis cs:1.3,-0.5) .. controls (axis cs:0.9,0.9) and (axis cs:-0.6,0.9) .. (axis cs:-1.35,-1.2);
+  \node[red!70!black,font=\scriptsize] at (axis cs:0.15,0.78) {thermal: over the barrier};
+  \draw[-{Latex},very thick,dashed,blue!70!black] (axis cs:1.2,-0.62) -- (axis cs:-0.7,-0.62);
+  \node[blue!70!black,font=\scriptsize,below] at (axis cs:0.3,-0.65) {quantum: through it};
+  \node[note,anchor=west] (nl) at (axis cs:2.3,-0.3) {stuck in a local\\minimum};
+  \draw[notearrow] (nl.west) -- (axis cs:1.45,-0.6);
+  \node[note,anchor=west] (ng) at (axis cs:2.3,-1.25) {the global minimum:\\the answer};
+  \draw[notearrow] (ng.west) to[bend left=15] (axis cs:-1.45,-1.42);
+  \node[note,anchor=west] (nb) at (axis cs:2.3,0.75) {barrier: its height sets\\the thermal rate, its\\width the tunnelling rate};
+  \draw[notearrow] (nb.west) to[bend right=20] (axis cs:0.15,0.05);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Simulated annealing escapes a local minimum by thermal activation over the barrier; quantum annealing can also tunnel through it. The comparison depends on the shape of the barrier: tunnelling favours tall, thin barriers.}\label{fig:ch04:tunnel}\end{figure}}
+\onp{\footnotesize Thermal escape: exponential in height/temperature. Tunnelling: exponential in width $\times\sqrt{\text{height}}$.}
+\end{frame}
+
+\begin{frame}\ft{Two levels: the Landau--Zener picture}
+\onp{\footnotesize}
+\ona{Everything about the adiabatic condition can be seen in a system of two levels. Consider}
+\begin{equation}\label{eq:ch04:lz}
+    H(t) = \frac{vt}{2}\,Z + \frac{\Delta}{2}\,X, \qquad t \in (-\infty,\infty),
+\end{equation}
+\ona{whose eigenvalues $\pm\tfrac12\sqrt{v^2t^2+\Delta^2}$ approach each other as $t\to0$ but never meet: an \emph{avoided crossing} with minimum gap $\Delta$ (Fig.~\ref{fig:ch04:lz}). Far from $t=0$ the eigenvectors are close to $\ket0$ and $\ket1$; passing through the crossing, the ground state changes from $\ket0$, whose energy $vt/2$ is negative for $t<0$, to $\ket1$. If the system starts in the ground state at $t\to-\infty$, the probability of ending in the excited state is given by the Landau--Zener formula \citep{zener1932non},}
+\begin{equation}\label{eq:ch04:lzformula}
+    P_{\rm diabatic} = \exp\Big(-\frac{\pi\Delta^2}{2v}\Big).
+\end{equation}
+\ona{If the sweep is slow, $v \ll \Delta^2$, the system follows the ground state; if it is fast, $v\gg\Delta^2$, it does not have time to turn and stays in $\ket0$, which is now the excited state. The time spent near the crossing is about $\Delta/v$, so following the ground state takes time of order $1/\Delta^2$. Remember the alternative: a fast passage moves the state to the other level almost with certainty. This will be put to use in the glued-trees algorithm.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.36\linewidth}}\onp{\gdef\plotH{0.3\linewidth}}
+\begin{axis}[width=0.5\linewidth,height=\plotH,clip=false,xlabel={$vt$},ylabel={energy},xmin=-4,xmax=4,ymin=-2.2,ymax=2.2,domain=-4:4,samples=120,no markers,thick,axis lines=left]
+  \addplot[blue!70!black] {0.5*sqrt(x^2+1)};
+  \addplot[red!70!black] {-0.5*sqrt(x^2+1)};
+  \addplot[gray,dashed] {x/2};
+  \addplot[gray,dashed] {-x/2};
+  \draw[<->,thick] (axis cs:0.25,-0.5) -- (axis cs:0.25,0.5) node[midway,right,font=\scriptsize] {$\Delta$};
+  \draw[-{Latex},very thick,green!40!black] (axis cs:-3.5,-1.95) to[out=10,in=190] (axis cs:3.5,-1.95);
+  \node[green!40!black,font=\scriptsize] at (axis cs:1.2,-1.45) {slow: stays in ground state};
+  \draw[-{Latex},very thick,orange!80!black] (axis cs:-3.5,-1.6) -- (axis cs:3.5,1.6);
+  \node[orange!80!black,font=\scriptsize,rotate=24] at (axis cs:2.0,1.45) {fast: jumps};
+  \node[note,anchor=west] (nd) at (axis cs:4.6,1.9) {bottleneck: smallest gap $\Delta$};
+  \draw[notearrow] (nd.west) to[bend right=15] (axis cs:0.35,0.45);
+  \node[note,anchor=west] (n0) at (axis cs:4.6,0.4) {$t<0$: ground state $\approx\ket0$};
+  \draw[notearrow] (n0.west) to[bend left=25] (axis cs:-3.2,-1.62);
+  \node[note,anchor=west] (n1) at (axis cs:4.6,-1.2) {$t>0$: ground state $\approx\ket1$};
+  \draw[notearrow] (n1.west) to[bend left=10] (axis cs:3.4,-1.75);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The two levels of \eqref{eq:ch04:lz}, excited (blue) and ground (red). Far from the crossing the eigenvectors are close to $\ket0$ and $\ket1$, whose energies $\pm vt/2$ (dashed) would cross; the coupling $\Delta$ turns the crossing into an avoided one. A slow sweep follows the ground state; a fast sweep stays on the dashed line and so ends in the excited state, with the probability \eqref{eq:ch04:lzformula}.}\label{fig:ch04:lz}\end{figure}}
+\onp{\footnotesize Blue: excited; red: ground. Slow ($v\ll\Delta^2$): follow the ground state. Fast ($v\gg\Delta^2$): jump to the other level. Time $\sim 1/\Delta^2$.}
+\end{frame}
+
+\begin{frame}\ft{How fast is too fast?}
+\ona{The Landau--Zener formula \eqref{eq:ch04:lzformula} depends on the sweep rate $v$ and the gap $\Delta$ only through $v/\Delta^2$ (Fig.~\ref{fig:ch04:lzcurve}). The transition is sharp: at $v/\Delta^2 = 0.1$ a jump has probability $1.5\times10^{-7}$, at $1$ about $0.21$, at $10$ about $0.85$, and at $100$ about $0.98$. An algorithm can therefore rely on either extreme: on following the ground state when it is slow compared with $\Delta^2$, or on jumping when it is fast.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.34\linewidth}}\onp{\gdef\plotH{0.3\linewidth}}
+\begin{axis}[width=0.55\linewidth,height=\plotH,clip=false,xmode=log,xmin=0.01,xmax=100,ymin=0,ymax=1.05,xlabel={sweep rate $v/\Delta^2$},ylabel={$P_{\rm diabatic}$},axis lines=left,samples=200,domain=0.01:100,no markers,thick]
+  \fill[green!12] (axis cs:0.01,0) rectangle (axis cs:0.1,1.05);
+  \fill[orange!15] (axis cs:10,0) rectangle (axis cs:100,1.05);
+  \addplot[blue!70!black] {exp(-pi/(2*x))};
+  \node[green!40!black,font=\scriptsize,align=center] at (axis cs:0.032,0.6) {adiabatic:\\stays};
+  \node[orange!80!black,font=\scriptsize,align=center] at (axis cs:32,0.4) {diabatic:\\jumps};
+  \fill[annot] (axis cs:1,0.208) circle (1.5pt);
+  \node[note,anchor=west] (nv) at (axis cs:150,0.25) {at $v = \Delta^2$ the jump\\still happens with\\probability $0.21$};
+  \draw[notearrow] (nv.west) to[bend left=12] (axis cs:1.1,0.2);
+  \node[note,anchor=west] (nw) at (axis cs:150,0.8) {the crossover spans\\only two decades\\of sweep rate};
+  \draw[notearrow] (nw.west) to[bend right=12] (axis cs:3,0.6);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The probability $\exp(-\pi\Delta^2/2v)$ of a diabatic transition at an avoided crossing with gap $\Delta$, against the sweep rate $v/\Delta^2$ on a logarithmic scale.}\label{fig:ch04:lzcurve}\end{figure}}
+\onp{\footnotesize Only $v/\Delta^2$ matters: slow $\Rightarrow$ stay, fast $\Rightarrow$ jump.}
 \end{frame}
 
 \begin{frame}\ft{The adiabatic approximation}
-\ona{A sufficient condition for convergence is given by the quantum adiabatic approximation. It asserts that, if the rate of change of the Hamiltonian scales with the energy gap $\Delta$ between the two lowest-energy states, the ground state can be prepared with controlled accuracy. In the form we use:}
+\onp{\footnotesize}
+\ona{For a general path, the role of $\Delta$ is played by the spectral gap $\Delta(s)$ between the level being followed and the nearest other level. In the form used by \citet{nagaj2012quantum}, following \citet{jansen2007bounds}:}
 \begin{thm}[Adiabatic approximation, informal]\label{thm:ch04:adiabatic}
-Let the initial state be an eigenstate of $H(s_0)$ and let $\Delta(s)$ be the spectral gap to the nearest eigenstate on $s_0 \le s \le s_f$. Then an annealing rate $\dot s(t) \propto \varepsilon\,\Delta^2(s)$, or smaller, prepares the corresponding eigenstate of $H(s_f)$ with overlap at least $\sqrt{1-\varepsilon(s_f - s_0)}$.
+Let the initial state be an eigenstate of $H(s_0)$ and let $\Delta(s)$ be the gap to the nearest other eigenvalue on $s_0 \le s \le s_f$. Then an annealing rate $\dot s(t) \propto \varepsilon\,\Delta^2(s)$, or smaller, prepares the corresponding eigenstate of $H(s_f)$ with overlap at least $\sqrt{1-\varepsilon(s_f - s_0)}$.
 \end{thm}
-\begin{itemize}\setlength\itemsep{0.2em}
-    \item Total time $T \sim 1/\Delta_{\min}^2$; for many optimization problems $\Delta_{\min}$ is exponentially small in $n$, so the exact algorithm is exponentially slow.
-    \item The approximation may also be \emph{necessary}: but it results in undesired overheads if $\Delta$ is small yet transitions are forbidden by selection rules, or if transitions can be \emph{exploited}. The latter is the case below.
+\ona{The proportionality constant hides the size of the derivatives of $H(s)$: rigorous versions bound the error by terms such as $\|H'\|^2/\Delta^3$ and $\|H''\|/\Delta^2$, integrated along the path \citep{jansen2007bounds}. For every path in this \chap{} the norms $\|H'\|$ and $\|H''\|$ are $\mathcal O(1)$, so the gap alone decides.}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item With a constant rate, the total time is $T \sim 1/\Delta_{\min}^2$, where $\Delta_{\min}$ is the smallest gap along the path. For many optimization problems $\Delta_{\min}$ is exponentially small in $n$ \citep{vandam2001powerful,altshuler2010anderson}, and the guarantee is then exponential.
+    \item A \emph{local} schedule, slow only where the gap is small, can do much better, as the next slide shows.
+    \item The condition is \emph{sufficient}, not necessary. It is wasteful if the small gap is to a level that the evolution cannot reach for reasons of symmetry, or if the transitions it allows can be put to use. The latter happens in the glued-trees algorithm.
 \end{itemize}
+\ona{\Chap~\chref{C.QAOA} proves an adiabatic theorem with no condition on the gap, which suffices for convergence but gives no rate. A thorough survey of adiabatic quantum computation is \citet{AlbashAdiabaticQC18}.}
 \end{frame}
 
-\begin{frame}\ft{The question}
-\ona{Because the Hamiltonians are stoquastic, the annealing can be simulated by probabilistic classical methods such as quantum Monte Carlo (QMC). Efficient QMC simulations exist whenever the Hamiltonians are, in addition, frustration-free. This places a doubt on whether a quantum-computer simulation of general quantum annealing can ever be done with substantially fewer resources than QMC or any other classical simulation.}
-\begin{center}
-\textit{Is there a problem on which quantum annealing with stoquastic Hamiltonians is provably, exponentially faster than any classical algorithm?}
+\begin{frame}\ft{Adiabatic search: the schedule matters}
+\onp{\footnotesize}
+\ona{Search for a marked element $m$ among $N = 2^n$, starting from the uniform superposition $\ket{+} = \ket{+}^{\otimes n}$, along}
+\begin{equation*}
+    H(s) = (1-s)\,(\one - \ket{+}\!\bra{+}) + s\,(\one - \ket m\!\bra m).
+\end{equation*}
+\ona{The evolution stays in the plane spanned by $\ket{+}$ and $\ket m$, and the gap between the two lowest levels in it is \citep{roland2002quantum}}
+\begin{equation}\label{eq:ch04:grovergap}
+    \Delta(s) = \sqrt{1 - 4\big(1-\tfrac1N\big)\,s(1-s)}, \qquad \Delta_{\min} = \Delta(\tfrac12) = \tfrac1{\sqrt N}.
+\end{equation}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.33\linewidth}}\onp{\gdef\plotH{0.27\linewidth}}
+\begin{axis}[width=0.5\linewidth,height=\plotH,clip=false,xlabel={$s$},ylabel={$\Delta(s)$},xmin=0,xmax=1,ymin=0,ymax=1.05,domain=0:1,samples=300,no markers,thick,axis lines=left,legend style={font=\scriptsize,draw=none,at={(0.5,0.98)},anchor=north}]
+  \addplot[blue!70!black] {sqrt(1-4*(1-1/64)*x*(1-x))};
+  \addplot[red!70!black] {sqrt(1-4*(1-1/1024)*x*(1-x))};
+  \legend{$N=64$,$N=1024$}
+  \node[note,anchor=west] (nf) at (axis cs:1.08,1.0) {gap near $1$: one may hurry};
+  \draw[notearrow] (nf.west) to[bend right=10] (axis cs:0.94,0.9);
+  \node[note,anchor=west] (nw) at (axis cs:1.08,0.55) {all the difficulty: a window\\of width $\approx 1/\sqrt N$};
+  \draw[notearrow] (nw.west) to[bend right=10] (axis cs:0.57,0.2);
+  \node[note,anchor=west] (nm) at (axis cs:1.08,0.08) {minimum $1/\sqrt N$ at $s = 1/2$};
+  \draw[notearrow] (nm.west) to[bend left=10] (axis cs:0.52,0.035);
+\end{axis}
+\end{tikzpicture}
 \end{center}
-\ona{\citet{nagaj2012quantum} answer yes, on an oracular problem: the glued trees of \citet{childs2003exponential}, for which quantum walks were already known to be exponentially faster than classical algorithms, but for which no efficient annealing schedule was known.}
+\ona{\caption{The gap \eqref{eq:ch04:grovergap} of adiabatic search for $N = 64$ and $N = 1024$. It is close to $1$ except in a window of width about $1/\sqrt N$ around $s = 1/2$, where it drops to $1/\sqrt N$.}\label{fig:ch04:grover}\end{figure}}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item \textbf{Constant rate:} $T \sim 1/\Delta_{\min}^2 = N$, no better than classical search.
+    \item \textbf{Local schedule} $\dot s \propto \varepsilon\Delta^2(s)$: $T \sim \int_0^1 ds/\Delta^2(s) \sim \sqrt N$, Grover's quadratic speedup \citep{roland2002quantum}, which no quantum algorithm can beat \citep{bennett1997strengths}.
+\end{itemize}
+\ona{The gap is small only on a short interval, and a schedule that slows down only there pays for it only there. Knowing where to slow down, however, requires knowing the spectrum, which in general one does not.}
 \end{frame}
+
+
+\begin{frame}\ft{The local schedule}
+\ona{With $\dot s = \varepsilon\Delta^2(s)$ the schedule can be computed in closed form. Writing $k = \sqrt{N-1}$, the total time is $T = \frac1\varepsilon\int_0^1\frac{ds}{\Delta^2(s)}$, and the fraction of it needed to reach $s$ is}
+\begin{equation*}
+    \frac{t(s)}{T} = \frac{\arctan\big((2s-1)k\big) + \arctan k}{2\arctan k}, \qquad T = \frac{N\arctan k}{\varepsilon\sqrt{N-1}} \;\approx\; \frac{\pi}{2\varepsilon}\sqrt N.
+\end{equation*}
+\ona{The schedule rushes through the regions of large gap and spends almost all its time near $s = 1/2$ (Fig.~\ref{fig:ch04:schedules}).}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.36\linewidth}}\onp{\gdef\plotH{0.3\linewidth}}
+\begin{axis}[width=0.45\linewidth,height=\plotH,clip=false,xmin=0,xmax=1,ymin=0,ymax=1,xlabel={$t/T$},ylabel={$s$},axis lines=left,no markers,thick,legend style={font=\scriptsize,draw=none,at={(0.98,0.02)},anchor=south east}]
+  \addplot[gray,dashed,domain=0:1] {x};
+  \addplot[red!70!black,variable=\t,domain=0:1,samples=400] ({(atan((2*\t-1)*31.984)+atan(31.984))/(2*atan(31.984))},{\t});
+  \legend{linear,local (Roland--Cerf)}
+  \node[note,anchor=west] (nl) at (axis cs:1.08,0.95) {linear: the same pace\\everywhere, so $T\sim N$};
+  \draw[notearrow] (nl.west) to[bend right=10] (axis cs:0.84,0.82);
+  \node[note,anchor=west] (np) at (axis cs:1.08,0.55) {almost all the time is\\spent near $s = 1/2$};
+  \draw[notearrow] (np.west) to[bend left=10] (axis cs:0.62,0.505);
+  \node[note,anchor=west] (nr) at (axis cs:1.08,0.12) {rushes through the\\regions of large gap};
+  \draw[notearrow] (nr.west) to[bend left=15] (axis cs:0.03,0.3);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Linear and local schedules for adiabatic search with $N = 1024$. The local schedule moves quickly where the gap \eqref{eq:ch04:grovergap} is large and slowly in a window of width about $1/\sqrt N$ around $s = 1/2$, where it is small.}\label{fig:ch04:schedules}\end{figure}}
+\onp{\footnotesize $\dot s = \varepsilon\Delta^2(s)$: fast where the gap is large, slow near $s = 1/2$; $T \approx \frac{\pi}{2\varepsilon}\sqrt N$.}
+\end{frame}
+
+\begin{frame}\ft{Annealing a small MaxCut instance}
+\ona{For the optimization problems of this course the spectrum along the path can be computed exactly when the instance is small. Figure~\ref{fig:ch04:maxcut} shows the four lowest levels of $H(s) = -(1-s)\sum_jX_j + s\,H_C$ for MaxCut on a $3$-regular graph with $8$ vertices and $12$ edges, whose maximum cut, $10$, is unique up to exchanging the two sides; $H_C$ assigns to each bit string minus the size of its cut. As the evolution commutes with flipping all spins, and starts in a state invariant under it, we may restrict to the invariant states, which removes the trivial degeneracy of each cut with its complement. The smallest gap, $0.66$, occurs at $s\approx0.67$, late in the evolution, where the transverse field carries a third of the weight and the levels have begun to follow the cut values. For larger random instances such late avoided crossings are what makes the gap small \citep{altshuler2010anderson}. The data are computed by \texttt{code/ch04\_figures.py}.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[baseline=(base)]
+  \coordinate (base) at (0,-0.3);
+  \foreach \i in {0,...,7} {\coordinate (v\i) at ({90-45*\i}:1.05);}
+  \foreach \u/\v in {0/1,0/2,0/7,1/5,1/7,2/4,2/7,3/4,3/5,3/6,4/6,5/6} {\draw[gray] (v\u) -- (v\v);}
+  \foreach \u/\v in {0/7,3/6} {\draw[gray,dashed] (v\u) -- (v\v);}
+  \foreach \i in {0,4,5,7} {\fill[blue!70!black] (v\i) circle (2.6pt);}
+  \foreach \i in {1,2,3,6} {\fill[red!70!black] (v\i) circle (2.6pt);}
+  \node[note,anchor=north] (nc) at (0,-1.35) {the maximum cut:\\colours are the two sides;\\only the $2$ dashed edges\\are not cut};
+\end{tikzpicture}\hspace{1em}
+\begin{tikzpicture}[baseline=(current axis.center)]
+\ona{\gdef\plotH{0.36\linewidth}}\onp{\gdef\plotH{0.3\linewidth}}
+\begin{axis}[width=0.5\linewidth,height=\plotH,clip=false,xmin=0,xmax=1,ymin=-10.3,ymax=-3.8,xlabel={$s$},ylabel={energy},axis lines=left,no markers,thick,legend style={font=\tiny,draw=none,at={(0.98,0.98)},anchor=north east}]
+  \addplot[blue!70!black] table[x=s,y=l0] {figures/ch04/maxcut_spectrum.dat};
+  \addplot[red!70!black] table[x=s,y=l1] {figures/ch04/maxcut_spectrum.dat};
+  \addplot[orange!80!black] table[x=s,y=l2] {figures/ch04/maxcut_spectrum.dat};
+  \addplot[gray] table[x=s,y=l3] {figures/ch04/maxcut_spectrum.dat};
+  \legend{$\lambda_0$,$\lambda_1$,$\lambda_2$,$\lambda_3$}
+  \draw[annot,dotted,thick] (axis cs:0.665,-10) -- (axis cs:0.665,-4);
+  \node[note,anchor=south] (ng) at (axis cs:0.45,-4.1) {smallest gap $0.66$,\\late, at $s\approx0.67$};
+  \draw[notearrow] (ng.south east) to[bend left=10] (axis cs:0.665,-7.6);
+  \node[note,anchor=west] (n0) at (axis cs:0.06,-8.9) {$-8$: all spins along $x$};
+  \draw[notearrow] (n0.north west) to[bend left=20] (axis cs:0.0,-8.05);
+  \node[note,anchor=west] (n1) at (axis cs:1.04,-9.8) {$-10$: the\\maximum cut};
+  \draw[notearrow] (n1.west) -- (axis cs:1.0,-10);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Left: a $3$-regular graph on $8$ vertices with a unique maximum cut of size $10$. Right: the four lowest eigenvalues of $-(1-s)\sum_jX_j + s\,H_C$ on states invariant under flipping all spins. At $s = 1$ the ground energy is $-10$; the smallest gap, $0.66$, is at $s\approx0.67$.}\label{fig:ch04:maxcut}\end{figure}}
+\onp{\footnotesize Smallest gap $0.66$ at $s\approx0.67$, late in the evolution.}
+\end{frame}
+
+\section{Adiabatic computation is universal}
+
+\begin{frame}\ft{The model, made precise}
+\onp{\footnotesize}
+\ona{How powerful is adiabatic computation? It can be simulated by ordinary quantum circuits, by discretising the evolution, so it is no more powerful than the circuit model. \citet{aharonov2007adiabatic} showed the converse, and thereby that the two models are equivalent. Their definition is the following.}
+\begin{defn}[Adiabatic computation, \citet{aharonov2007adiabatic}]
+A $k$-local adiabatic computation is given by two $k$-local Hamiltonians $H_{\rm init}$ and $H_{\rm final}$ on $n$ particles, each with a unique ground state, that of $H_{\rm init}$ being a product state. The system evolves under $H(t/T)$ along the straight line \eqref{eq:ch04:path}, and the output is a state $\epsilon$-close to the ground state of $H_{\rm final}$. The \emph{running time} is $T\cdot\max_s\|H(s)\|$.
+\end{defn}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \textbf{Running time includes the energy.} Multiplying $H$ by $c$ and dividing $T$ by $c$ leaves the Schrödinger equation unchanged, so $T$ alone could be made arbitrarily small; $T\cdot\max\|H\|$ is invariant.
+    \item \textbf{The adiabatic theorem} in their form: for any fixed $\delta>0$, a time $T \in \Omega\big(\|H_{\rm final}-H_{\rm init}\|^{1+\delta}/(\epsilon^\delta\Delta_{\min}^{2+\delta})\big)$ suffices. Polynomial norms and an inverse-polynomial gap $\Delta_{\min}$ therefore give a polynomial running time.
+    \item \textbf{Invariant subspaces.} If every $H(s)$ leaves a subspace $\mathcal S$ invariant and the evolution starts in it, only the gap of $H(s)$ restricted to $\mathcal S$ matters. We used the same device for the column subspace of the glued trees.
+\end{itemize}
+\ona{The general definition allows any local $H_{\rm final}$, not only diagonal ones. Adiabatic \emph{optimization}, with a diagonal $H_{\rm final}$, is a special case, to which we return below.}
+\end{frame}
+
+\begin{frame}\ft{The obstacle, and the history state}
+\ona{Given a circuit of $L$ two-qubit gates $U_1,\dots,U_L$ acting on $\ket{0^n}$, write $\ket{\alpha(\ell)}$ for the state after $\ell$ gates. The natural idea is to choose $H_{\rm final}$ with ground state $\ket{\alpha(L)}$. But that state is unknown, it being what the circuit is to compute, and a sequence of local gates, applied one after another, is quite unlike a local Hamiltonian, whose terms constrain the state simultaneously. The resolution, due to Feynman \citep{feynman1986quantum} and Kitaev \citep{kitaev2002classical}, is to aim for the whole \emph{history} of the computation instead:}
+\begin{equation}\label{eq:ch04:history}
+    \ket\eta = \frac1{\sqrt{L+1}}\sum_{\ell=0}^L\ket{\gamma_\ell}, \qquad \ket{\gamma_\ell} = \ket{\alpha(\ell)}\otimes\ket{1^\ell0^{L-\ell}}^c,
+\end{equation}
+\ona{where the second register, of $L$ qubits, is a clock counting the steps in unary. Each step can be checked locally: the Hamiltonian need only compare the state at times $\ell-1$ and $\ell$, which differ by one gate and one clock qubit. Every term below is positive semidefinite and penalises a violation, so the desired state, which violates nothing, has energy $0$ and is a ground state:}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item $H_{\rm clock} = \sum_\ell\ket{01}\!\bra{01}^c_{\ell,\ell+1}$ penalises clock states not of the form $1^\ell0^{L-\ell}$;
+    \item $H_{\rm input} = \sum_i\ket1\!\bra1_i\otimes\ket0\!\bra0^c_1$ penalises a wrong input at time $0$;
+    \item $H_{\rm clockinit} = \ket1\!\bra1^c_1$ penalises any time other than $0$;
+    \item $H_\ell = \one\otimes\ket{100}\!\bra{100}^c - U_\ell\otimes\ket{110}\!\bra{100}^c - U_\ell^\dagger\otimes\ket{100}\!\bra{110}^c + \one\otimes\ket{110}\!\bra{110}^c$, on clock qubits $\ell-1,\ell,\ell+1$, penalises any step from $\ell-1$ to $\ell$ that is not the gate $U_\ell$.
+\end{itemize}
+\ona{Then $H_{\rm init} = H_{\rm clockinit} + H_{\rm input} + H_{\rm clock}$ has ground state $\ket{\gamma_0}$, a product state, and $H_{\rm final} = \tfrac12\sum_\ell H_\ell + H_{\rm input} + H_{\rm clock}$ has ground state $\ket\eta$. Both are $5$-local, involving three clock qubits and two computational ones, and both can be written down from the circuit without knowing its output.}
+\onp{\footnotesize Target the history state $\ket\eta$, not the unknown output: each step is checked locally against a unary clock.}
+\end{frame}
+
+\begin{frame}\ft{The history state, pictured}
+\ona{Figure~\ref{fig:ch04:historycircuit} shows the states that the history state \eqref{eq:ch04:history} superposes, for a circuit of four gates on three qubits. Each time slice is paired with its clock state, so the slices remain orthogonal and the superposition records the whole computation.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[x=1.5cm,y=0.6cm,every node/.style={font=\scriptsize},g/.style={draw,fill=white,minimum width=0.6cm,minimum height=0.45cm}]
+  \foreach \q in {1,2,3} {\draw (0,-\q) node[left] {$\ket0$} -- (4.6,-\q);}
+  \node[g,minimum height=1.05cm] at (0.6,-1.5) {$U_1$};
+  \node[g,minimum height=1.05cm] at (1.6,-2.5) {$U_2$};
+  \node[g] at (2.6,-1) {$U_3$};
+  \node[g,minimum height=1.05cm] at (3.6,-2.5) {$U_4$};
+  \foreach \l/\x/\c in {0/0.1/0000,1/1.1/1000,2/2.1/1100,3/3.1/1110,4/4.1/1111} {
+    \draw[dashed,gray] (\x,-0.4) -- (\x,-3.6);
+    \node at (\x,0) {$\ket{\alpha(\l)}$};
+    \node at (\x,-4.2) {$\ket{\c}^c$};
+  }
+  \node[note,anchor=west] (nc) at (4.75,-4.2) {the clock, in unary:\\one more $1$ per gate};
+  \draw[notearrow] (nc.west) -- (4.45,-4.2);
+  \node[note,anchor=west] (na) at (4.75,0.3) {the state after\\$\ell$ gates};
+  \draw[notearrow] (na.west) -- (4.45,0.05);
+  \node[note,anchor=north] (nh) at (2.1,-4.85) {the history state is the uniform superposition of the five\\columns: each slice, tagged by its clock, is orthogonal to the others};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{A circuit of $L = 4$ gates on three qubits. At each dashed line the circuit is in the state $\ket{\alpha(\ell)}$, shown above, and the clock is in the unary state $\ket{1^\ell0^{L-\ell}}^c$, shown below. The history state is the uniform superposition of the five products $\ket{\alpha(\ell)}\otimes\ket{1^\ell0^{L-\ell}}^c$.}\label{fig:ch04:historycircuit}\end{figure}}
+\onp{\footnotesize $\ket\eta = \frac1{\sqrt5}\sum_{\ell=0}^4\ket{\alpha(\ell)}\otimes\ket{1^\ell0^{4-\ell}}^c$.}
+\end{frame}
+
+
+\begin{frame}\ft{A particle on a line, again}
+\onp{\footnotesize}
+\ona{The span $\mathcal S_0$ of $\ket{\gamma_0},\dots,\ket{\gamma_L}$ is invariant under $H(s)$, and $\ket{\gamma_0}\in\mathcal S_0$, so only the restriction of $H(s)$ to $\mathcal S_0$ matters. In the basis $\ket{\gamma_\ell}$, $H_{\rm clock}$ and $H_{\rm input}$ vanish, $H_{\rm init} = \mathrm{diag}(0,1,\dots,1)$, and each $H_\ell$ acts like $\ket{\gamma_{\ell-1}}\!\bra{\gamma_{\ell-1}} + \ket{\gamma_\ell}\!\bra{\gamma_\ell} - \ket{\gamma_\ell}\!\bra{\gamma_{\ell-1}} - \ket{\gamma_{\ell-1}}\!\bra{\gamma_\ell}$: the gates have disappeared. So}
+\begin{equation}\label{eq:ch04:historyline}
+    H_{\mathcal S_0}(s) = \begin{pmatrix} \frac s2 & -\frac s2 & & & \\ -\frac s2 & 1 & -\frac s2 & & \\ & \ddots & \ddots & \ddots & \\ & & -\frac s2 & 1 & -\frac s2 \\ & & & -\frac s2 & 1-\frac s2\end{pmatrix},
+\end{equation}
+\ona{a particle hopping on a line of $L+1$ sites (Fig.~\ref{fig:ch04:historyline}). At $s = 1$ it is half the Laplacian of the path, whose ground state is uniform, which is $\ket\eta$. The computation has become a walk along the time axis, exactly as the glued trees became a walk along the columns.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[x=1.25cm,every node/.style={font=\scriptsize}]
+  \foreach \l/\lab in {0/{\gamma_0},1/{\gamma_1},2/{\gamma_2},4/{\gamma_{L-1}},5/{\gamma_L}} {\node[draw,circle,fill=blue!8,minimum size=0.75cm,inner sep=0pt] (g\l) at (\l,0) {$\lab$};}
+  \node (dots) at (3,0) {$\cdots$};
+  \draw[thick] (g0) -- node[above] {$-\frac s2$} (g1);
+  \draw[thick] (g1) -- node[above] {$-\frac s2$} (g2);
+  \draw[thick] (g2) -- (dots); \draw[thick] (dots) -- (g4);
+  \draw[thick] (g4) -- node[above] {$-\frac s2$} (g5);
+  \node[below=4pt,green!40!black] at (g0.south) {$\frac s2$};
+  \node[below=4pt,green!40!black] at (g1.south) {$1$};
+  \node[below=4pt,green!40!black] at (g2.south) {$1$};
+  \node[below=4pt,green!40!black] at (g4.south) {$1$};
+  \node[below=4pt,green!40!black] at (g5.south) {$1-\frac s2$};
+  \node[above=10pt] at (g0.north) {input $\ket{0^n}$};
+  \node[above=10pt] at (g5.north) {output $\ket{\alpha(L)}$};
+  \node[note,anchor=north] (n0) at (0,-1.6) {energy $\frac s2 < 1$: the\\particle starts here};
+  \draw[notearrow] (n0.north) -- (0,-0.85);
+  \node[note,anchor=north] (nh) at (2.5,-1.6) {hopping: one gate forward,\\or one back};
+  \draw[notearrow] (nh.north) to[bend left=15] (1.5,0.12);
+  \node[note,anchor=north] (n5) at (5,-1.6) {the gates are gone:\\only time remains};
+  \draw[notearrow] (n5.north) -- (5,-0.85);
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The Hamiltonian \eqref{eq:ch04:historyline} of \citet{aharonov2007adiabatic} on the history subspace: site $\ell$ is the state $\ket{\gamma_\ell}$ of the circuit after $\ell$ gates, with the clock reading $\ell$; on-site energies in green, hopping $-s/2$. At $s=0$ the particle sits at site $0$; at $s=1$ its ground state is spread uniformly over the line.}\label{fig:ch04:historyline}\end{figure}}
+\onp{\footnotesize On $\mathrm{span}\{\ket{\gamma_\ell}\}$ the gates disappear: a particle on a line of $L+1$ sites.}
+\end{frame}
+
+\begin{frame}\ft{The gap is inverse polynomial}
+\onp{\scriptsize}
+\begin{lem}[\citet{aharonov2007adiabatic}]\label{lem:ch04:gap}
+The gap of $H_{\mathcal S_0}(s)$ is $\Omega(1/L^2)$ for all $s\in[0,1]$.
+\end{lem}
+\ona{\emph{Proof.}}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \textbf{For $s < 1/3$} the matrix is close to $H_{\rm init}$, whose gap is $1$. By Gershgorin's circle theorem, the first diagonal entry is $s/2 < 1/6$, with off-diagonal row sum $s/2 < 1/6$, so its disc lies in $[0,1/3)$. Every other diagonal entry is at least $1-s/2 > 5/6$, and its off-diagonal row sum is at most $s < 1/3$, for an interior row has two neighbours; so these discs lie in $(2/3, 4/3)$. The two sets of discs are disjoint, so one eigenvalue lies below $1/3$ and all the others above $2/3$: the gap is at least $1/3$.\ona{ (The original argument states row sums below $1/6$ for all rows; the bound $1/3$ for interior rows is what holds, and suffices.)}
+    \item \textbf{For $s \ge 1/3$} the argument goes through Markov chains. The matrix $G = \one - H_{\mathcal S_0}(s)$ has non-negative entries and is irreducible, so by the Perron--Frobenius theorem its largest eigenvalue $\mu = 1-\lambda_0$ is simple, with an eigenvector $\alpha$ of positive entries: the ground state of $H$. Then $P_{ij} = \alpha_jG_{ij}/(\mu\alpha_i)$ is a stochastic matrix, the transition matrix of a random walk on the line, with stationary distribution $\pi_i \propto \alpha_i^2$, and its spectral gap is $\Delta(H)/\mu$.
+    \item \textbf{The ground state is monotone,} $\alpha_0\ge\alpha_1\ge\dots\ge\alpha_L$. It is the limit of $(G/\mu)^k(1,\dots,1)^\top$, and $G$ maps monotone vectors to monotone vectors.
+    \item \textbf{Conductance.} Monotonicity gives every set $B$ with $\pi(B)\le\tfrac12$ a flow $F(B)/\pi(B)\ge 1/(6L)$ out of it. The conductance bound of \citet{sinclair1989approximate}, that the gap of $P$ is at least half the square of the conductance, then gives a gap of at least $1/(72L^2)$. Since $\mu \ge 1/2$, $\Delta(H) \ge 1/(144L^2)$. \qed
+\end{itemize}
+\ona{Two features are worth remembering. The analysis avoids knowing the ground state, which would amount to knowing the outcome of the computation, and uses only its monotonicity. And the Markov-chain tools are those of \Chap~\chref{C.Inapprox}, where conductance was expansion.}
+\end{frame}
+
+\begin{frame}\ft{The ground state of the history chain}
+\ona{Figure~\ref{fig:ch04:monotone} shows the ground state of \eqref{eq:ch04:historyline} for $L = 20$ at several values of $s$. At $s = 0$ it sits on the input, $\ket{\gamma_0}$; as $s$ grows it spreads along the line, and at $s = 1$ it is uniform, the history state. At every $s$ its amplitudes decrease along the line, which is the monotonicity used in the proof of Lemma~\ref{lem:ch04:gap}. The gap falls from $1$ at $s = 0$ to $0.011$ at $s = 1$, comfortably above the bound $1/(144L^2) \approx 1.7\times10^{-5}$.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.36\linewidth}}\onp{\gdef\plotH{0.32\linewidth}}
+\begin{axis}[width=0.55\linewidth,height=\plotH,clip=false,xmin=0,xmax=20,ymin=0,ymax=1.02,xlabel={time step $\ell$},ylabel={amplitude $\alpha_\ell$},axis lines=left,thick,mark size=1.2pt,legend style={font=\tiny,draw=none,at={(0.98,0.98)},anchor=north east}]
+  \addplot[black,mark=*] table[x=l,y=s0] {figures/ch04/history_ground.dat};
+  \addplot[blue!70!black,mark=*] table[x=l,y=s025] {figures/ch04/history_ground.dat};
+  \addplot[green!40!black,mark=*] table[x=l,y=s05] {figures/ch04/history_ground.dat};
+  \addplot[orange!80!black,mark=*] table[x=l,y=s075] {figures/ch04/history_ground.dat};
+  \addplot[red!70!black,mark=*] table[x=l,y=s1] {figures/ch04/history_ground.dat};
+  \legend{$s=0$,$s=0.25$,$s=0.5$,$s=0.75$,$s=1$}
+  \node[note,anchor=west] (n0) at (axis cs:2.5,0.95) {$s=0$: all weight\\on the input};
+  \draw[notearrow] (n0.west) to[bend right=15] (axis cs:0.3,0.98);
+  \node[note,anchor=west] (n1) at (axis cs:22,0.15) {$s=1$: uniform,\\the history state};
+  \draw[notearrow] (n1.west) -- (axis cs:20.3,0.22);
+  \node[note,anchor=north west] (nm) at (axis cs:22,1.0) {always decreasing\\along the line: the\\monotonicity the\\proof needs};
+  \draw[notearrow] (nm.west) to[bend right=15] (axis cs:4,0.28);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The ground state of the history-chain Hamiltonian \eqref{eq:ch04:historyline} with $L = 20$, for five values of $s$: concentrated on the input at $s = 0$, uniform at $s = 1$, and monotone in between. Computed by \texttt{code/ch04\_figures.py}.}\label{fig:ch04:monotone}\end{figure}}
+\onp{\footnotesize From the input ($s=0$) to the uniform history state ($s=1$); always monotone.}
+\end{frame}
+
+
+\begin{frame}\ft{From the history to the output, and locality}
+\onp{\footnotesize}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item \textbf{Reading the output.} The history state has weight only $1/(L+1)$ on the final step. Appending $\mathcal O(L/\epsilon)$ identity gates to the circuit makes most of the history consist of copies of $\ket{\alpha(L)}$, so that the ground state of $H_{\rm final}$ is $\epsilon$-close to the output after the clock is discarded. With the theorem above, the running time of this $5$-local construction is $\mathcal O(\epsilon^{-(5+3\delta)}L^{5+2\delta})$.
+    \item \textbf{Fewer interactions.} A refinement gives $3$-local Hamiltonians, at the price of a higher polynomial. With the $2$-local construction of \citet{kempe2006complexity}, $2$-local Hamiltonians suffice.
+    \item \textbf{Geometry.} Any quantum computation can be simulated adiabatically with two-local nearest-neighbour interactions between six-state particles on a two-dimensional grid, the computation ``snaking'' through the lattice.
+\end{itemize}
+\begin{thm}[\citet{aharonov2007adiabatic}]\label{thm:ch04:equivalence}
+Adiabatic computation with local Hamiltonians is polynomially equivalent to the circuit model of quantum computation.
+\end{thm}
+\ona{The construction relies on the gates $U_\ell$ entering the off-diagonal terms of $H_\ell$, with arbitrary complex entries, so its Hamiltonians are in general \emph{not} stoquastic. Universality says nothing about stoquastic adiabatic computation, nor about adiabatic optimization; \citet{aharonov2007adiabatic} leave the power of the latter open, and remark that it might be simulable classically.}
+\end{frame}
+
+\begin{frame}\ft{Adiabatic computation, adiabatic optimization, and annealing}
+\ona{The terms are often used loosely, but they differ in what is allowed and what is required.}
+\begin{center}\ona{\small}\onp{\tiny}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.23\linewidth}>{\raggedright\arraybackslash}p{0.27\linewidth}}\toprule
+model & Hamiltonians & dynamics & what is known \\\midrule
+adiabatic computation & any local, unique ground states & closed system; slow enough to stay in the ground state & equivalent to quantum circuits \citep{aharonov2007adiabatic} \\
+stoquastic adiabatic computation & stoquastic & as above & no sign problem; classically simulable if frustration-free \citep{bravyi2009complexity}; oracle separations with a polynomial gap \citep{hastings2021power,gilyen2021sub} \\
+adiabatic optimization & $-\sum_jX_j$ to diagonal $H_C$, straight line & as above & power unknown; exponentially small gaps on some instances \citep{vandam2001powerful,altshuler2010anderson} \\
+quantum annealing & stoquastic, typically transverse-field Ising & finite time, transitions allowed; in hardware an open system at finite temperature, run many times & a heuristic; oracle speedup through diabatic transitions \citep{nagaj2012quantum}; no scaling advantage observed in experiments \citep{ronnow2014defining} \\
+QAOA & alternating $H_C$ and a mixer & discretised, angles optimised & converges as depth grows (\Chap~\chref{C.QAOA}) \\\bottomrule
+\end{tabular}
+\end{center}
+\ona{Four distinctions separate the rows. \emph{The final Hamiltonian}: general, as in the universality theorem, or diagonal, as in optimization, where the answer is a bit string. \emph{The sign structure}: universality is known only with non-stoquastic terms, and is not expected without them, whereas annealing hardware implements stoquastic ones. \emph{The regime}: adiabatic computation insists on following the ground state, with a guaranteed running time, whereas annealing is a heuristic that may run fast and accept, or exploit, transitions, as in the glued-trees schedule. \emph{The environment}: the theory assumes a closed system at zero temperature, whereas annealers are open systems in which thermal relaxation can both help and hurt, and which are sampled repeatedly. QAOA sits between the two: a circuit that discretises the annealing path, with the schedule replaced by angles to be optimised.}
+\end{frame}
+
+\begin{frame}\ft{A map of the models}
+\ona{Figure~\ref{fig:ch04:map} summarises the table. Each model on the inside is a special case of the one around it; quantum annealing, as practised, sits partly outside, being neither closed nor necessarily adiabatic; and QAOA discretises the path.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+  \draw[rounded corners=12pt,thick,fill=blue!5] (-4.2,-2.1) rectangle (2.6,2.1);
+  \node[anchor=north west,align=left] at (-4.1,2.05) {\textbf{adiabatic computation}, any local $H$\\$=$ quantum circuits};
+  \draw[rounded corners=10pt,thick,fill=green!7] (-3.6,-1.85) rectangle (2.2,0.95);
+  \node[anchor=north west] at (-3.5,0.9) {\textbf{stoquastic} adiabatic computation};
+  \draw[rounded corners=8pt,thick,fill=orange!10] (-3.2,-1.6) rectangle (0.2,-0.2);
+  \node at (-1.5,-0.9) {\textbf{adiabatic optimization}\\$-\sum_jX_j \to H_C$};
+  \draw[rounded corners=8pt,thick,dashed,red!70!black,fill=red!5,fill opacity=0.6,text opacity=1] (0.7,-1.6) rectangle (4.6,0.2);
+  \node[red!70!black] at (2.65,-0.7) {\textbf{quantum annealing}\\heuristic, may jump levels,\\open system in hardware};
+  \draw[rounded corners=8pt,thick,fill=gray!10] (3.1,0.9) rectangle (5.4,2.0);
+  \node at (4.25,1.45) {\textbf{QAOA}\\discretised path};
+  \draw[-{Latex},thick] (3.4,0.9) -- (2.8,0.25) node[midway,right] {\tiny discretises};
+  \node[note,anchor=north west] (nu) at (-4.2,-2.3) {universality known only\\with non-stoquastic terms};
+  \draw[notearrow] (nu.north) to[bend left=10] (-3.9,-1.9);
+  \node[note,anchor=north] (no) at (-0.6,-3.0) {power unknown: perhaps\\classically simulable};
+  \draw[notearrow] (no.north) to[bend right=10] (-1.0,-1.62);
+  \node[note,anchor=north west] (ns) at (1.6,-2.3) {oracle speedups, the\\subject of this lecture};
+  \draw[notearrow] (ns.north) to[bend right=10] (1.9,-1.62);
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The models of the table. Adiabatic optimization is a special case of stoquastic adiabatic computation, itself a special case of adiabatic computation, which is equivalent to quantum circuits \citep{aharonov2007adiabatic}. Stoquastic adiabatic computation is classically simulable when frustration-free \citep{bravyi2009complexity}, and admits oracle speedups \citep{nagaj2012quantum,hastings2021power,gilyen2021sub}. Quantum annealing uses stoquastic Hamiltonians but need not stay adiabatic and, on hardware, is an open system at finite temperature. QAOA discretises the annealing path.}\label{fig:ch04:map}\end{figure}}
+\onp{\footnotesize Nested: adiabatic optimization $\subset$ stoquastic AQC $\subset$ AQC $=$ circuits.}
+\end{frame}
+
 
 \section{The glued-trees problem}
 
@@ -51,26 +418,78 @@ Let the initial state be an eigenstate of $H(s_0)$ and let $\Delta(s)$ be the sp
 \begin{center}
 \textbf{Problem:} given the oracle and the name of ENTRANCE, find the name of EXIT.
 \end{center}
-\figslide[height=0.45\textheight]{figures/annealing/glued-trees.pdf}{Two binary trees of depth $n=4$ glued randomly; $N = 2^{n+2}-2$ vertices, each labelled by a random $2n$-bit string; $j$ is the column number \cite{nagaj2012quantum}.}{fig:ch04:glued}
-\ona{No classical algorithm can output the name of EXIT with high probability using fewer than a subexponential number of oracle calls: a random walk gets lost in the exponentially many middle vertices, and the random names give no other clue. A quantum walk solves it in polynomial time \cite{childs2003exponential}.}
+\ona{\begin{figure}[htb]}\begin{center}
+\ona{\gdef\gtX{0.95cm}\gdef\gtY{0.6cm}}\onp{\gdef\gtX{0.72cm}\gdef\gtY{0.36cm}}
+\input{figures/ch04/gluedtrees.tex}
+\end{center}
+\ona{\caption{Two binary trees of depth $n = 4$, glued by a random cycle between their leaves (red): $N = 2^{n+2}-2 = 62$ vertices in $2n+2 = 10$ columns, after \citet{childs2003exponential} and \citet{nagaj2012quantum}. Drawn by \texttt{code/ch04\_figures.py}.}\label{fig:ch04:glued}\end{figure}}
+\ona{No classical algorithm can output the name of EXIT with more than exponentially small probability using fewer than exponentially many oracle calls: with at most $2^{n/6}$ queries it succeeds with probability at most $4\cdot2^{-n/6}$ \citep{childs2003exponential}. The bound is for an adjacency-list oracle and vertex names chosen at random, and both assumptions matter. The intuition is that the random names carry no information, so a classical algorithm can only explore the graph by following edges; a random walk drifts towards the middle, where there are exponentially many vertices, and gets lost there, and the random cycle in the middle defeats any cleverer exploration. A quantum walk, $e^{-iAt}$, solves the problem in polynomial time \citep{childs2003exponential}.}
 \end{frame}
 
 \begin{frame}\ft{The column subspace}
-\ona{As for the quantum walk, the key is the symmetry of the graph. Define the uniform superpositions over columns,}
+\onp{\footnotesize}
+\ona{The key is the symmetry of the graph. Define the uniform superpositions over the columns,}
 \begin{equation}\label{eq:ch04:columns}
     \ket{{\rm col}_j} = \frac{1}{\sqrt{N_j}}\sum_{i \in j\text{-th column}} \ket{a(i)}, \qquad N_j = \begin{cases} 2^j & 0 \le j \le n,\\ 2^{2n+1-j} & n+1 \le j \le 2n+1,\end{cases}
 \end{equation}
 \ona{so that $\ket{{\rm col}_0} = \ket{a({\rm ENTRANCE})}$ and $\ket{{\rm col}_{2n+1}} = \ket{a({\rm EXIT})}$. Let
-\begin{equation}
+\begin{equation*}
     H_0 = -\ket{a({\rm ENTRANCE})}\!\bra{a({\rm ENTRANCE})}, \qquad H_1 = -\ket{a({\rm EXIT})}\!\bra{a({\rm EXIT})}
+\end{equation*}
+be the diagonal Hamiltonians that distinguish the two roots. Although the name of EXIT is unknown, $H_1$ can be implemented: EXIT is the only vertex other than ENTRANCE of degree two, which a constant number of oracle queries detects. The $(2n+2)$-dimensional span of the column states is invariant under $A$, $H_0$ and $H_1$; in it, after rescaling $A \gets A/\sqrt2$, $H_0$ and $H_1$ are $-1$ at the first and last site respectively, and}
+\begin{equation}\label{eq:ch04:Amatrix}
+    \bra{{\rm col}_j} A \ket{{\rm col}_{j+1}} = \begin{cases}\sqrt2 & j = n,\\ 1 & \text{otherwise.}\end{cases}
 \end{equation}
-be the diagonal Hamiltonians distinguishing the two roots. The $(2n+2)$-dimensional column subspace is invariant under $A$, $H_0$ and $H_1$, and in it, after rescaling $A \gets \sqrt2 A$,}
-\begin{align}
-    \bra{{\rm col}_j} A \ket{{\rm col}_{j+1}} &= \begin{cases}\sqrt2 & j = n,\\ 1 & \text{otherwise,}\end{cases}\\
-    \bra{{\rm col}_j}H_0\ket{{\rm col}_j} &= -\delta_{j,0}, \qquad \bra{{\rm col}_j}H_1\ket{{\rm col}_j} = -\delta_{j,2n+1}.
-\end{align}
-\onp{The $(2n+2)$-dimensional column subspace is invariant under $A$, $H_0$, $H_1$: the problem is a line of $2n+2$ sites with one defect in the middle.}
+\ona{Indeed, each vertex in column $j+1 \le n$ has exactly one parent in column $j$, so the part of $A\ket{{\rm col}_j}$ in column $j+1$ has weight $1/\sqrt{N_j}$ on each of its $N_{j+1} = 2N_j$ vertices, which is $\sqrt2\ket{{\rm col}_{j+1}}$; in the middle, each vertex of column $n+1$ has two neighbours in column $n$, which has the same size, giving $2\ket{{\rm col}_{n+1}}$. Dividing by $\sqrt2$ gives \eqref{eq:ch04:Amatrix}. The problem on an exponentially large graph thus becomes a problem on a line of $2n+2$ sites with one defect in the middle (Fig.~\ref{fig:ch04:line}).}
+\ona{\begin{figure}[htb]}\begin{center}
+\ona{\gdef\lineX{1.15cm}}\onp{\gdef\lineX{0.95cm}}
+\begin{tikzpicture}[x=\lineX,every node/.style={font=\scriptsize}]
+  \foreach \j/\N in {0/1,1/2,2/4,3/8,4/16,5/16,6/8,7/4,8/2,9/1} {
+    \node[draw,circle,fill=blue!8,minimum size=0.62cm,inner sep=0pt] (c\j) at (\j,0) {$\j$};
+    \node[above=3pt] at (c\j.north) {$N_j{=}\N$};
+  }
+  \foreach \j in {0,1,2,3,5,6,7,8} {\pgfmathtruncatemacro{\k}{\j+1} \draw[thick] (c\j) -- node[below=1pt] {$1$} (c\k);}
+  \draw[very thick,red!70!black] (c4) -- node[below=1pt] {$\sqrt2$} (c5);
+  \node[below=12pt,green!40!black,align=center] at (c0.south) {$-\alpha(1-s)$\\ENTRANCE};
+  \node[below=12pt,green!40!black,align=center] at (c9.south) {$-\alpha s$\\EXIT};
+  \node[note,anchor=north] (nd) at (4.5,-1.0) {the defect $\sqrt2$, where the leaves\\are glued: the state $\ket u$ is\\localised here};
+  \draw[notearrow] (nd.north) -- (4.5,-0.25);
+  \node[note,anchor=south] (nn) at (4.5,1.35) {column sizes double towards the middle};
+  \draw[notearrow] (nn.south west) to[bend right=10] ($(c2.north)+(0,0.55)$);
+  \draw[notearrow] (nn.south east) to[bend left=10] ($(c7.north)+(0,0.55)$);
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The glued trees of Fig.~\ref{fig:ch04:glued} ($n = 4$) restricted to the column subspace: a line of $2n+2 = 10$ sites, the column states \eqref{eq:ch04:columns}, with hopping $1$ and a defect $\sqrt2$ in the middle; above each site the number of vertices in the column. The Hamiltonian \eqref{eq:ch04:ourH} adds a potential $-\alpha(1-s)$ at ENTRANCE and $-\alpha s$ at EXIT.}\label{fig:ch04:line}\end{figure}}
+\onp{\footnotesize Exponentially large graph $\to$ a line of $2n+2$ sites with a defect.}
 \end{frame}
+
+\begin{frame}\ft{Walking along the columns}
+\ona{The column picture also explains the gap between classical and quantum walks (Fig.~\ref{fig:ch04:walks}). A classical random walk moves from column $j<n$ to $j+1$ with probability $2/3$, since each vertex has two children and one parent, but in the right tree it moves towards the middle with the same probability; it is pushed into the middle, where most vertices are, and reaches EXIT only with probability of order $1/N$. The quantum walk $e^{-iAt}$ on the line of columns propagates ballistically and reaches EXIT with probability above $1/2$ at time $t\approx9$, for $n = 10$. This is the separation of \citet{childs2003exponential}; the annealing schedule of the next section achieves the same with stoquastic Hamiltonians.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.32\linewidth}}\onp{\gdef\plotH{0.4\linewidth}}
+\begin{axis}[name=left,width=0.47\linewidth,height=\plotH,xmin=-1,xmax=22,ymin=0,ymax=0.6,clip=false,xlabel={column $j$},ylabel={probability},axis lines=left,ybar,bar width=1.6pt,title={\scriptsize distribution over columns}]
+  \addplot[fill=gray!60,draw=gray] table[x=j,y=classical] {figures/ch04/walk_columns.dat};
+  \addplot[fill=blue!60,draw=blue!70!black] table[x=j,y=quantum] {figures/ch04/walk_columns.dat};
+  \node[note,anchor=north west] (nc) at (rel axis cs:0.0,1.0) {grey: classical,\\$200$ steps, stuck\\in the middle};
+  \draw[notearrow] (nc.south) to[bend right=10] (axis cs:9.6,0.27);
+  \node[note,anchor=north east] (nq) at (rel axis cs:0.92,1.0) {blue: quantum,\\$t\approx8.7$, at EXIT};
+  \draw[notearrow] (nq.east) to[bend left=20] (axis cs:21,0.5);
+\end{axis}
+\begin{axis}[at={(left.east)},anchor=west,xshift=2.0cm,width=0.47\linewidth,height=\plotH,xmode=log,ymode=log,xmin=1,xmax=2000,ymin=1e-6,ymax=1,xlabel={time},ylabel={probability at EXIT},axis lines=left,no markers,thick,title={\scriptsize reaching EXIT}]
+  \addplot[blue!70!black] table[x=t,y=quantum] {figures/ch04/walk_quantum_exit.dat};
+  \addplot[gray] table[x=t,y=classical] {figures/ch04/walk_classical_exit.dat};
+  \node[note,anchor=north west] (nq) at (rel axis cs:0.56,1.0) {blue: quantum,\\$>1/2$ at $t\approx9$};
+  \draw[notearrow] (nq.west) to[bend right=15] (axis cs:9.5,0.55);
+  \node[note,anchor=south west] (nc) at (rel axis cs:0.56,0.04) {grey: classical,\\$\approx 1/N$ for ever};
+  \draw[notearrow] (nc.north) to[bend right=10] (axis cs:400,1.7e-4);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Glued trees with $n = 10$, i.e., $22$ columns and $N = 4094$ vertices. Left: the distribution over the columns of a classical random walk from ENTRANCE after $200$ steps (grey), concentrated in the middle, and of the quantum walk $e^{-iAt}$ at $t\approx8.7$ (blue), concentrated at EXIT; here $A$ is the adjacency matrix itself, not the rescaled $A/\sqrt2$ of \eqref{eq:ch04:Amatrix}, so times differ from those of the annealing schedule by a factor $\sqrt2$. Right: the probability of being at EXIT against time, on logarithmic scales; the classical value, averaged over consecutive steps to remove a parity effect, saturates near $1.6\times10^{-4}$. Computed by \texttt{code/ch04\_figures.py}.}\label{fig:ch04:walks}\end{figure}}
+\onp{\footnotesize Classical: pushed into the middle, EXIT with probability $\sim1/N$. Quantum: ballistic, EXIT with probability $>1/2$ at $t\approx9$.}
+\end{frame}
+
 
 \section{An annealing schedule that exploits a small gap}
 
@@ -79,75 +498,205 @@ be the diagonal Hamiltonians distinguishing the two roots. The $(2n+2)$-dimensio
 \begin{equation}\label{eq:ch04:ourH}
     H(s) = (1-s)\,\alpha H_0 \;-\; s(1-s)\,A \;+\; s\,\alpha H_1, \qquad 0 \le s \le 1,
 \end{equation}
-\ona{with a constant $0 < \alpha < 1/2$ independent of $n$. It interpolates from $H_0$, whose ground state is $\ket{a({\rm ENTRANCE})}$, to $H_1$, whose ground state is $\ket{a({\rm EXIT})}$, through the (negative) adjacency matrix. All three terms are stoquastic, and evolutions under $A$, $H_0$, $H_1$ can be implemented with $\mathcal O(T)$ oracle calls for time $T$.}
+\ona{with a constant $0 < \alpha < 1/2$ independent of $n$; in the figures, $\alpha = 1/\sqrt8$. It interpolates from $H_0$, whose ground state is $\ket{a({\rm ENTRANCE})}$, to $H_1$, whose ground state is $\ket{a({\rm EXIT})}$, through the (negative) adjacency matrix. All three terms are stoquastic, and evolutions under $A$, $H_0$, $H_1$ can be implemented with $\mathcal O(T)$ oracle calls for time $T$.}
 \begin{thm}[\citet{nagaj2012quantum}]\label{thm:ch04:main}
-Annealing along \eqref{eq:ch04:ourH} at a rate $\dot s(t) \propto \varepsilon/n^6$ transforms $\ket{a({\rm ENTRANCE})}$ into a state with overlap $1 - \mathcal O(\sqrt\varepsilon)$ with $\ket{a({\rm EXIT})}$, using ${\rm poly}(n)$ oracle calls.
+Annealing along \eqref{eq:ch04:ourH} at a rate $\dot s(t) \propto \varepsilon/n^6$ transforms $\ket{a({\rm ENTRANCE})}$ into a state with overlap $1 - \mathcal O(\sqrt\varepsilon)$ with $\ket{a({\rm EXIT})}$, using ${\rm poly}(n)$ oracle calls. Measuring then gives the name of EXIT with probability $1-\mathcal O(\varepsilon)$.
 \end{thm}
-\ona{The surprise is that the minimum gap along the path is \emph{exponentially} small in $n$, so Theorem~\ref{thm:ch04:adiabatic} alone would demand exponential time.}
+\ona{The surprise is that the smallest gap along the path is \emph{exponentially} small in $n$, so Theorem~\ref{thm:ch04:adiabatic} alone would demand exponential time. The proof has three parts: the spectrum of $H(s)$, the adiabatic stages, and two non-adiabatic stages in which the levels are exchanged.}
 \end{frame}
 
-\begin{frame}\ft{The spectrum}
-\ona{Restricting to the column subspace, one proposes the ansatz $\ket\phi = \sum_j \gamma_j \ket{{\rm col}_j}$ with $\gamma_j = a e^{ipj} + b e^{-ipj}$ for $j \le n$ and mirrored for $j > n$, $p \in \C$; the eigenvalue condition gives $\lambda = -2s(1-s)\cos p$. Figure~\ref{fig:ch04:gaps} shows the three lowest eigenvalues for $n = 10$.}
-\figslide[height=0.55\textheight]{figures/annealing/gaps-fig2.pdf}{Three lowest eigenvalues of $H(s)$ in the column subspace, $\alpha = 1/\sqrt8$, $n=10$ \cite{nagaj2012quantum}. Inside $[s_1,s_2]$ and $[s_3,s_4]$ the gap $\Delta_{10}$ is exponentially small in $n$; elsewhere it is $\Omega(1/n^3)$. Brown arrows depict the level transitions induced by a $1/{\rm poly}(n)$ annealing rate.}{fig:ch04:gaps}
+\begin{frame}\ft{The spectrum, step 1: an ansatz}
+\onp{\footnotesize}
+\ona{Restricted to the column subspace, $H(s)$ is a tridiagonal $(2n+2)\times(2n+2)$ matrix, which can be diagonalised by an ansatz of plane waves on each half of the line:}
+\begin{equation}\label{eq:ch04:ansatz}
+    \ket\phi = \sum_j\gamma_j\ket{{\rm col}_j}, \qquad
+    \gamma_j = \begin{cases} a e^{ipj} + b e^{-ipj} & 0 \le j \le n,\\ c e^{ipj'} + d e^{-ipj'} & n+1 \le j \le 2n+1,\end{cases}
+\end{equation}
+\ona{with $j' = 2n+1-j$ and $p\in\C$. Away from the ends and the middle, the eigenvalue equation is that of a free particle on a line, $-s(1-s)(\gamma_{j-1}+\gamma_{j+1}) = \lambda\gamma_j$, which every plane wave satisfies with}
+\begin{equation}\label{eq:ch04:lambda}
+    \lambda = -2s(1-s)\cos p.
+\end{equation}
+\ona{The remaining equations, at the two ends (the potentials $\alpha' = \alpha/s$ and $\beta' = \alpha/(1-s)$ after dividing by $s(1-s)$) and across the defect $\sqrt2$, determine $a,b,c,d$ and quantise $p$:}
+\begin{equation}\label{eq:ch04:quant}
+    f(p,\alpha')\,f(p,\beta') = 2, \qquad f(p,\theta) = \frac{\sin((n+2)p) - \theta\sin((n+1)p)}{\sin((n+1)p) - \theta\sin(np)}.
+\end{equation}
+\ona{Two kinds of solution matter. Real $p$ gives waves spread over the whole line, whose energies fill the band $[-2s(1-s), 2s(1-s)]$. Imaginary $p = -iq$ gives states localised exponentially, either at an end of the line or at the defect, with energies $-2s(1-s)\cosh q$ below the band. The two lowest levels are of the second kind. By the symmetry $s \leftrightarrow 1-s$, which exchanges $\alpha'$ and $\beta'$, it suffices to consider $s\le1/2$.}
+\onp{\footnotesize Plane waves on each half: $\lambda = -2s(1-s)\cos p$; boundary conditions quantise $p$. Imaginary $p$: localised states below the band.}
 \end{frame}
 
-\begin{frame}\ft{The spectrum: what matters}
-\ona{Write $x \approx_\epsilon y$ if $|x-y| \le \epsilon$ with $\epsilon \in \mathcal O(2^{-n/2})$. By the $s \leftrightarrow 1-s$ symmetry it suffices to consider $s \le 1/2$.}
-\begin{itemize}\setlength\itemsep{0.2em}
-    \item As $n \to \infty$, the two lowest eigenvalues \emph{cross} at $s_\times = \alpha/\sqrt2$. For finite $n$ the crossing is avoided, but the gap $\Delta_{10}(s) = \lambda_1 - \lambda_0$ is exponentially small near $s_\times$; for $0 \le s \le s_\times$,
-    $\Delta_{10}(s) \approx_\epsilon -(1-s)\big(\tfrac{3s}{\sqrt2} - \tfrac{\alpha^2+s^2}{\alpha}\big)$.
-    \item Away from $s_\times$, i.e., on $[0,s_1]$ and $[s_2, 1/2]$ with $s_{1,2} = s_\times \mp \delta$, $\delta \in \Omega(1/n^3)$, we have $\Delta_{10}(s) \ge c/n^3$.
-    \item The gap to the \emph{second} excited state, $\Delta_{21}(s)$, is $\Omega(1)$ on $[s_1, \alpha]$ and $\ge c'/n^3$ on $[\alpha, 1/2]$: the third level never comes close.
-\end{itemize}
-\ona{So the dynamics at a polynomial rate stays in the two-dimensional manifold of the two lowest states, but within it, near $s_\times$, it is \emph{not} adiabatic.}
+\begin{frame}\ft{The spectrum, step 2: two localised states}
+\ona{As $n\to\infty$ the quantisation condition has two solutions with imaginary $p$:
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item $q_0 = \ln\alpha'$, a state localised at ENTRANCE, bound by the potential $-\alpha(1-s)$, with energy
+    \begin{equation*}
+        F(s) = -2s(1-s)\cosh q_0 = -(1-s)\Big(\alpha + \frac{s^2}{\alpha}\Big);
+    \end{equation*}
+    it exists while $\alpha'\ge1$, i.e., $s\le\alpha$, where $F$ meets the band edge.
+    \item $q_1 = \ln\sqrt2$, a state localised at the defect, with energy
+    \begin{equation*}
+        G(s) = -2s(1-s)\cosh q_1 = -\frac{3}{\sqrt2}\,s(1-s).
+    \end{equation*}
+    Its amplitudes grow as $(\sqrt2)^j$ towards the middle, in proportion to $\sqrt{N_j}$: it is the uniform superposition $\ket u$ over \emph{all} vertices, and it does not depend on $s$.
+\end{itemize}}
+\onp{\footnotesize Two localised states as $n\to\infty$: at ENTRANCE, energy $F(s) = -(1-s)(\alpha + s^2/\alpha)$; at the defect, the uniform superposition $\ket u$, energy $G(s) = -\tfrac{3}{\sqrt2}s(1-s)$.}
+\ona{The two energies are equal at $s_\times = \alpha/\sqrt2$, which is $1/4$ for $\alpha = 1/\sqrt8$ (Fig.~\ref{fig:ch04:levels}). For $n<\infty$ the crossing is avoided, but the two localised states are exponentially far apart, at the end and in the middle of the line, and their coupling, and hence the gap, is exponentially small: $\Delta_{10}(s_\times) \in \mathcal O(2^{-n/2})$. Heuristically: at $s_\times$ the state at ENTRANCE decays along the line as $(s/\alpha)^j = 2^{-j/2}$, while $\ket u$ grows as $2^{(j-n)/2}$ up to normalisation; the matrix element of $H$ between them is of the order of the overlap of their profiles, $\sum_j 2^{-j/2}2^{(j-n)/2} \approx n\,2^{-n/2}$, exponentially small up to a factor polynomial in $n$. The supplementary material of \citet{nagaj2012quantum} makes this precise by a second-order expansion of the quantisation condition \eqref{eq:ch04:quant}.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\ona{\gdef\plotH{0.36\linewidth}}\onp{\gdef\plotH{0.3\linewidth}}
+\begin{axis}[width=0.55\linewidth,height=\plotH,clip=false,xlabel={$s$},ylabel={energy},xmin=0,xmax=1,ymin=-1.15,ymax=0.05,samples=150,no markers,thick,axis lines=left,legend style={font=\tiny,draw=none,at={(0.5,0.02)},anchor=south}]
+  \addplot[blue!70!black,domain=0:0.35355] {-(1-x)*(0.35355+x^2/0.35355)};
+  \addplot[blue!70!black,domain=0.64645:1,forget plot] {-x*(0.35355+(1-x)^2/0.35355)};
+  \addplot[red!70!black,domain=0:1] {-2.12132*x*(1-x)};
+  \addplot[gray,dashed,domain=0:1] {-2*x*(1-x)};
+  \draw[dotted] (axis cs:0.25,-1.15) -- (axis cs:0.25,0.05) node[below right,font=\tiny] {$s_\times$};
+  \draw[dotted] (axis cs:0.75,-1.15) -- (axis cs:0.75,0.05) node[below left,font=\tiny] {$1-s_\times$};
+  \legend{$F$: at ENTRANCE / EXIT,$G$: state $\ket u$,band edge $-2s(1-s)$}
+  \fill[annot] (axis cs:0.25,-0.3977) circle (1.6pt);
+  \node[note,anchor=north west] (nx) at (axis cs:1.04,0.08) {levels cross at $s_\times$:\\exponentially small gap};
+  \draw[notearrow] (nx.west) to[bend right=12] (axis cs:0.26,-0.38);
+  \node[note,anchor=west] (nb) at (axis cs:1.04,-0.5) {band edge: above it,\\waves over the whole line};
+  \draw[notearrow] (nb.west) to[bend right=10] (axis cs:0.9,-0.2);
+  \node[note,anchor=west] (nu) at (axis cs:1.04,-0.95) {$\ket u$: uniform over all\\vertices};
+  \draw[notearrow] (nu.west) to[bend left=10] (axis cs:0.6,-0.51);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The energies of the two localised states as $n\to\infty$, for $\alpha = 1/\sqrt8$. The state at ENTRANCE (blue, left) is the ground state until $s_\times = 1/4$, where it crosses $\ket u$ (red); it then joins the band at $s = \alpha$. By symmetry, the state at EXIT (blue, right) appears at $1-\alpha$ and becomes the ground state after $1-s_\times$. For finite $n$ both crossings are avoided with exponentially small gaps; compare Fig.~\ref{fig:ch04:gaps}.}\label{fig:ch04:levels}\end{figure}}
+\onp{\footnotesize $F$ crosses $G$ at $s_\times = \alpha/\sqrt2$: exponentially small gap, because the two states live far apart.}
+\end{frame}
+
+\begin{frame}\ft{The spectrum, step 3: the gaps}
+\ona{Taking the finite-$n$ corrections into account, and writing $x \approx_\eta y$ for $|x-y|\le\eta$ with $\eta \in \mathcal O(2^{-n/2})$ (an exponentially small quantity, not to be confused with the schedule parameter $\varepsilon$), one finds \citep{nagaj2012quantum}:
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item For $0 \le s \le s_\times$, $\lambda_0 \approx_{\eta/2} F(s)$ and $\lambda_1 \approx_{\eta/2} G(s)$; for $s_\times \le s \le 1/2$ the two are \emph{swapped}. Hence $\Delta_{10}(s) = |F(s)-G(s)| + \mathcal O(\eta)$, which is at least $c/n^3$ outside the window $[s_1,s_2] = [s_\times-\delta, s_\times+\delta]$, $\delta \in \Omega(1/n^3)$, and exponentially small inside it.
+    \item The second excited state is the lowest wave in the band, $p \approx \pi/(n+1)$. While $\ket u$ is the first excited state, for $s \le s_\times$, its gap to it is $\Delta_{21}(s) \approx s(1-s)\big(\tfrac3{\sqrt2} - 2\cos\tfrac{\pi}{n+1}\big)$, and the same holds with $F$ in place of $G$ just after $s_\times$; on the window $V_2 = [s_1,s_2]$ around $s_\times$ this is $\Omega(1)$. On $[s_2,\alpha]$ the first excited state is the state at ENTRANCE, whose energy $F$ approaches the band edge as $s\to\alpha$, so that $\Delta_{21}$ shrinks to order $1/n^2$; and on $[\alpha,1/2]$ a finer expansion of \eqref{eq:ch04:quant} gives $\Delta_{21}(s) \ge c'/n^3$. Hence $\Delta_{21} \in \Omega(1)$ on $V_2$ and $\Delta_{21} \ge c'/n^3$ on $[s_2,1/2]$, which is all the proof needs. (The paper states $\Delta_{21}\in\Omega(1)$ on all of $[s_1,\alpha]$, which is too strong near $s = \alpha$.)
+\end{itemize}}
+\onp{\footnotesize $\Delta_{10}\ge c/n^3$ except in a window of width $\Omega(1/n^3)$ around $s_\times$, where it is $\mathcal O(2^{-n/2})$; the third level stays $\Omega(1/n^3)$ away.}
+\ona{The third level therefore never comes close: the dynamics at a polynomial rate stays in the two-dimensional manifold of the two lowest states, but within it, near $s_\times$, it cannot be adiabatic. Figure~\ref{fig:ch04:gaps} shows the exact spectrum for $n = 10$.}
+\ona{\begin{figure}[htb]}\begin{center}
+\ona{\gdef\imgW{0.58\linewidth}}\onp{\gdef\imgW{0.5\linewidth}}
+\begin{tikzpicture}
+  \node[anchor=south west,inner sep=0] (img) at (0,0) {\includegraphics[width=\imgW]{figures/annealing/gaps-fig2.pdf}};
+  \begin{scope}[x={(img.south east)},y={(img.north west)}]
+    \node[note,anchor=west] (n1) at (1.04,0.62) {$1\to2$: a fast passage\\lifts the state to $\lambda_1$};
+    \draw[notearrow] (n1.west) to[bend right=10] (0.2,0.36);
+    \node[note,anchor=west] (n3) at (1.04,0.4) {$3\to4$: and drops it\\back to $\lambda_0$};
+    \draw[notearrow] (n3.west) to[bend left=10] (0.8,0.36);
+    \node[note,anchor=west] (n2) at (1.04,0.15) {$\lambda_2$ never comes close:\\the dynamics stays in\\the two lowest levels};
+    \draw[notearrow] (n2.west) to[bend left=15] (0.55,0.62);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Three lowest eigenvalues of $H(s)$ in the column subspace, $\alpha = 1/\sqrt8$, $n=10$, from \citet{nagaj2012quantum}. Inside $[s_1,s_2]$ and $[s_3,s_4]$ the gap $\Delta_{10}$ is exponentially small in $n$; elsewhere it is $\Omega(1/n^3)$. The arrows of the original figure depict the level transitions induced by a $1/{\rm poly}(n)$ annealing rate.}\label{fig:ch04:gaps}\end{figure}}
 \end{frame}
 
 \begin{frame}\ft{Five stages}
-\ona{Split $[0,1] = V_1 \cup \dots \cup V_5$ with $V_1 = [0,s_1)$, $V_2 = [s_1,s_2)$, $V_3 = [s_2,s_3)$, $V_4 = [s_3,s_4)$, $V_5 = [s_4,1]$, $s_3 = 1-s_2$, $s_4 = 1-s_1$, and write $\ket{\phi_0(s)}, \ket{\phi_1(s)}$ for the ground and first excited states. With $\dot s \propto \varepsilon/n^6$, the adiabatic approximation gives, on the three stages where the gap is polynomial,}
-\begin{align}
+\ona{Split $[0,1] = V_1 \cup \dots \cup V_5$ with $V_1 = [0,s_1)$, $V_2 = [s_1,s_2)$, $V_3 = [s_2,s_3)$, $V_4 = [s_3,s_4)$, $V_5 = [s_4,1]$, $s_3 = 1-s_2$, $s_4 = 1-s_1$, and write $\ket{\phi_0(s)}, \ket{\phi_1(s)}$ for the ground and first excited states. With $\dot s \propto \varepsilon/n^6 \le \varepsilon\,\Delta^2$, Theorem~\ref{thm:ch04:adiabatic} gives, on the three stages where the relevant gap is polynomial,}
+\begin{align}\label{eq:ch04:adiabaticstages}
     \ket{\phi_0(0)} &\to \ket{\phi_0(s_1)}, &
     \ket{\phi_1(s_2)} &\to \ket{\phi_1(s_3)}, &
     \ket{\phi_0(s_4)} &\to \ket{\phi_0(1)},
 \end{align}
-\ona{each with error amplitude $\mathcal O(\sqrt\varepsilon)$. On $V_2$ and $V_4$, the gap to the second excited state keeps the dynamics in $\spn\{\ket{\phi_0},\ket{\phi_1}\}$, and the claim is that the levels \emph{swap}:}
+\ona{each with error amplitude $\mathcal O(\sqrt\varepsilon)$. On $V_2$ and $V_4$ the gap $\Delta_{21}\in\Omega(1)$ keeps the dynamics in $\spn\{\ket{\phi_0},\ket{\phi_1}\}$, and the claim is that the levels \emph{swap}:}
 \begin{align}\label{eq:ch04:swap}
     \ket{\phi_0(s_1)} \to \ket{\phi_1(s_2)}, \qquad \ket{\phi_1(s_3)} \to \ket{\phi_0(s_4)}.
 \end{align}
-\ona{Chaining the five stages transforms $\ket{\phi_0(0)} = \ket{a({\rm ENTRANCE})}$ into $\ket{\phi_0(1)} = \ket{a({\rm EXIT})}$: the same transition that kicks the state \emph{up} at $s_\times$ kicks it back \emph{down} at $1-s_\times$, by symmetry.}
+\ona{Chaining the five stages transforms $\ket{\phi_0(0)} = \ket{a({\rm ENTRANCE})}$ into $\ket{\phi_0(1)} = \ket{a({\rm EXIT})}$. The same kind of fast passage that lifts the state to the first excited level at $s_\times$ brings it back down at $1-s_\times$, by symmetry: two Landau--Zener jumps in the sense of Fig.~\ref{fig:ch04:lz}.}
 \onp{Adiabatic on $V_1, V_3, V_5$; \emph{diabatic swap} of the two lowest levels on $V_2$ and $V_4$; the swaps cancel by symmetry.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[x=9cm,every node/.style={font=\scriptsize}]
+  \fill[green!20] (0,0) rectangle (0.22,0.3); \fill[orange!30] (0.22,0) rectangle (0.28,0.3);
+  \fill[green!20] (0.28,0) rectangle (0.72,0.3); \fill[orange!30] (0.72,0) rectangle (0.78,0.3);
+  \fill[green!20] (0.78,0) rectangle (1,0.3);
+  \draw (0,0) rectangle (1,0.3);
+  \foreach \x/\l in {0/0,0.22/s_1,0.28/s_2,0.72/s_3,0.78/s_4,1/1} {\draw (\x,0) -- (\x,-0.08) node[below] {$\l$};}
+  \foreach \x/\l in {0.11/V_1,0.25/V_2,0.5/V_3,0.75/V_4,0.89/V_5} {\node at (\x,0.15) {$\l$};}
+  \draw[very thick,blue!70!black] (0,0.6) -- (0.22,0.6); \draw[very thick,blue!70!black,dashed] (0.22,0.6) -- (0.28,1.0);
+  \draw[very thick,red!70!black] (0.28,1.0) -- (0.72,1.0); \draw[very thick,red!70!black,dashed] (0.72,1.0) -- (0.78,0.6);
+  \draw[very thick,blue!70!black] (0.78,0.6) -- (1,0.6);
+  \node[left] at (0,0.6) {ground}; \node[right] at (1,0.6) {ground};
+  \node[above] at (0.5,1.0) {first excited};
+  \node at (0.5,-0.55) {green: adiabatic \qquad orange: diabatic swap};
+  \node[note,anchor=east] (nu) at (0.14,1.25) {fast passage at $s_\times$:\\jump up};
+  \draw[notearrow] (nu.east) to[bend left=15] (0.25,0.82);
+  \node[note,anchor=west] (nd) at (0.86,1.25) {fast passage at $1-s_\times$:\\jump back down};
+  \draw[notearrow] (nd.west) to[bend right=15] (0.75,0.82);
+  \node[note,anchor=south] (ns) at (0.5,1.3) {symmetry $s\leftrightarrow1-s$: the two jumps cancel};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The five stages of the glued-trees schedule. On $V_1$, $V_3$ and $V_5$ the evolution is adiabatic; on the short intervals $V_2$ and $V_4$ around the two avoided crossings it is diabatic, and the state swaps level. The state occupied is drawn above: the ground state, then the first excited state, then the ground state again.}\label{fig:ch04:stages}\end{figure}}
+
 \end{frame}
 
 \begin{frame}\ft{Why the levels swap: an almost-eigenstate}
-\ona{Let $\ket u = N^{-1/2}\sum_{i} \ket{a(i)}$ be the uniform superposition over all vertices. It is \emph{almost} an eigenstate for all $s$: $H(s)\ket u \approx_{\epsilon/2} -\frac{3 s(1-s)}{\sqrt2}\ket u$. Hence $f(t) = |\bra u U(t)\ket u|^2$ satisfies $\dot f \approx_\epsilon 0$, so over the time $T \in \mathcal O(n^3)$ spent in $V_2$, $f(T) \approx_{\epsilon'} 1$ with $\epsilon' \in \mathcal O(\epsilon n^3)$: the state $\ket u$ essentially does not move. Moreover, one checks}
-\begin{equation}
-    |\braket{u|\phi_1(s_1)}| \approx_{\epsilon'} 1, \qquad |\braket{u|\phi_0(s_2)}| \approx_{\epsilon'} 1,
-\end{equation}
-\ona{i.e., $\ket u$ is the first excited state before the crossing and the ground state after it. Therefore
-\begin{equation}
-    |\bra{\phi_1(s_1)}U(T)\ket{\phi_0(s_2)}|^2 \approx_{5\epsilon'} 1,
-\end{equation}
-and by unitarity the orthogonal complement in the two-dimensional manifold must also swap: $\ket{\phi_0(s_1)} \to \ket{\phi_1(s_2)}$, which is \eqref{eq:ch04:swap}. The overall error is dominated by the adiabatic stages, $\mathcal O(\sqrt\varepsilon)$ with $\varepsilon$ arbitrary.}
-\onp{$\ket u$ (uniform over all vertices) is an almost-eigenstate for all $s$, and it \emph{is} $\ket{\phi_1}$ before and $\ket{\phi_0}$ after the crossing $\Rightarrow$ the levels swap by unitarity.}
-\figslide[height=0.38\textheight]{figures/annealing/overlaps.pdf}{Overlap of $U(t)\ket{a({\rm ENTRANCE})}$ with the ground and first excited states, $n = 40$, $\alpha = 1/\sqrt8$, $s(t) = t/10000$, simulated in the column subspace \cite{nagaj2012quantum}.}{fig:ch04:overlaps}
+\ona{The swap follows from the state $\ket u$, the uniform superposition over all vertices, which is the defect state of step 2. For finite $n$ it is \emph{almost} an eigenstate for every $s$:}
+\begin{equation*}
+    H(s)\ket u \approx_{\eta/2} G(s)\ket u = -\frac{3s(1-s)}{\sqrt2}\ket u.
+\end{equation*}
+\ona{Let $f(t) = |\bra u U(t)\ket u|^2$, with $U(t)$ the evolution operator. By the Schrödinger equation, $\dot f(t) = -i\bra u H(s(t))U(t)\ket u\,\overline{\bra u U(t)\ket u} + \text{c.c.}$, and since $\bra u H \approx_{\eta/2} G\bra u$ the two terms nearly cancel: $\dot f \approx_\eta 0$. Over the time $T\in\mathcal O(n^3)$ spent in $V_2$, therefore, $f(T) \approx_{\eta'} 1$ with $\eta' \in \mathcal O(\eta n^3)$, which is still exponentially small: the state $\ket u$ essentially does not move. Moreover, as $\ket u$ is the defect state,}
+\begin{equation*}
+    |\braket{u|\phi_1(s_1)}| \approx_{\eta'} 1, \qquad |\braket{u|\phi_0(s_2)}| \approx_{\eta'} 1:
+\end{equation*}
+\ona{$\ket u$ is the first excited state before the crossing and the ground state after it. Therefore
+\begin{equation*}
+    |\bra{\phi_0(s_2)}U(T)\ket{\phi_1(s_1)}|^2 \approx_{5\eta'} 1,
+\end{equation*}
+and since $U(T)$ is unitary and the evolution stays in the two-dimensional manifold up to a leakage of amplitude $\mathcal O(\sqrt\varepsilon)$ to the second excited level, the orthogonal states must also be exchanged, up to the same error: $\ket{\phi_0(s_1)} \to \ket{\phi_1(s_2)}$, which is \eqref{eq:ch04:swap}. The same argument applies on $V_4$. Adding the amplitude errors of the five stages, the overall error is $\mathcal O(\sqrt\varepsilon + n^3\eta)$, which is $\mathcal O(\sqrt\varepsilon)$ for large $n$, with $\varepsilon$ arbitrary; and the total time is $\mathcal O(n^6/\varepsilon)$, polynomial. \qed}
+\onp{\footnotesize $\ket u$ (uniform over all vertices) is an almost-eigenstate for all $s$, and it \emph{is} $\ket{\phi_1}$ before and $\ket{\phi_0}$ after the crossing $\Rightarrow$ it does not move, and the levels swap by unitarity.}
+\ona{\begin{figure}[htb]}\begin{center}
+\ona{\gdef\imgW{0.55\linewidth}}\onp{\gdef\imgW{0.42\linewidth}}
+\begin{tikzpicture}
+  \node[anchor=south west,inner sep=0] (img) at (0,0) {\includegraphics[width=\imgW]{figures/annealing/overlaps.pdf}};
+  \begin{scope}[x={(img.south east)},y={(img.north west)}]
+    \node[note,anchor=west] (na) at (1.04,0.88) {$t\approx2500$, $s = s_\times$: the\\state leaves the ground\\level for the first excited};
+    \draw[notearrow] (na.west) to[bend right=10] (0.3,0.93);
+    \node[note,anchor=west] (nb) at (1.04,0.55) {in between it rides\\the first excited level};
+    \draw[notearrow] (nb.west) to[bend left=10] (0.5,0.72);
+    \node[note,anchor=west] (nc) at (1.04,0.22) {$t\approx7500$, $s = 1-s_\times$:\\back to the ground level,\\which is now EXIT};
+    \draw[notearrow] (nc.west) to[bend left=10] (0.76,0.82);
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Overlap of $U(t)\ket{a({\rm ENTRANCE})}$ with the ground state (blue) and the first excited state (red), $n = 40$, $\alpha = 1/\sqrt8$, $s(t) = t/10000$, simulated in the column subspace, from \citet{nagaj2012quantum}. At this rate the final overlap with EXIT is about $0.6$; slower schedules bring it closer to $1$.}\label{fig:ch04:overlaps}\end{figure}}
 \end{frame}
 
 \section{Generalisations and lessons}
 
 \begin{frame}\ft{Initial-state randomisation}
-\ona{If one insists on a schedule that forbids transitions to the second excited level, $\dot s \propto \varepsilon/n^6$, success can still be guaranteed with probability $1/2$ by \emph{randomising the initial state}: prepare $\ket{a({\rm ENTRANCE})}$ or $\ket u$, each with probability $1/2$; both are efficiently preparable, and by unitarity exactly one of them ends in $\ket{a({\rm EXIT})}$.}
+\ona{The swaps need not be analysed at all if one is content with probability $1/2$. Anneal at a rate that forbids transitions to the second excited level, $\dot s \propto \varepsilon/n^6$, so that the evolution maps the span of the two lowest states at $s = 0$, that is of $\ket{a({\rm ENTRANCE})}$ and approximately $\ket u$, onto the span of the two lowest states at $s = 1$, whatever happens within it. Prepare one of the two initial states at random. By unitarity, the probabilities with which the two end in $\ket{a({\rm EXIT})}$ add up to one, so the average success probability is $1/2$, whether or not the levels swap. This \emph{initial-state randomisation} requires both states to be preparable; \citet{nagaj2012quantum} assert that $\ket u$, the uniform superposition over the $N$ valid names, can be prepared efficiently, which needs an argument of its own.}
 \begin{itemize}\setlength\itemsep{0.2em}
     \item More generally, if the $k$ lowest eigenvalues are separated from the rest by $1/{\rm poly}(n)$ gaps, any eigenstate in this manifold can be prepared with probability of order $1/k$ by randomising the initial state, regardless of small gaps or crossings within the manifold.
-    \item Example: the one-dimensional transverse-field Ising chain, whose two lowest levels have an exponentially small gap while the third level stays $1/{\rm poly}(n)$ away, as is common for systems with conformal invariance.
+    \item Example, from \citet{nagaj2012quantum}: the one-dimensional transverse-field Ising chain, as the coupling grows, has its two lowest levels split by an exponentially small amount in the ordered phase, while the third level stays $1/{\rm poly}(n)$ away along the whole path.
 \end{itemize}
 \end{frame}
 
 \begin{frame}\ft{Lessons for variational methods}
-\begin{itemize}\setlength\itemsep{0.4em}
-    \item \textbf{The gap is not the whole story.} The relevant gap for the adiabatic approximation can be much larger than $\Delta_{\min}$ when transitions among low-lying levels are harmless or even useful. QAOA's freedom to optimise angles, rather than follow a fixed schedule, is a way to \emph{find} such shortcuts.
-    \item \textbf{Symmetry is a resource.} The proof works because the column subspace is invariant and $\ket u$ is an almost-eigenstate. In \Chap~\chref{C.Motivation} we saw the flip side: the $\mathbb Z_2$ symmetry of cold-start QAOA is an obstruction on bipartite graphs.
-    \item \textbf{Provable speedups exist for annealing}, on an oracular problem and against all classical algorithms, sign problem or not. Whether this extends to optimization is open.
-    \item \textbf{Next:} discretising the adiabatic evolution gives QAOA, and the adiabatic theorem gives its convergence (\Chap~\chref{C.QAOA}).
+\onp{\footnotesize}
+\begin{itemize}\setlength\itemsep{0.35em}
+    \item \textbf{The gap is not the whole story.} The adiabatic condition is sufficient, not necessary. The relevant gap can be much larger than $\Delta_{\min}$ when transitions among low-lying levels are harmless, or useful, as here. QAOA's freedom to optimise its angles, rather than follow a fixed schedule, is a way to \emph{find} such shortcuts.
+    \item \textbf{Schedules matter.} Adiabatic search is no faster than classical search at a constant rate, and optimal with a local schedule; the glued-trees schedule is fast where a naive one would be slowest.
+    \item \textbf{Symmetry is a resource.} The proof works because the column subspace is invariant and $\ket u$ is an almost-eigenstate. In \Chap~\chref{C.Inapprox} we saw the other side: the $\mathbb Z_2$ symmetry of QAOA started from $\ket+^{\otimes n}$ is an obstruction on bipartite graphs.
+    \item \textbf{Provable speedups exist for stoquastic annealing}, but only for oracle problems with special structure; for generic chemistry and optimization none is known (\Chaps~\chref{C.EQA}--\chref{C.Inapprox}).
+    \item \textbf{Next:} discretising the adiabatic evolution gives QAOA, and an adiabatic theorem without a gap condition gives its convergence (\Chap~\chref{C.QAOA}).
 \end{itemize}
+\end{frame}
+
+\begin{frame}\ft{Exercises}
+\begin{exe}[Landau--Zener]
+For $H(t)$ in \eqref{eq:ch04:lz}, compute the eigenvalues and eigenvectors, and show that the gap is smallest at $t = 0$. Using \eqref{eq:ch04:lzformula}, find the sweep rate $v$ for which the system ends in the ground state with probability $0.99$, and the time spent within the window where the gap is at most $2\Delta$.
+\end{exe}
+\begin{exe}[Adiabatic search]
+Show that the evolution of adiabatic search stays in $\spn\{\ket{+}, \ket m\}$, derive the gap \eqref{eq:ch04:grovergap}, and compute $\int_0^1 ds/\Delta^2(s)$ exactly. Conclude that a local schedule needs time $\mathcal O(\sqrt N)$.
+\end{exe}
+\end{frame}
+
+\begin{frame}\ft{Exercises, continued}
+\begin{exe}[Columns]
+Verify \eqref{eq:ch04:Amatrix} for the glued trees, including the factor $\sqrt2$ in the middle. Show that $\ket u = \sum_j\sqrt{N_j/N}\,\ket{{\rm col}_j}$, and that its amplitudes grow as $(\sqrt2)^j$ towards the middle.
+\end{exe}
+\begin{exe}[The crossing]
+Show that $F(s) = G(s)$ at $s_\times = \alpha/\sqrt2$, and that $F(\alpha) = -2\alpha(1-\alpha)$ lies on the band edge. Why must $\alpha < 1/2$ for the argument to work?
+\end{exe}
 \end{frame}
 
 \begin{frame}[allowframebreaks]\ft{References}

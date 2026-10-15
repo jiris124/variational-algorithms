@@ -658,6 +658,21 @@ Minimising $\braket{O(\boldsymbol\phi)} = \braket{\Psi(\boldsymbol\phi)|O|\Psi(\
 \onp{\footnotesize Error $\rho$ relative to the spectral width. Oracle: no $\rho<1$; QAOA: $\rho\ge(1-\alpha_{\max})/2$, i.e., $\ge 1/34$, or $\ge 0.061$ under UGC; depth: $\mathbf{QCMA}$-hard within $N^{1-\epsilon}$.}
 \end{frame}
 
+\begin{frame}\ft{Training, if the Unique Games Theorem holds}
+\onp{\scriptsize}
+\ona{The bounds of the previous slide are stated relative to $\alpha_{\max}$, the best ratio achievable for MaxCut in polynomial time, and so they sharpen if Theorem~\ref{thm:ch03:ugt} is correct. Two cases must be distinguished, according to the computer on which the training runs.}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item \textbf{Classical training.} Goemans--Williamson achieves $\alpha_{\rm GW}$, and if the theorem holds and $\mathbf P\ne\mathbf{NP}$, no polynomial-time algorithm achieves more on every instance, so that $\alpha_{\max} = \alpha_{\rm GW}$. Every polynomial-time classical training procedure for QAOA of depth one then has optimization error
+    \begin{equation*}
+        \rho \;\ge\; \tfrac12(1-\alpha_{\rm GW}) \;\approx\; 0.061,
+    \end{equation*}
+    with no assumption beyond $\mathbf P\ne\mathbf{NP}$. Without the theorem, the unconditional bound was $1/34 \approx 0.029$, from H\accent23 astad's $16/17$.
+    \item \textbf{Training with a quantum computer in the loop.} An optimizer that queries a quantum device, or runs any other quantum subroutine, is a polynomial-time quantum algorithm. If it guaranteed $\rho < (1-\alpha_{\rm GW})/2$, the reduction of \citet{bittel2021training} would turn it into a polynomial-time quantum algorithm approximating MaxCut beyond $\alpha_{\rm GW}$. By the theorem, that would decide 3-SAT, so the same bound holds unless $\mathbf{NP}\subseteq\mathbf{BQP}$. The quantum device does not help with the hard instances in any case: those of the reduction live on $\mathcal O(\log d)$ qubits and can be simulated classically, so the difficulty lies in the search over parameters.
+    \item \textbf{What is unchanged.} The oracle setting already excludes any guarantee $\rho<1$ assuming only $\mathbf P\ne\mathbf{NP}$, or $\mathbf{NP}\not\subseteq\mathbf{BQP}$ for quantum optimizers. Gradient methods guarantee no more than $\rho\ge1/4$ in any case, as their fixed points are the cuts that cannot be improved by moving one vertex. The $\mathbf{QCMA}$-hardness of approximating the optimal depth \citep{bittelQCMA} does not involve unique games.
+\end{itemize}
+\ona{In short, if the theorem holds, a relative error of about $6\%$ of the spectral width is the best that any efficient training procedure, classical or quantum, can guarantee on all instances of depth-one QAOA, unless $\mathbf{NP}\subseteq\mathbf{BQP}$. As before, this says nothing about typical instances.}
+\end{frame}
+
 \begin{frame}\ft{What the theorem says, and what it does not}
 \begin{itemize}\setlength\itemsep{0.3em}
     \item It says that in the worst case no polynomial-time training procedure finds the optimal parameters, nor even parameters within a fixed fraction of the spectral width of the optimum, unless $\mathbf P = \mathbf{NP}$. The difficulty lies in the classical optimization, not in the quantum hardware or in estimating expectation values.
@@ -666,6 +681,23 @@ Minimising $\braket{O(\boldsymbol\phi)} = \braket{\Psi(\boldsymbol\phi)|O|\Psi(\
 \end{itemize}
 \ona{Later work has extended the picture. Besides the hardness of approximating the depth \citep{bittelQCMA}, in an idealised digitised setting the training problem is even undecidable \citep{korpas2025undecidable}; and for a constant number of angles there are tractable regimes \citep{sakos2026global}.}
 \onp{\footnotesize Later: undecidability \citep{korpas2025undecidable}; tractable constant-angle regimes \citep{sakos2026global}.}
+\end{frame}
+
+\mode<all>{\gdef\quanttab#1#2#3#4{\begin{tabular}{>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}}\toprule
+problem & before the theorem & if the theorem holds & still assumed \\\midrule
+unique games, entangled provers & value approximable by SDP; entangled UGC false & unchanged; the reduction's ``no'' instances must contain games with classical value $\le\delta$ and entangled value near $1$ (our inference) & $\mathbf P\ne\mathbf{NP}$ \\
+Quantum MaxCut, best product state & UG-hard beyond $\alpha_{\rm BOV}\approx0.956$ & $\mathbf{NP}$-hard beyond $0.956$ & the 2026 Borell result \\
+Quantum MaxCut, true (entangled) value & UG-hard beyond $0.956$ & $\mathbf{NP}$-hard beyond $0.956$; for quantum computers, unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & the vector-valued Borell conjecture \\
+local Hamiltonians, quantum PCP & $\mathbf{NP}$-hard within some constant; $\mathbf{QMA}$-hardness open & unchanged & --- \\
+QAOA for MaxCut, angles found in polynomial time & beating $\alpha_{\rm GW}$ would refute the UGC or give $\mathbf{NP}\subseteq\mathbf{BQP}$ & impossible on all instances unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP}$ \\
+QAOA for MaxCut, angles as advice & as above, with $\mathbf{BQP/poly}$ & impossible unless $\mathbf{NP}\subseteq\mathbf{BQP/poly}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP/poly}$ \\
+training QAOA, classical optimizer & $\rho\ge1/34$ unless $\mathbf P=\mathbf{NP}$ & $\rho\ge0.061$ unless $\mathbf P=\mathbf{NP}$ & $\mathbf P\ne\mathbf{NP}$ \\
+training QAOA, quantum in the loop & as above, with $\mathbf{BQP}$ & $\rho\ge0.061$ unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP}$ \\\bottomrule
+\end{tabular}}}
+\begin{frame}\ft{Quantum variants, if the Unique Games Theorem holds}
+\ona{Theorem~\ref{thm:ch03:ugt} concerns the classical value of classical constraints, and the preprint draws no quantum consequences. Table~\ref{tab:ch03:quantum} summarises those that follow from it together with known results. Some entries are our own inferences, and are marked as such.}
+\onp{\vspace{-0.8em}\begin{center}\tiny\quanttab{0.17}{0.25}{0.30}{0.15}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Quantum variants, before and after the claimed Unique Games Theorem \citep{OAI:The-Unique-Games-Theorem-September-23-2026}. Entangled-prover unique games: \citet{kempe2010unique}. Quantum MaxCut: \citet{hwang2023unique}, with the constant $\alpha_{\rm BOV}$ of the product-state algorithm of Bri\"et, Oliveira and Vallentin; the vector-valued Borell inequality needed for the product-state result is claimed in a 2026 preprint of \citet{heilman2026sharp}. Training: \citet{bittel2021training} and the previous slides. The whole table assumes that the preprint is correct.}\label{tab:ch03:quantum}\footnotesize\quanttab{0.2}{0.25}{0.27}{0.18}\end{table}}
 \end{frame}
 
 \section{Structural obstructions and average-case hardness}
