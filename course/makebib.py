@@ -4,7 +4,8 @@
 Collects every \\cite key used in ch*.tex, looks it up (in order) in
 ../template/jakubs.bib, ../numerics/refs.bib, ../iterationcomplexity/refs.bib,
 ../survey/references.bib, ../chemistry/ref.bib, ../eqa/ref.bib, adds a few hand-written entries for papers that have no
-.bib file (only .bbl), and reports keys that are still missing.
+.bib file (only .bbl), replaces the entries in OVERRIDE that are wrong in the sources, and reports
+keys that are still missing.
 """
 import re, glob, sys
 
@@ -44,7 +45,7 @@ HAND = {
 "gilyen2021sub": "@inproceedings{gilyen2021sub,\n  title={(Sub)exponential advantage of adiabatic quantum computation with no sign problem},\n  author={Gily{\\'e}n, Andr{\\'a}s and Hastings, Matthew B. and Vazirani, Umesh},\n  booktitle={Proceedings of the 53rd ACM Symposium on Theory of Computing},\n  pages={1357--1369},\n  year={2021},\n  doi={10.1145/3406325.3451060}\n}",
 "feynman1986quantum": '@article{feynman1986quantum,\n  title={Quantum mechanical computers},\n  author={Feynman, Richard P.},\n  journal={Foundations of Physics},\n  volume={16},\n  number={6},\n  pages={507--531},\n  year={1986},\n  doi={10.1007/BF01886518}\n}',
 "sinclair1989approximate": '@article{sinclair1989approximate,\n  title={Approximate counting, uniform generation and rapidly mixing {Markov} chains},\n  author={Sinclair, Alistair and Jerrum, Mark},\n  journal={Information and Computation},\n  volume={82},\n  number={1},\n  pages={93--133},\n  year={1989},\n  doi={10.1016/0890-5401(89)90067-9}\n}',
-"mohar1990eigenvalues": '@article{mohar1990eigenvalues,\n  title={Eigenvalues and the max-cut problem},\n  author={Mohar, Bojan and Poljak, Svatopluk},\n  journal={Czechoslovak Mathematical Journal},\n  volume={40},\n  number={2},\n  pages={343--352},\n  year={1990},\n  publisher={Institute of Mathematics, Academy of Sciences of the Czech Republic}\n}',
+"mohar1990eigenvalues": '@article{mohar1990eigenvalues,\n  title={Eigenvalues and the max-cut problem},\n  author={Mohar, Bojan and Poljak, Svatopluk},\n  journal={Czechoslovak Mathematical Journal},\n  volume={40},\n  number={2},\n  pages={343--352},\n  year={1990},\n  publisher={Institute of Mathematics, Academy of Sciences of the Czech Republic},\n  doi={10.21136/CMJ.1990.102386}\n}',
 "hwang2023unique": "@inproceedings{hwang2023unique,\n  title={Unique Games hardness of {Quantum Max-Cut}, and a conjectured vector-valued {Borell}'s inequality},\n  author={Hwang, Yeongwoo and Neeman, Joe and Parekh, Ojas and Thompson, Kevin and Wright, John},\n  booktitle={Proceedings of the 2023 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA)},\n  pages={1319--1384},\n  year={2023},\n  doi={10.1137/1.9781611977554.ch48},\n  note={arXiv:2111.01254}\n}",
 "heilman2026sharp": '@misc{heilman2026sharp,\n  title={Sharp hardness for {MAX-3-CUT} and {Quantum MAX-CUT}},\n  author={Heilman, Steven},\n  howpublished={arXiv:2608.00333},\n  year={2026}\n}',
 "OAI:The-Unique-Games-Theorem-September-23-2026": '@misc{OAI:The-Unique-Games-Theorem-September-23-2026,\n  author = {{OpenAI}},\n  title = {{The Unique Games Theorem}},\n  howpublished = {OpenAI Math Release preprint\n                  \\href{https://github.com/openai/math/blob/main/preprints/The-Unique-Games-Theorem-September-23-2026/paper.pdf}{OAI:The-Unique-Games-Theorem-September-23-2026}},\n  year = {2026}\n}',
@@ -95,7 +96,17 @@ HAND = {
 "poljak1995recipe": "@article{poljak1995recipe,\n  title={A recipe for semidefinite relaxation for (0,1)-quadratic programming},\n  author={Poljak, Svatopluk and Rendl, Franz and Wolkowicz, Henry},\n  journal={Journal of Global Optimization},\n  volume={7},\n  number={1},\n  pages={51--73},\n  year={1995},\n  publisher={Springer}\n}",
 "khot2002power": "@inproceedings{khot2002power,\n  title={On the power of unique 2-prover 1-round games},\n  author={Khot, Subhash},\n  booktitle={Proceedings of the 34th Annual ACM Symposium on Theory of Computing},\n  pages={767--775},\n  year={2002}\n}",
 "Bravyi2019": "@article{Bravyi2019,\n  title={Obstacles to variational quantum optimization from symmetry protection},\n  author={Bravyi, Sergey and Kliesch, Alexander and Koenig, Robert and Tang, Eugene},\n  journal={Physical Review Letters},\n  volume={125},\n  number={26},\n  pages={260505},\n  year={2020},\n  publisher={APS}\n}",
+"schuch2009computational": '@article{schuch2009computational,\n  title={Computational complexity of interacting electrons and fundamental limitations of density functional theory},\n  author={Schuch, Norbert and Verstraete, Frank},\n  journal={Nature Physics},\n  volume={5},\n  number={10},\n  pages={732--735},\n  year={2009},\n  doi={10.1038/nphys1370}\n}',
+"eisert2006computational": '@article{eisert2006computational,\n  title={Computational difficulty of global variations in the density matrix renormalization group},\n  author={Eisert, Jens},\n  journal={Physical Review Letters},\n  volume={97},\n  number={26},\n  pages={260501},\n  year={2006},\n  doi={10.1103/PhysRevLett.97.260501}\n}',
 "Wang2018": "@article{Wang2018,\n  title={Quantum approximate optimization algorithm for {MaxCut}: A fermionic view},\n  author={Wang, Zhihui and Hadfield, Stuart and Jiang, Zhang and Rieffel, Eleanor G.},\n  journal={Physical Review A},\n  volume={97},\n  number={2},\n  pages={022304},\n  year={2018},\n  publisher={APS}\n}",
+}
+
+# Corrected entries that replace wrong ones in the source bibliographies, checked against Crossref.
+OVERRIDE = {
+# the source entries lack the article number
+"Wecker2015": '@article{Wecker2015,\n  title={Progress towards practical quantum variational algorithms},\n  author={Wecker, Dave and Hastings, Matthew B. and Troyer, Matthias},\n  journal={Physical Review A},\n  volume={92},\n  number={4},\n  pages={042303},\n  year={2015},\n  doi={10.1103/PhysRevA.92.042303}\n}',
+# the source entries carry the DOI of the FSTTCS 2004 version
+"kempe2006complexity": '@article{kempe2006complexity,\n  title={The complexity of the local {Hamiltonian} problem},\n  author={Kempe, Julia and Kitaev, Alexei and Regev, Oded},\n  journal={SIAM Journal on Computing},\n  volume={35},\n  number={5},\n  pages={1070--1097},\n  year={2006},\n  doi={10.1137/S0097539704445226}\n}',
 }
 
 def main():
@@ -109,6 +120,8 @@ def main():
     bibs = [parse_bib(p) for p in SOURCES]
     out, missing = [], []
     for k in sorted(keys):
+        if k in OVERRIDE:
+            out.append(OVERRIDE[k]); continue
         for b in bibs:
             if k in b:
                 out.append(b[k]); break

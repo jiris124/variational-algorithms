@@ -9,7 +9,7 @@
 \lecture{Per-Iteration Complexity of QAOA}{Lect09}
 \chapter{Per-Iteration Complexity of QAOA}\label{C.PerIteration}
 
-\ona{\Chap~\chref{C.IterationComplexity} counted iterations. This \chap{} asks what one iteration \emph{costs}: shots, circuits, circuit depth, classical simulation time, and hardware latency; then why no per-iteration budget rescues the worst case, following the $\mathbf{NP}$-hardness proof of \citet{bittel2021training}, which we cover in full in the lecture and sketch on one page here. It then follows \citet{marecek2026angles}, \emph{Setting angles in quantum approximate optimization at utility-scale}, where these costs decide how the angles of QAOA are set at 100 qubits or more, and which of the many proposed methods to trust.}
+\ona{\Chap~\chref{C.IterationComplexity} counted iterations. This \chap{} asks what one iteration \emph{costs}: shots, circuits, circuit depth, classical simulation time, and hardware latency; then recalls from \Chap~\chref{C.VQE} why no per-iteration budget rescues the worst case: training is $\mathbf{NP}$-hard \citep{bittel2021training}. It then follows \citet{marecek2026angles}, \emph{Setting angles in quantum approximate optimization at utility-scale}, where these costs decide how the angles of QAOA are set at 100 qubits or more, and which of the many proposed methods to trust.}
 
 \section{The cost of one iteration}
 
@@ -49,60 +49,14 @@
 
 \section{No budget rescues the worst case: training is NP-hard}
 
-\begin{frame}\ft{The statements}
-\onp{\scriptsize}
-\ona{Per-iteration costs are polynomial. Iteration counts, by \Chap~\chref{C.IterationComplexity}, are polynomial to reach a \emph{stationary} point. What no polynomial budget buys is the \emph{global} optimum, in the worst case. \citet{bittel2021training} prove this through the following chain; all figures of merit are normalised by the spectral width $\Delta(O) = \lambda_{\max}(O) - \lambda_{\min}(O)$.}
-\begin{probl}[Continuous MaxCut]\label{p:ch09:cmc}
-Given the adjacency matrix $A \in \{0,1\}^{d\times d}$ of a graph, find $\boldsymbol\phi \in [0,2\pi)^d$ minimising $\mu(\boldsymbol\phi) = \frac14\sum_{i,j}A_{ij}[\cos\phi_i\cos\phi_j - 1]$.
-\end{probl}
-\begin{thm}[\citet{bittel2021training}]\label{thm:ch09:bittel}
-\begin{enumerate}\setlength\itemsep{0.05em}
-    \item[(a)] Problem~\ref{p:ch09:cmc} is $\mathbf{NP}$-hard, and any polynomial-time algorithm for it has an approximation ratio at most $\alpha_{\max}$, that of MaxCut.
-    \item[(b)] VQA minimisation with oracle access to $\braket{O(\boldsymbol\phi)}$ is $\mathbf{NP}$-hard, and no polynomial-time algorithm guarantees an optimization error $\rho < 1$.
-    \item[(c)] VQA minimisation on a Hilbert space of dimension $2d$, i.e., $\mathcal O(\log d)$ qubits, is $\mathbf{NP}$-hard, with $d$ layers and with a single layer; the decision version is $\mathbf{NP}$-complete.
-    \item[(d)] QAOA minimisation with one layer is $\mathbf{NP}$-hard, even with $\|H_b\|,\|H_c\| \le 3$ and periodic angles; every polynomial-time algorithm has optimization error $\rho \ge (1-\alpha_{\max})/2$; gradient methods have $\rho \ge 1/4$.
-    \item[(e)] The same holds for free-fermionic circuits.
-\end{enumerate}
-\end{thm}
-\end{frame}
-
-\begin{frame}\ft{Proof sketch, part I: from MaxCut to cosines}
-\onp{\scriptsize}\ona{\small}
-\textbf{(a) Continuous MaxCut.} Fix all coordinates but $\phi_i$. Since $A_{ii} = 0$ and $A = A^\top$,
-\begin{equation}
-    \mu(\boldsymbol\phi) = \cos(\phi_i)\Big[\tfrac12\sum_{j\ne i}A_{ij}\cos\phi_j\Big] + C_i,
-\end{equation}
-with $C_i$ independent of $\phi_i$: the dependence is through $\cos\phi_i$ alone, so $\mu(\boldsymbol\phi) \ge \min\{\mu|_{\phi_i=0},\ \mu|_{\phi_i=\pi}\}$. Rounding the coordinates one by one to $\{0,\pi\}$ never increases $\mu$, in polynomial time. On $\{0,\pi\}^d$, with $v_i = \cos\phi_i \in \{\pm1\}$,
-\begin{equation}
-    \min_{\boldsymbol\phi\in\{0,\pi\}^d}\mu = \tfrac14\min_{v\in\{\pm1\}^d}\sum_{i,j}A_{ij}(v_iv_j - 1) = -\tfrac12\min_v\sum_{i,j}A_{ij}\mathbb 1[v_i\ne v_j] = -\mathrm{MaxCut}(A),
-\end{equation}
-a many-one reduction of MaxCut to Problem~\ref{p:ch09:cmc}, preserving approximation ratios. \emph{Remark:} at $\{0,\pi\}^d$ the gradient vanishes and the Hessian is diagonal, so local minima of $\mu$ are exactly the fixed points of greedy single-vertex local search, whose ratio is $1/2$: gradient methods on $\mu$ guarantee only $1/2$.
-
-\textbf{(b) Oracular VQA.} Take $N = d$ qubits, $O = \frac14\sum_{ij}A_{ij}(Z_iZ_j - \one)$, generators $H_i = Y_i/2$, $L = d$ layers, initial state $\ket0^{\otimes d}$. Then $\ket{\Psi(\boldsymbol\phi)} = \bigotimes_iR_Y(\phi_i)\ket0$ has $\braket{Z_i} = \cos\phi_i$, so $\braket{O(\boldsymbol\phi)} = \mu(\boldsymbol\phi)$ exactly. \emph{Boosting:} with $\tilde O = (-1)^{k-1}O^{\otimes k}$ and $\tilde U = U^{\otimes k}$ on $kd$ qubits, $\braket{\tilde O} = -|\mu|^k$, spectral width $\mathrm{MC}^k$, and an algorithm with ratio $\alpha$ has error $\rho \ge 1 - \alpha^k \to 1$: no $\rho < 1$ can be guaranteed unless $\mathbf P = \mathbf{NP}$.
-\end{frame}
-
-\begin{frame}\ft{Proof sketch, part II: logarithmically many qubits, one layer}
-\onp{\scriptsize}\ona{\small}
-\textbf{(c) Logarithmically many qubits.} On $\mathcal H = \C^{2d}$ let $O' = \frac d8\,A\otimes\begin{psmallmatrix}1&1\\1&1\end{psmallmatrix}$ and $O = O'$ off the diagonal with $O_{jj} = -\sum_\alpha O'_{\alpha j}$; initial state $\ket{\Psi_0} = (2d)^{-1/2}\sum_j\ket j$; generators $H_i = \ket{2i-1}\!\bra{2i-1} - \ket{2i}\!\bra{2i}$, $L = d$. Then $\ket{\Psi(\boldsymbol\phi)} = (2d)^{-1/2}\sum_j(e^{-i\phi_j}\ket{2j-1} + e^{i\phi_j}\ket{2j})$ and a direct computation gives
-\begin{equation}
-    \braket{O(\boldsymbol\phi)} = \tfrac18\sum_{ij}A_{ij}\big(\cos(\phi_i-\phi_j) + \cos(\phi_i+\phi_j) - 2\big) = \mu(\boldsymbol\phi).
-\end{equation}
-Everything here is classically computable in polynomial time, so the hardness is intrinsic to the optimization, not inherited from the quantum part; a parameter vector is a polynomial witness, hence $\mathbf{NP}$-completeness of the decision version. \emph{One layer:} replace the $d$ generators by $H = \sum_jE_j(\ket{2j-1}\!\bra{2j-1} - \ket{2j}\!\bra{2j})$ with $E_j = 2\pi/m^j$. The spectrum is $\epsilon$-approximately ergodic with $\epsilon = 4\pi/m$: for every $\boldsymbol\phi$ there is a time $t$ with $\|\phi_j - E_jt\|_{2\pi} \le \epsilon$ for all $j$ (a nested-clock argument, $\mathcal O(d\log m)$ bits). So $\braket{O(t)} = \mu(\boldsymbol Et)$ approximates $\mu(\boldsymbol\phi)$ to any precision along a single one-parameter curve; minimising over $t$ is $\mathbf{NP}$-hard.
-\end{frame}
-
-\begin{frame}\ft{Proof sketch, part III: QAOA}
-\onp{\scriptsize}\ona{\small}
-\textbf{(d) QAOA.} On $\C^{2d+1}$ take $H_b = \mathrm{diag}(E_1,-E_1,\dots,E_d,-E_d,-1)$ with ground state $\ket{2d+1}$, and $H_c = O\oplus0 + \tau(\ket{+_{2d}}\!\bra{2d+1} + \text{h.c.})$. Then $U_c(\gamma)\ket{2d+1} = \cos(\tau\gamma)\ket{2d+1} + i\sin(\tau\gamma)\ket{+_{2d}}$, since $\ket{+_{2d}}$ is an eigenvector of $O\oplus0$, and $U_b(\beta)$ imprints the phases $e^{\mp iE_j\beta}$, so
-\begin{equation}
-    \braket{H_c(\beta,\gamma)} = \sin^2(\tau\gamma)\,\mu(\boldsymbol E\beta) + 2\tau\cos(\tau\gamma)\sin(\tau\gamma)\,g(\beta).
-\end{equation}
-For $\tau \ll 1$ the second term is negligible and $\gamma = \pi/(2\tau)$ is optimal, reducing to (c). A more careful construction with $E_i \in \{-3,\dots,3\}$ and $\|H_c\| = 1$ achieves $\braket{H_c}_{\min} = 1 - 2\,\mathrm{MC}/|E|$ by penalising deviations from the intended structure; with spectral width $2$ and $\mathrm{MC} \ge |E|/2$, an algorithm with ratio $\alpha$ has $\rho \ge \frac12\big(\tfrac{2\mathrm{MC}}{|E|} - \tfrac{2\alpha\mathrm{MC}}{|E|}\big) \ge (1-\alpha)/2$, hence $\rho \ge (1-\alpha_{\max})/2$ for every polynomial-time algorithm and $\rho \ge 1/4$ for gradient methods. \qed
-\end{frame}
-
-\begin{frame}\ft{The circuit behind the reduction}
-\figslide[height=0.45\textheight]{figures/bittel/sketch.pdf}{The variational circuit of the reduction, after \citet{bittel2021training}: parametrised layers $U_i(\phi_i)$, a measured observable $O$, a classical optimizer that proposes $\boldsymbol\phi$, and post-processing. In the reduction the layers are single-qubit $Y$ rotations, or diagonal phases on $\mathcal O(\log d)$ qubits, and the optimizer faces the landscape of continuous MaxCut.}{fig:ch09:bittel}
+\begin{frame}\ft{No budget rescues the worst case}
+\ona{Per-iteration costs are polynomial. Iteration counts, by \Chap~\chref{C.IterationComplexity}, are polynomial to reach a \emph{stationary} point. What no polynomial budget buys is the \emph{global} optimum, in the worst case. \Chap~\chref{C.VQE} proved this, following \citet{bittel2021training}:}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item Training is $\mathbf{NP}$-hard on $\mathcal O(\log d)$ qubits, with a single layer, and for QAOA with a single layer. On these instances one evaluation of the energy is a small matrix computation, so the cost of an iteration is negligible, and the difficulty is the number of iterations needed to find the global optimum.
+    \item Unless $\mathbf P = \mathbf{NP}$, no polynomial-time training procedure guarantees an optimization error below $(1-\alpha_{\max})/2$ of the spectral width for QAOA, that is $1/34$, or $0.061$ under the Unique Games Conjecture; methods that may stop at a local minimum do no better than $1/4$, as the local minima of the landscape include the local optima of single-vertex search.
+\end{itemize}
 \ona{What the theorem does \emph{not} say: it does not forbid good angles for typical instances, which is what the rest of this \chap{} finds empirically, nor good solutions from local minima, which is what warm starts guarantee (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}). It says that a per-iteration budget, however generous, is not the bottleneck in the worst case: the number of iterations to the global optimum is.}
-\onp{Not forbidden: good angles on typical instances (empirically, below); good solutions from local minima (warm starts). Forbidden: a worst-case guarantee from any polynomial budget.}
+\onp{Not forbidden: good angles on typical instances (empirically, below); good solutions from local minima (warm starts). Forbidden: a worst-case guarantee from any polynomial budget (\Chap~\chref{C.VQE}).}
 \end{frame}
 
 \section{Angle setting at utility scale}

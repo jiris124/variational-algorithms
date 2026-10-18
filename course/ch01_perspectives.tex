@@ -629,7 +629,7 @@ Gurobi & $1$ & $1$ & $1$ \\\bottomrule
 \begin{frame}\ft{Bad news I: the angles are hard to find}
 \ona{The landscape $F_p(\boldsymbol\theta)$ is a trigonometric polynomial in $2p$ variables, riddled with local minima even at $p=1$ \citep{Vijendran2025}. Worse, finding the global minimum is provably hard:}
 \begin{itemize}\setlength\itemsep{0.3em}
-    \item Training a VQA to additive error below $(1-\alpha_{\max})/2$ is \textbf{NP}-hard \citep{bittel2021training}, even for a single layer, and even on logarithmically many qubits.
+    \item Training a VQA is \textbf{NP}-hard \citep{bittel2021training}, even for a single layer, and even on logarithmically many qubits; no polynomial-time algorithm guarantees an error below $(1-\alpha_{\max})/2$ of the spectral width, unless $\mathbf P = \mathbf{NP}$ (\Chap~\chref{C.VQE}).
     \item Deciding the depth $p$ needed to reach a target energy is \textbf{QCMA}-hard \citep{bittelQCMA}.
     \item In an idealised digitised setting, deciding whether a depth-58 QAOA reaches a target energy is \emph{undecidable} \citep{korpas2025undecidable}.
 \end{itemize}

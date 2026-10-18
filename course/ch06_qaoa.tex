@@ -9,7 +9,7 @@
 \lecture{The Quantum Approximate Optimization Algorithm}{Lect06}
 \chapter{The Quantum Approximate Optimization Algorithm}\label{C.QAOA}
 
-\ona{This \chap{} defines QAOA \citep{farhi2014quantum}, the variational algorithm for combinatorial optimization that the rest of the course studies, establishes that training it is \textbf{NP}-hard \citep{bittel2021training}, and then proves that it nevertheless converges as the depth grows, following the elementary proof of \citet{binkowski2023elementary}, which also covers the constrained \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum}. The first part is adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{This \chap{} defines QAOA \citep{farhi2014quantum}, the variational algorithm for combinatorial optimization that the rest of the course studies, recalls from \Chap~\chref{C.VQE} that training it is \textbf{NP}-hard \citep{bittel2021training}, and then proves that it nevertheless converges as the depth grows, following the elementary proof of \citet{binkowski2023elementary}, which also covers the constrained \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum}. The first part is adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{Quantum Approximate Optimization Algorithm}\label{sec:ch06:qaoa}
 
@@ -66,47 +66,16 @@ The optimization version is \textbf{APX}-hard \ona{\citep{lee2021classifying}} w
 \onp{\begin{itemize}\item closed form per edge; for 3-regular triangle-free graphs the optimum ratio is $0.6924$ \citep{farhi2014quantum}; \item depth-one landscapes are exactly computable classically \citep{Wang2018}, and far from GW.\end{itemize}}
 \end{frame}
 
-\section{VQAs are NP-hard to train}
+\section{Training QAOA is NP-hard}
 
-\begin{frame}\ft{VQAs are \textbf{NP}-hard to train}
-An interesting result was given by \citet{bittel2021training}. To describe this seminal work we can outsource the quantum computation to an oracle $\mathcal{O}$ to avoid potential computational complications associated with the quantum circuit.
-\begin{probl}[VQA minimization, oracular formulation]\label{p:ch06:VQAoracle}\hfill
-\begin{description}[noitemsep,leftmargin=0.5cm,font=\normalfont]
-\item[Instance] A set of Hermitian generators $\{ H_i \}_{i=1,\ldots, L}$ and an observable $O$, given in terms of the Pauli basis representation, acting on $\mathcal{H}$.
-\item[Oracle Access] The oracle $\mathcal{O}$ returns the expectation value $\braket{O} \equiv \braket{O(\vartheta)}$ for a given $\vartheta \in \mathbb{R}^L$ up to any desired polynomial additive error $\epsilon$.
-\item[Task] Find $\vartheta \in \mathbb{R}^L$ that minimises $\braket{O}$, provided access to the oracle $\mathcal{O}$.
-\end{description}
-\end{probl}
-\ona{The crucial feature of Problem \ref{p:ch06:VQAoracle} is that it captures the complexity of only the classical optimization part of VQAs since the oracle makes the return of the quantum part deterministic.}
-\end{frame}
-
-\begin{frame}\ft{VQAs are \textbf{NP}-hard to train}
-\begin{thm}[Hardness of VQA optimization, oracular formulation]\label{thm:ch06:NPhard1}
-    Assuming \textbf{P}$\neq$\textbf{NP}, there is no deterministic classical algorithm that solves \ona{Prob. \ref{p:ch06:VQAoracle}}\onp{VQA minimization} in polynomial time.
-\end{thm}
-The proof \ona{of Theorem \ref{thm:ch06:NPhard1}} amounts to reducing the continuous, trigonometric version of MaxCut to \ona{Prob. \ref{p:ch06:VQAoracle}}\onp{VQA minimization}:
-\begin{probl}[continuous, trigonometric Max-Cut]\label{p:ch06:triMaxCut}\hfill
-\begin{description}[noitemsep,leftmargin=0.5cm,font=\normalfont]
-\item[Instance] The adjacency matrix $A \in\{0,1\}^{d \times d}$ of an unweighted undirected graph $G=(V,E)$ with $|V|=d$.
-\item[Task] Find $\phi \in[0,2 \pi)^d$ that minimizes
-$
-\mu(\phi)\coloneqq\frac{1}{4} \sum_{i=1}^d \sum_{j=1}^d A_{i, j}\left(\cos \left(\phi_i\right) \cos \left(\phi_j\right)-1\right).
-$
-\end{description}
-\end{probl}
-\ona{One checks that $\mu$ is minimised at $\phi \in \{0,\pi\}^d$, where it equals minus the cut size, and that $\mu(\phi)$ is the energy $\braket{O(\phi)}$ of a product of single-qubit $Y$ rotations applied to $\ket 0^{\otimes d}$ with $O = \frac14\sum_{ij}A_{ij}(Z_iZ_j - \one)$. Hence a single layer of single-qubit gates already suffices for hardness.}
-\end{frame}
-
-\begin{frame}\ft{VQAs are \textbf{NP}-hard to train}
-\ona{Minima of real valued functions are given by real numbers that may not have an efficient numerical representation. However, it is commonly said that a minimization problem is solved if it is solved to exponential precision, which is the convention we also use. The intuitive notion is that the hardness does not come from the difficulty of representing the minimum.}
-The result is robust \citep{bittel2021training}: it persists
-\begin{itemize}
-    \item when the ansatz uses only logarithmically many qubits,
-    \item when it consists of a single layer,
-    \item when it is built from free-fermionic gates,
-    \item and when time evolution is continuous rather than digitised.
+\begin{frame}\ft{Training QAOA is \textbf{NP}-hard}
+\ona{\Chap~\chref{C.VQE} formalised the training of a variational algorithm, following \citet{bittel2021training}, and proved it $\mathbf{NP}$-hard. For QAOA the conclusions are these, with $\Delta$ the optimization error, measured in units of the spectral width of the cost Hamiltonian $H_c$:}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item Minimising $\braket{H_c(\boldsymbol\beta,\boldsymbol\gamma)}$ is $\mathbf{NP}$-hard already for one layer, on a Hilbert space of polynomial dimension, where every energy can be computed classically; and for $d$ layers with $\|H_b\| = 3$ and $\|H_c\| = 1$.
+    \item Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm guarantees $\Delta<(1-\alpha_{\max})/2$ on every instance, where $\alpha_{\max}$ is the best polynomial-time ratio for MaxCut: $\Delta\ge1/34$, or $\Delta\ge0.061$ under the Unique Games Conjecture.
+    \item The landscape contains \emph{persistent} local minima, the local optima of MaxCut under single-vertex moves, and methods that may stop at a local minimum have $\Delta\ge1/4$.
 \end{itemize}
-Moreover, no polynomial-time algorithm can guarantee an additive optimization error $\Delta < (1-\alpha_{\max})/2$ for QAOA on every instance, where $\alpha_{\max}$ is the best polynomial-time approximation ratio of the underlying problem. \ona{The landscape contains many \emph{persistent} local minima with values bounded away from the optimum \citep{bittel2021training}; see \Chap~\chref{C.PerIteration} for how this is coped with in practice.}
+\ona{The hardness is a worst-case statement about the classical optimization; see \Chap~\chref{C.PerIteration} for how angles are set in practice.}
 \end{frame}
 
 
