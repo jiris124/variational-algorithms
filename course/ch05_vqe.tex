@@ -10,7 +10,7 @@
 \chapter{The Variational Quantum Eigensolver}\label{C.VQE}
 \ona{\sloppy}
 
-\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop, we follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the parameter-shift rule. We then explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop, we introduce a second instance, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as a special case of a VQA, ahead of its full treatment in \Chap~\chref{C.QAOA}. We then follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the parameter-shift rule. We then explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{The variational principle}
 
@@ -44,12 +44,43 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
 \ona{\begin{figure}[htb]\centering\includegraphics[width=0.92\linewidth,height=0.42\textheight,keepaspectratio]{figures/vqa/vqa2024.pdf}\caption{Schematic of the VQA loop: the quantum computer evaluates the cost of a parametrised circuit by sampling; a classical optimizer proposes new parameters.}\label{fig:ch05:vqa}\end{figure}}
 \end{frame}
 
+\begin{frame}\ft{A second instance: QAOA}
+\onp{\footnotesize}
+\onp{The \emph{quantum approximate optimization algorithm} (QAOA) \citep{farhi2014quantum} is the VQA for combinatorial optimization; \Chap~\chref{C.QAOA} treats it in full. Encode the objective $f$ to be maximised in a diagonal cost Hamiltonian:}
+\ona{VQE is not the only VQA. The \emph{quantum approximate optimization algorithm} (QAOA) of \citet{farhi2014quantum} is the VQA for combinatorial optimization. \Chap~\chref{C.QAOA} treats it in full; here we introduce only what the worked example below needs. Let $f:\{0,1\}^n\to\R$ be an objective to maximise, such as the cut of a graph, and write it as a diagonal \emph{cost Hamiltonian},}
+\begin{equation}\label{eq:ch05:HC}
+    H_C\ket x = -f(x)\ket x\quad\text{for all } x\in\{0,1\}^n;\qquad\text{for MaxCut,}\quad H_C = -\tfrac12\sum_{ij\in E}(\one - Z_iZ_j),
+\end{equation}
+\ona{so that the ground states of $H_C$ are the optimal bit strings. For MaxCut, $\braket{x|H_C|x} = -\mathrm{cut}(x)$, as $Z_iZ_j$ takes the value $-1$ on $\ket x$ exactly when the edge $ij$ is cut. QAOA of depth $p$ is the VQA with:}
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item the initial state $\ket+^{\otimes n}$, the uniform superposition of all bit strings, prepared by a Hadamard gate on every qubit;
+    \item the ansatz of $p$ alternating layers of the \emph{cost unitary} $e^{-i\gamma_kH_C}$ and the \emph{mixer} $e^{-i\beta_kH_M}$, with $H_M = \sum_jX_j$,
+    \begin{equation}\label{eq:ch05:qaoa}
+        \ket{\psi_p(\boldsymbol\beta,\boldsymbol\gamma)} = e^{-i\beta_pH_M}e^{-i\gamma_pH_C}\cdots e^{-i\beta_1H_M}e^{-i\gamma_1H_C}\ket+^{\otimes n};
+    \end{equation}
+    \item the cost $F_p(\boldsymbol\beta,\boldsymbol\gamma) = \braket{\psi_p|H_C|\psi_p}$, minus the expected objective of a measured bit string, minimised over the $2p$ angles by a classical optimizer\ona{, as in Fig.~\ref{fig:ch05:vqa}}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\ft{QAOA as a special case of a VQA}
+\onp{\footnotesize}
+\ona{In the terms of the variational loop of Fig.~\ref{fig:ch05:vqa}, QAOA fixes every ingredient except the angles:}
+\begin{description}\setlength\itemsep{0.15em}
+    \item[Embedding] the problem enters only through the diagonal Hamiltonian $H_C$.
+    \item[Ansatz] two generators, $H_C$ and $H_M$, used alternately: $2p$ layers and $2p$ parameters, however many qubits there are. The cost unitary is a product of commuting rotations, one for each term of $H_C$: for MaxCut, one $ZZ$ rotation per edge. The mixer is a product of single-qubit $X$ rotations.
+    \item[Measurement] every qubit in the computational basis, as $H_C$ is diagonal. Each measured copy yields a bit string $x$ together with its objective $f(x)$, so the same samples estimate the energy and supply candidate solutions; the output is the best bit string seen.
+    \item[Optimizer] as for VQE: derivative-free, or gradient-based with the parameter-shift rule (\Chap~\chref{C.PSR}).
+\end{description}
+\ona{Two features set QAOA apart from VQE. Its ansatz comes from adiabatic computation: \eqref{eq:ch05:qaoa} is a discretised quantum annealing from $-H_M$, whose ground state is $\ket+^{\otimes n}$, to $H_C$ (\Chap~\chref{C.Annealing}), which Section~\ref{sec:ch05:adiabatic} makes precise. And its target is a bit string rather than an energy: what matters is how often good bit strings are sampled. What QAOA achieves at fixed depth, and as the depth grows, is the subject of \Chap~\chref{C.QAOA}.}
+\onp{Its ansatz is discretised annealing from $-H_M$ to $H_C$ (\Chap~\chref{C.Annealing}, and below); its output is a bit string. Performance and convergence: \Chap~\chref{C.QAOA}.}
+\end{frame}
+
 \section{A worked example: depth-one QAOA on the 4-cycle}\label{sec:ch05:worked}
 
 \begin{frame}\ft{A worked example: the instance and the ansatz}
 \onp{\scriptsize}
 \onp{\begin{columns}[T]\begin{column}{0.66\textwidth}}
-\ona{To see every step of the loop of Fig.~\ref{fig:ch05:vqa} at once, we run a few iterations on the smallest interesting case: MaxCut on the 4-cycle, with vertices $1,2,3,4$ and edges $12$, $23$, $34$, $41$, and the depth-one ansatz of the quantum approximate optimization algorithm, which \Chap~\chref{C.QAOA} studies in general. With the conventions of that \chap{},}
+\ona{To see every step of the loop of Fig.~\ref{fig:ch05:vqa} at once, we run a few iterations on the smallest interesting case: MaxCut on the 4-cycle, with vertices $1,2,3,4$ and edges $12$, $23$, $34$, $41$, and QAOA of depth one, $p = 1$. In the notation of \eqref{eq:ch05:HC} and \eqref{eq:ch05:qaoa},}
 \begin{gather}
     H_C = -\tfrac12\sum_{ij\in E}(\one - Z_iZ_j),\qquad H_M = \sum_{j=1}^4 X_j,\nonumber\\
     \ket{\psi(\beta,\gamma)} = e^{-i\beta H_M}e^{-i\gamma H_C}\ket{+}^{\otimes4}.
