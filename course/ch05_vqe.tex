@@ -6,11 +6,11 @@
 \thispagestyle{empty}
 
 \ona{ \setcounter{chapter}{4} } % ONE LESS
-\lecture{The Variational Quantum Eigensolver}{Lect05}
-\chapter{The Variational Quantum Eigensolver}\label{C.VQE}
+\lecture{Variational Quantum Algorithms}{Lect05}
+\chapter{Variational Quantum Algorithms}\label{C.VQE}
 \ona{\sloppy}
 
-\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop, we introduce a second instance, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as a special case of a VQA, ahead of its full treatment in \Chap~\chref{C.QAOA}. We then follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the parameter-shift rule. We then explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop, we introduce a second instance, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as a special case of a VQA, ahead of its full treatment in \Chap~\chref{C.QAOA}. We then follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the gradients obtained from shifted circuits. We then explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{The variational principle}
 
@@ -93,7 +93,7 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
 \begin{itemize}\setlength\itemsep{0.1em}
     \item two parameters $(\beta,\gamma)$, starting at $(0.1,-0.1)$;
     \item $M = 1000$ measured copies for every circuit;
-    \item gradients by the parameter-shift rule; steps $(\beta,\gamma)\leftarrow(\beta,\gamma) - 0.1\,\hat g$.
+    \item gradients from shifted circuits; steps $(\beta,\gamma)\leftarrow(\beta,\gamma) - 0.1\,\hat g$.
 \end{itemize}
 \onp{\end{column}\begin{column}{0.32\textwidth}}
 \begin{center}
@@ -178,9 +178,9 @@ $R_Z$, edge $34$ & $-1.824$ & $-2.212$ & $+0.194$ & $R_X$, qubit $3$ & $-2.148$ 
 $R_Z$, edge $41$ & $-1.838$ & $-2.228$ & $+0.195$ & $R_X$, qubit $4$ & $-2.200$ & $-1.948$ & $-0.252$ \\\midrule
 \multicolumn{3}{@{}l}{$\hat g_\gamma$, the sum (exact $+0.763$)} & $+0.798$ & \multicolumn{3}{l}{$\hat g_\beta$, the sum (exact $-0.732$)} & $-0.866$ \\\bottomrule
 \end{tabular}}}
-\begin{frame}\ft{The gradient, by the parameter-shift rule}
+\begin{frame}\ft{The gradient, from shifted circuits}
 \onp{\footnotesize}
-\ona{The energy depends on the angle $\theta$ of a single gate $R_P(\theta) = e^{-i\theta P/2}$, with $P$ a Pauli string, as $a + b\cos\theta + c\sin\theta$; hence, exactly, $\partial F/\partial\theta = \frac12[F(\theta+\frac\pi2) - F(\theta-\frac\pi2)]$, the parameter-shift rule of \Chap~\chref{C.PSR}. Here $\gamma$ is the angle of four gates $R_Z(\gamma)$, one per edge, and $2\beta$ that of four gates $R_X(2\beta)$, one per qubit. Shifting one gate at a time, by the chain rule,}
+\ona{The energy depends on the angle $\theta$ of a single gate $R_P(\theta) = e^{-i\theta P/2}$, with $P$ a Pauli string, as $a + b\cos\theta + c\sin\theta$; hence, exactly, $\partial F/\partial\theta = \frac12[F(\theta+\frac\pi2) - F(\theta-\frac\pi2)]$, as \Chap~\chref{C.PSR} shows in general. Here $\gamma$ is the angle of four gates $R_Z(\gamma)$, one per edge, and $2\beta$ that of four gates $R_X(2\beta)$, one per qubit. Shifting one gate at a time, by the chain rule,}
 \onp{For one gate $R_P(\theta) = e^{-i\theta P/2}$: $\partial F/\partial\theta = \frac12[F(\theta+\frac\pi2) - F(\theta-\frac\pi2)]$ (\Chap~\chref{C.PSR}). Here $\gamma$ sits in four $R_Z(\gamma)$ and $2\beta$ in four $R_X(2\beta)$; shift one gate at a time:}
 \begin{equation}
     \frac{\partial F}{\partial\gamma} = \sum_{e\in E}\tfrac12\big[F_{e+} - F_{e-}\big], \qquad \frac{\partial F}{\partial\beta} = \sum_{j=1}^4 2\cdot\tfrac12\big[F_{j+} - F_{j-}\big],

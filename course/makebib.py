@@ -105,6 +105,8 @@ HAND = {
 OVERRIDE = {
 # the source entries lack the article number
 "Wecker2015": '@article{Wecker2015,\n  title={Progress towards practical quantum variational algorithms},\n  author={Wecker, Dave and Hastings, Matthew B. and Troyer, Matthias},\n  journal={Physical Review A},\n  volume={92},\n  number={4},\n  pages={042303},\n  year={2015},\n  doi={10.1103/PhysRevA.92.042303}\n}',
+# the source entries lack the umlaut in the name of the journal
+"born1928adiabatic": '@article{born1928adiabatic,\n  title={Beweis des {A}diabatensatzes},\n  author={Born, M. and Fock, V.},\n  journal={Zeitschrift f{\\"u}r Physik},\n  volume={51},\n  number={3--4},\n  pages={165--180},\n  year={1928},\n  doi={10.1007/BF01343193}\n}',
 # the source entries carry the DOI of the FSTTCS 2004 version
 "kempe2006complexity": '@article{kempe2006complexity,\n  title={The complexity of the local {Hamiltonian} problem},\n  author={Kempe, Julia and Kitaev, Alexei and Regev, Oded},\n  journal={SIAM Journal on Computing},\n  volume={35},\n  number={5},\n  pages={1070--1097},\n  year={2006},\n  doi={10.1137/S0097539704445226}\n}',
 }
