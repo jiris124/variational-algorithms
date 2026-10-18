@@ -10,7 +10,7 @@
 \chapter{Variational Quantum Algorithms}\label{C.VQE}
 \ona{\sloppy}
 
-\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop, we introduce a second instance, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as a special case of a VQA, ahead of its full treatment in \Chap~\chref{C.QAOA}. We then follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the gradients obtained from shifted circuits. We then explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{This \chap{} introduces variational quantum algorithms through their first instance, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, with the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After the variational loop and VQE for molecules, we explain where good ans\"atze come from: VQE as a discretisation of adiabatic computation, with a bound on the error of the discretisation and a comparison, for small hydrogen molecules, of the discretised schedule with VQE started from it. We then introduce a second instance, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as a special case of a VQA, ahead of its full treatment in \Chap~\chref{C.QAOA}, and follow one run of it in full detail, depth-one QAOA on the 4-cycle, from the circuit and its controlled gates to the measured copies and the gradients obtained from shifted circuits. The main subject of the \chap{} is then what it means to \emph{train} such an algorithm, and how hard that is. We follow \citet{bittel2021training}, \emph{Training variational quantum algorithms is NP-hard}, who turn the training into a family of well-posed computational problems, with a measure of error that separates what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part is trivial: for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA, and for free fermions; and that in the worst case no polynomial-time algorithm can guarantee any non-trivial error. We explain the formalisation first, and then prove the results, all but one in full. Parts are adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{The variational principle}
 
@@ -44,6 +44,247 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
 \ona{\begin{figure}[htb]\centering\includegraphics[width=0.92\linewidth,height=0.42\textheight,keepaspectratio]{figures/vqa/vqa2024.pdf}\caption{Schematic of the VQA loop: the quantum computer evaluates the cost of a parametrised circuit by sampling; a classical optimizer proposes new parameters.}\label{fig:ch05:vqa}\end{figure}}
 \end{frame}
 
+\mode<all>{\gdef\fittab#1#2#3#4#5{\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}>{\raggedright\arraybackslash}p{#5\linewidth}@{}}\toprule
+ansatz & initial state & generators $H_i$ & observable $O$ & layers $L$ \\\midrule
+hardware-efficient & $\ket0^{\otimes N}$ & $\frac12Y_k$, $\frac12Z_k$ on one qubit, $\frac12Z_kZ_l$ on two & molecular $H = \sum_kh_kP_k$ & number of gates \\
+UCCSD, Trotterised & $\ket{\rm HF}$, a basis state & $i(\tau_k - \tau_k^\dagger)$ for an excitation $\tau_k$: a sum of Pauli strings & molecular $H$ & excitations $\times$ Trotter steps \\\bottomrule
+\end{tabular}}}
+\begin{frame}\ft{The variational algorithms we know are instances}
+\onp{\footnotesize}
+\ona{Every ansatz in this \chap{} has the form of the loop of Fig.~\ref{fig:ch05:vqa}: layers $U_i(\vartheta_i) = e^{-i\vartheta_iH_i}$, each with a generator $H_i$ and one real parameter, applied to an initial state, and an observable whose expectation is minimised. Table~\ref{tab:ch05:fit} writes the two ans\"atze for molecules of the next slide in this form. Two conventions make them fit. First, a layer may act on all qubits at once, and one parameter may control many gates: the generator is then their sum. Second, the initial state may always be taken to be $\ket0^{\otimes N}$. A fixed initial state $V\ket0^{\otimes N}$, such as the Hartree--Fock determinant $X^{x}\ket0^{\otimes N}$, is absorbed by conjugation,}
+\begin{equation}
+    U_L(\vartheta_L)\cdots U_1(\vartheta_1)V\ket0 = V\,e^{-i\vartheta_LV^\dagger H_LV}\cdots e^{-i\vartheta_1V^\dagger H_1V}\ket0,
+\end{equation}
+\ona{so that one replaces every $H_i$ by $V^\dagger H_iV$ and $O$ by $V^\dagger OV$. When $V$ is a product of single-qubit Clifford gates, such as $X$ and the Hadamard gate, Pauli strings go to Pauli strings and the number of terms does not change. The training problems of Section~\ref{sec:ch05:formal} use this convention.}
+\onp{\begin{center}\scriptsize\fittab{0.15}{0.13}{0.27}{0.15}{0.12}\end{center}
+\footnotesize A fixed initial state $V\ket0$ is absorbed: $H_i\mapsto V^\dagger H_iV$, $O\mapsto V^\dagger OV$.}
+\ona{\begin{table}[htb]\centering\caption{Two ans\"atze for molecules in the form of the variational loop. A fixed initial state can be absorbed into the generators and the observable. Here $\tau_k$ is a fermionic excitation operator mapped to qubits.}\label{tab:ch05:fit}\footnotesize\fittab{0.15}{0.13}{0.27}{0.15}{0.12}\end{table}}
+\end{frame}
+
+\begin{frame}\ft{VQE for molecules}
+\ona{The variational quantum eigensolver \citep{peruzzo2014variational} is the VQA for the electronic-structure problem of \Chap~\chref{C.Motivation}: $H$ is the second-quantised molecular Hamiltonian mapped to qubits, with $\mathcal O(N^4)$ Pauli terms for $N$ orbitals, and the goal is the ground-state energy. Design choices:}
+\begin{description}\setlength\itemsep{0.2em}
+    \item[Initial state] the Hartree--Fock determinant $\ket{\Psi_0}$, a computational basis state, whose energy is already the mean-field energy; the variational circuit adds correlation.
+    \item[Chemically inspired ansatz] unitary coupled cluster with singles and doubles (UCCSD), $U(\vartheta) = e^{T(\vartheta) - T(\vartheta)^\dagger}$ with excitation operators $T$; exact in a limit, deep in practice.
+    \item[Hardware-efficient ansatz] layers of single-qubit rotations and native entangling gates \citep{kandala2017hardware}; shallow and expressive, but problem-agnostic.
+    \item[Measurement] group commuting Pauli terms; the shot count to reach precision $\epsilon$ scales as $(\sum_k|h_k|)^2/\epsilon^2$ in the worst case.
+\end{description}
+\ona{On hardware, VQE has produced ground-state energies of small molecules (H$_2$, LiH, BeH$_2$) to chemical accuracy after error mitigation \citep{kandala2017hardware}. Its scaling to larger molecules is the subject of \Chap~\chref{C.EQA}.}
+\end{frame}
+
+\begin{frame}\ft{VQE as state preparation for early fault-tolerant algorithms}
+\ona{VQE has no guarantee on the quality of its output state, and there is evidence that prepare-and-measure estimation as in VQE is not competitive for industrially relevant molecules: the shot counts to reach chemical accuracy are prohibitive. \citet{zhang2022computing} propose a division of labour that keeps what VQE is good at:}
+\begin{enumerate}\setlength\itemsep{0.2em}
+    \item run VQE (or Hartree--Fock, or a short adiabatic evolution) to prepare $\ket{\phi_0}$ with overlap $\eta = |\braket{\phi_0|\psi_0}|^2$;
+    \item hand $\ket{\phi_0}$ to a ground-state property estimation routine that uses Hadamard tests of $e^{-ijH}$ and $O$ with classical Fourier post-processing, and returns $\braket{\psi_0|O|\psi_0}$ to accuracy $\epsilon$ with maximal evolution time $\widetilde{\mathcal O}(\gamma^{-1})$, regardless of how good $\ket{\phi_0}$ is, at total cost $\widetilde{\mathcal O}(\gamma^{-1}\epsilon^{-2}\eta^{-2})$ (\Chap~\chref{C.Motivation}).
+\end{enumerate}
+\ona{The variational state need not be accurate; it needs overlap. This reframes the goal of VQE from ``find the ground state'' to ``find a state with non-negligible $\eta$'', which is a lower bar, and connects to the warm starts of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, where the initial state likewise needs only a good overlap with the optimum. Example properties: entries $D_{pq} = \braket{\psi_0|a_p^\dagger a_q|\psi_0}$ of the one-particle reduced density matrix, hence charge densities and dipole moments, each a combination of four Pauli-string expectations.}
+\onp{VQE supplies overlap $\eta$; a Fourier-based post-processing of Hadamard tests supplies the guarantee \citep{zhang2022computing}. The variational state need not be accurate, only overlapping.}
+\end{frame}
+
+\section{VQE as discretised adiabatic computation}\label{sec:ch05:adiabatic}
+
+\begin{frame}\ft{From an adiabatic path to an ansatz}
+\onp{\footnotesize}
+\ona{Where do good ans\"atze come from? The answer that comes with a guarantee is adiabatic computation (\Chap~\chref{C.Annealing}). Let $H_0$ be a Hamiltonian whose ground state $\ket{\Psi_0}$ is easy to prepare, let $H_1$ be the Hamiltonian whose ground state we want, and evolve slowly along the path}
+\begin{equation}\label{eq:ch05:path}
+    H(s) = (1-s)\,H_0 + s\,H_1,\qquad i\frac{d}{dt}\ket{\psi(t)} = H(t/T)\ket{\psi(t)},\quad \ket{\psi(0)} = \ket{\Psi_0},\quad 0\le t\le T.
+\end{equation}
+\ona{By the adiabatic theorem of \Chap~\chref{C.Annealing}, a total time $T$ of the order of $1/\Delta_{\min}^2$, where $\Delta_{\min}$ is the smallest gap along the path, leaves $\ket{\psi(T)}$ close to the ground state of $H_1$; write $\varepsilon_{\rm ad}(T) = 1 - |\braket{g|\psi(T)}|^2$ for the remaining infidelity, with $\ket g$ the ground state of $H_1$. For the electronic structure problem, $H_1 = H$ is the molecular Hamiltonian and the natural $H_0$ is the \emph{Fock operator} $F = \sum_p\varepsilon_p\,a_p^\dagger a_p$ of the Hartree--Fock method, with the orbital energies $\varepsilon_p$; among states with the right numbers of electrons, its ground state is the Hartree--Fock determinant $\ket{\rm HF}$, the usual initial state of VQE. A gate-based computer cannot apply \eqref{eq:ch05:path} directly. Three steps turn the evolution into a circuit, and then into VQE:}
+\begin{enumerate}\setlength\itemsep{0.15em}
+    \item \textbf{Piecewise constant:} on the $k$-th of $L$ intervals of length $\Delta t = T/L$, replace $H(t/T)$ by $H(s_k)$, with $s_k = (k-\frac12)/L$.
+    \item \textbf{Trotter splitting:} replace $e^{-i\Delta t H(s_k)}$ by $e^{-i\beta_kH_0}\,e^{-i\gamma_kH_1}$, with $\gamma_k = s_k\Delta t$ and $\beta_k = (1-s_k)\Delta t$.
+    \item \textbf{Free the angles:} keep the circuit, and let an optimizer choose all $2L$ angles $(\boldsymbol\beta,\boldsymbol\gamma)$:
+\end{enumerate}
+\begin{equation}\label{eq:ch05:hva}
+    \ket{\Psi(\boldsymbol\beta,\boldsymbol\gamma)} = e^{-i\beta_LH_0}e^{-i\gamma_LH_1}\cdots e^{-i\beta_1H_0}e^{-i\gamma_1H_1}\ket{\Psi_0}.
+\end{equation}
+\ona{The first factor to act is $e^{-i\gamma_1H_1}$, since $e^{-i\beta_1H_0}$ would only multiply $\ket{\Psi_0}$ by a phase. Steps 1 and 2 cost an error that we bound next; step 3 can only help, as the schedule is one point in the parameter space.}
+\end{frame}
+
+\begin{frame}\ft{The discretisation, pictured}
+\ona{Figure~\ref{fig:ch05:schedule} shows the three steps for $L = 6$. The schedule $s = t/T$ becomes a staircase, and each step of the staircase becomes two pulses: one of $H_1$ for a time $\gamma_k$, one of $H_0$ for a time $\beta_k$. The share of $H_1$ grows from layer to layer as the schedule does; in VQE, the widths of the pulses become free.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[x=1.1cm,y=1cm,every node/.style={font=\scriptsize}]
+  \draw[-{Latex}] (0,0) -- (6.4,0) node[right] {$t$};
+  \draw[-{Latex}] (0,0) -- (0,2.6) node[above] {$s$};
+  \draw (0.07,2.2) -- (-0.07,2.2) node[left] {$1$};
+  \draw (6,0.07) -- (6,-0.07) node[below] {$T$};
+  \draw[thick,gray] (0,0) -- (6,2.2);
+  \foreach \k in {1,...,6} {\draw[very thick,blue!70!black] ({\k-1},{2.2*(\k-0.5)/6}) -- (\k,{2.2*(\k-0.5)/6});}
+  \draw[densely dotted] (4,0) -- (4,1.65); \draw[densely dotted] (5,0) -- (5,2.017);
+  \draw[{Latex}-{Latex}] (4,-0.25) -- node[below] {$\Delta t$} (5,-0.25);
+  \begin{scope}[yshift=-1.75cm]
+    \foreach \k in {1,...,6} {
+      \pgfmathsetmacro{\sk}{(\k-0.5)/6}
+      \fill[orange!70] ({\k-1},0) rectangle ({\k-1+\sk},0.5);
+      \fill[blue!30] ({\k-1+\sk},0) rectangle (\k,0.5);
+      \draw ({\k-1},0) rectangle (\k,0.5);
+      \node at ({\k-0.5},-0.22) {$k = \k$};
+    }
+    \node[anchor=east] at (-0.1,0.25) {pulses};
+  \end{scope}
+  \node[note,anchor=west] (n1) at (6.6,2.45) {the schedule $s = t/T$};
+  \draw[notearrow] (n1.west) to[bend right=15] (4.5,1.68);
+  \node[note,anchor=west] (n2) at (6.6,1.55) {step 1: $H(s_k)$ for a time $\Delta t$,\\with $s_k = (k-\frac12)/L$};
+  \draw[notearrow] (n2.west) to[bend left=10] (5.6,2.03);
+  \node[note,anchor=west] (n3) at (6.6,-1.3) {step 2: $H_1$ for $\gamma_k = s_k\Delta t$ (orange),\\then $H_0$ for $\beta_k = (1-s_k)\Delta t$ (blue)};
+  \draw[notearrow] (n3.west) -- (5.4,-1.5);
+  \node[note,anchor=north] at (3,-2.25) {step 3, VQE: the $2L$ pulse widths become free parameters;\\the adiabatic schedule is one point of the parameter space};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Discretising the adiabatic path with $L = 6$ layers. Top: the linear schedule (grey) and its piecewise-constant approximation at the midpoints (blue). Bottom: each layer as a pulse of $H_1$ followed by a pulse of $H_0$, of lengths $\gamma_k$ and $\beta_k$ with $\gamma_k + \beta_k = \Delta t$.}\label{fig:ch05:schedule}\end{figure}}
+\onp{\footnotesize A staircase, then two pulses per step; VQE frees the pulse widths.}
+\end{frame}
+
+\begin{frame}\ft{Steps 1 and 2: what the discretisation costs}
+\onp{\footnotesize}
+\begin{lem}\label{lem:ch05:duhamel}
+If $H(t)$ and $\tilde H(t)$ generate the unitaries $U(t)$ and $\tilde U(t)$ on $[0,T]$, then $\|U(T) - \tilde U(T)\|\le\int_0^T\|H(t) - \tilde H(t)\|\,dt$.
+\end{lem}
+\ona{\emph{Proof.} From $U' = -iHU$ and $\tilde U' = -i\tilde H\tilde U$, $\frac d{dt}(U^\dagger\tilde U) = iU^\dagger(H - \tilde H)\tilde U$. Integrate from $0$ to $T$ and use that unitaries preserve norms. \qed}
+\begin{lem}[First-order Trotter error]\label{lem:ch05:trotter}
+For Hermitian $A$ and $B$, $\|e^{-i(A+B)} - e^{-iA}e^{-iB}\|\le\frac12\|[A,B]\|$.
+\end{lem}
+\ona{\emph{Proof.} Let $V(t) = e^{iBt}e^{iAt}e^{-i(A+B)t}$, so that the left-hand side is $\|V(1) - \one\|$. Then $V'(t) = ie^{iBt}e^{iAt}\big(e^{-iAt}Be^{iAt} - B\big)e^{-i(A+B)t}$, and $\|e^{-iAt}Be^{iAt} - B\|\le t\|[A,B]\|$, since the derivative of $e^{-iA\tau}Be^{iA\tau}$ is $-ie^{-iA\tau}[A,B]e^{iA\tau}$. Integrating, $\|V(1) - \one\|\le\int_0^1t\,\|[A,B]\|\,dt = \frac12\|[A,B]\|$. \qed}
+\ona{Apply both to the path \eqref{eq:ch05:path}. In step 1, $\|H(t/T) - H(s_k)\| = |t/T - s_k|\,\|H_1 - H_0\|\le\|H_1-H_0\|/(2L)$ on the $k$-th interval, so by Lemma~\ref{lem:ch05:duhamel} the error is at most $T\|H_1-H_0\|/(2L)$. In step 2, Lemma~\ref{lem:ch05:trotter} with $A = \gamma_kH_1$ and $B = \beta_kH_0$ bounds the error of layer $k$ by $\frac12\beta_k\gamma_k\|[H_0,H_1]\|\le\frac18\Delta t^2\|[H_0,H_1]\|$, as $s_k(1-s_k)\le\frac14$; errors of products of unitaries add, so the $L$ layers cost at most $T^2\|[H_0,H_1]\|/(8L)$. In all,}
+\begin{equation}\label{eq:ch05:disc}
+    \big\|\ket{\psi(T)} - \ket{\Psi(\boldsymbol\beta^{\rm ad},\boldsymbol\gamma^{\rm ad})}\big\| \;\le\; \eta_L \coloneqq \frac{T\,\|H_1 - H_0\|}{2L} + \frac{T^2\,\|[H_0,H_1]\|}{8L},
+\end{equation}
+\ona{where $(\boldsymbol\beta^{\rm ad},\boldsymbol\gamma^{\rm ad})$ are the angles of the schedule. Both terms fall like $1/L$; second-order splittings would make the second fall like $1/L^2$.}
+\onp{\footnotesize Steps 1 and 2 cost $\eta_L$: both terms fall like $1/L$; commuting $H_0, H_1$ would make step 2 exact.}
+\end{frame}
+
+\begin{frame}\ft{Step 3: the ansatz contains the adiabatic algorithm}
+\onp{\scriptsize}
+\begin{propn}\label{propn:ch05:adiabatic}
+At the angles of the schedule, the state \eqref{eq:ch05:hva} has approximation error, relative to the spectral width of $H_1$, at most
+\begin{equation*}
+    \delta \;\le\; \varepsilon_{\rm ad}(T) + \eta_L.
+\end{equation*}
+Hence the model mismatch $\delta_m$ of the ansatz with $L$ layers obeys the same bound, and so does the result of any optimizer started at these angles that never increases the energy.
+\end{propn}
+\ona{\emph{Proof.} For any state $\ket\phi$ with $|\braket{g|\phi}|^2 = 1-\epsilon$, expanding in eigenvectors gives $\braket{\phi|H_1|\phi} - E_0\le\epsilon\,w(H_1)$, so $\ket{\psi(T)}$ has $\delta\le\varepsilon_{\rm ad}(T)$. For unit vectors $\phi,\phi'$ and any $c\in\R$, $|\braket{\phi|H_1|\phi} - \braket{\phi'|H_1|\phi'}|\le2\|H_1 - c\one\|\,\|\phi-\phi'\|$; with $c$ the midpoint of the spectrum, $2\|H_1 - c\one\| = w(H_1)$, and \eqref{eq:ch05:disc} adds at most $\eta_L$ to $\delta$. \qed}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item \textbf{A polynomial ansatz with a guarantee.} If the gap along the path is at least inverse-polynomial and the norms are polynomial, then $T$ and $L = \mathcal O\big((T\|H_1-H_0\| + T^2\|[H_0,H_1]\|)/\epsilon\big)$ are polynomial, and the ansatz contains a state with $\delta\le\epsilon$. As adiabatic computation is universal \citep{aharonov2007adiabatic}, this family of ans\"atze is too.
+    \item \textbf{A certified starting point.} The schedule gives angles with a known error. An optimizer started there can only improve on them: a warm start in the sense of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, whose guarantee survives the persistent local minima of \citet{bittel2021training}, although it does not promise the global optimum.
+    \item \textbf{Combinatorial optimization} is the case of a diagonal $H_1$, whose ground states are the optimal solutions, started from $H_0 = -\sum_jX_j$; it is the subject of \ona{Section~\ref{sec:ch05:qaoa}}\onp{a section below}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\ft{The gates, for a molecule}
+\onp{\footnotesize}
+\ona{Under the Jordan--Wigner transformation (\Chap~\chref{C.Motivation}), $a_p^\dagger a_p = \frac12(\one - Z_p)$, so the two kinds of layer in \eqref{eq:ch05:hva} are very different.}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item \textbf{The Fock layer is cheap.} $F = \mathrm{const} - \frac12\sum_p\varepsilon_pZ_p$, so $e^{-i\beta F}$ is, up to a phase, a product of single-qubit rotations $R_Z(-\beta\varepsilon_p)$.
+    \item \textbf{The molecular layer is not.} $H = \sum_\alpha h_\alpha P_\alpha$ has $\mathcal O(N^4)$ Pauli strings for $N$ orbitals, which do not commute. One more Trotter splitting, $e^{-i\gamma H}\approx\prod_\alpha e^{-i\gamma h_\alpha P_\alpha}$, turns each factor into a Pauli rotation: a ladder of CNOTs around one $R_Z$.
+    \item \textbf{Untying the angles.} Giving each group of commuting terms its own angle in each layer yields the \emph{Hamiltonian variational ansatz} of \citet{Wecker2015}: more parameters, a richer ansatz, and a harder optimization.
+    \item \textbf{H$_2$ is too easy.} In the minimal basis, the states reachable from $\ket{\rm HF}$ span two dimensions. One layer with free angles, $e^{-i\beta F}e^{-i\gamma H}\ket{\rm HF}$, already reaches the exact ground energy, while the schedule itself, with $T = 16$, needs $L = 9$ layers for chemical accuracy, $1.6$ mHa.
+\end{itemize}
+\ona{All numbers in this section come from \texttt{code/ch05\_adiabatic.py}, which builds the qubit Hamiltonians from the integrals computed by PySCF, as in \Chap~\chref{C.Motivation}, checks their ground energies against the full configuration interaction of PySCF, and works in the sector with the right numbers of spin-up and spin-down electrons, which both $F$ and $H$ preserve.}
+\end{frame}
+
+\begin{frame}\ft{How long must the evolution be?}
+\ona{Figure~\ref{fig:ch05:adiabaticT} shows the error of the continuous evolution \eqref{eq:ch05:path} as a function of $T$, in units of $\hbar$ per Hartree, for H$_2$ at $0.75$~\angstrom{} and for a linear chain of four hydrogen atoms, H$_4$, at spacings $1.0$ and $1.5$~\angstrom{}, on eight qubits. Along the paths, the gap within the singlet states shrinks to $0.52$~Hartree at $1.0$~\angstrom{} and to $0.17$~Hartree at $1.5$~\angstrom{}, both at $s = 1$, and the stretched chain is correspondingly slower. The errors fall roughly like $1/T^2$, the rate of a linear schedule.}
+\ona{\gdef\atH{0.4\linewidth}}\onp{\gdef\atH{0.34\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=0.5\linewidth,height=\atH,clip=false,xmode=log,ymode=log,log basis x=2,xmin=1,xmax=64,ymin=3e-6,ymax=0.3,xtick={1,2,4,8,16,32,64},xticklabels={1,2,4,8,16,32,64},xlabel={total time $T$},ylabel={energy error (Hartree)},thick,mark size=1.6pt]
+  \addplot[green!45!black,mark=*] table[x=T,y=m0] {figures/ch05/adiabatic_T.dat};
+  \addplot[blue!70!black,mark=*] table[x=T,y=m1] {figures/ch05/adiabatic_T.dat};
+  \addplot[red!70!black,mark=*] table[x=T,y=m2] {figures/ch05/adiabatic_T.dat};
+  \addplot[gray,densely dotted,very thick,domain=1:64,samples=2] {1.6e-3};
+  \node[note,anchor=west] at (axis cs:72,4.0e-4) {H$_4$, $1.5$~\angstrom};
+  \node[note,anchor=west] at (axis cs:72,5.8e-5) {H$_4$, $1.0$~\angstrom};
+  \node[note,anchor=west] at (axis cs:72,6.8e-6) {H$_2$, $0.75$~\angstrom};
+  \node[note,anchor=west] at (axis cs:72,1.6e-3) {chemical accuracy};
+  \node[note,anchor=south west] (c2) at (axis cs:1.1,1.2e-5) {the smaller the gap,\\the longer the evolution};
+  \draw[notearrow] (c2.north) to[bend left=20] (axis cs:8,1.6e-2);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The adiabatic evolution \eqref{eq:ch05:path} from the Fock operator to the molecular Hamiltonian, in the minimal basis: the energy error at time $T$ above the exact ground energy. Of the times computed, chemical accuracy, $1.6$~mHa (dotted), is first reached at $T = 4$ for H$_2$, $T = 16$ for H$_4$ at $1.0$~\angstrom{} and $T = 64$ at $1.5$~\angstrom.}\label{fig:ch05:adiabaticT}\end{figure}}
+\onp{\footnotesize Errors fall like $1/T^2$; the stretched chain, with the smaller gap, needs the longest evolution.}
+\end{frame}
+
+\begin{frame}\ft{The schedule versus VQE: H$_4$ at $1.0$~\angstrom}
+\ona{Figures~\ref{fig:ch05:adiabaticL} and~\ref{fig:ch05:adiabaticL2} fix $T = 16$ and vary the number of layers $L$, for the two H$_4$ chains. Blue: the discretised schedule, with the angles of steps 1 and 2. Red: VQE, that is, BFGS on all $2L$ angles, started at the schedule. The schedule is accurate only once $\Delta t = T/L$ is small. VQE reaches chemical accuracy from $L = 6$, but it is not monotone in $L$: it does worse with five layers than with four, as BFGS stops at a local minimum.}
+\ona{\gdef\alH{0.42\linewidth}\gdef\alW{0.56\linewidth}}\onp{\gdef\alH{0.4\linewidth}\gdef\alW{0.52\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[name=al,width=\alW,height=\alH,clip=false,ymode=log,xmin=0.5,xmax=12.5,ymin=1e-10,ymax=3,xtick={1,2,4,6,8,10,12},ytick={1e-10,1e-8,1e-6,1e-4,1e-2,1},xlabel={layers $L$},ylabel={energy error (Hartree)},thick,mark size=1.6pt,title={\scriptsize H$_4$, $1.0$~\angstrom}]
+  \addplot[blue!70!black,mark=o] table[x=L,y=disc1] {figures/ch05/adiabatic_L.dat};
+  \addplot[red!70!black,mark=*] table[x=L,y=vqe1] {figures/ch05/adiabatic_L.dat};
+  \addplot[blue!70!black,dashed,domain=0.5:12.5,samples=2] {8.1e-4};
+  \addplot[gray,densely dotted,very thick,domain=0.5:12.5,samples=2] {1.6e-3};
+  \node[note,anchor=west] (a1) at (axis cs:13.3,1.5) {blue: the schedule, accurate only\\once $\Delta t = T/L$ is small};
+  \draw[notearrow] (a1.west) to[bend right=10] (axis cs:10.2,1.2e-3);
+  \node[note,anchor=west] (a2) at (axis cs:13.3,1e-2) {not monotone: a local\\minimum at $L = 5$};
+  \draw[notearrow] (a2.west) to[bend right=15] (axis cs:5.2,3.4e-2);
+  \node[note,anchor=west] (a3) at (axis cs:13.3,1e-5) {red: VQE from the schedule's\\angles, chemically accurate\\from $L = 6$};
+  \draw[notearrow] (a3.west) to[bend left=10] (axis cs:6.2,1.0e-4);
+  \node[note,anchor=west] (a4) at (axis cs:13.3,1e-8) {dashed: the continuous\\evolution; dotted: chemical\\accuracy, $1.6$ mHa};
+  \draw[notearrow] (a4.west) to[bend left=15] (axis cs:12.4,8.1e-4);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The discretised adiabatic schedule (blue) and VQE started from it (red), for H$_4$ at spacing $1.0$~\angstrom{} with $T = 16$: energy errors above the exact ground energy as functions of the number of layers $L$. Dashed: the continuous evolution for the same $T$. Dotted: chemical accuracy.}\label{fig:ch05:adiabaticL}\end{figure}}
+\onp{\footnotesize The schedule needs small $\Delta t$; VQE from its angles needs few layers, but can stop at local minima.}
+\end{frame}
+
+\begin{frame}\ft{The schedule versus VQE: H$_4$ at $1.5$~\angstrom}
+\ona{At $1.5$~\angstrom{} the gap is smaller, and $T = 16$ is too short: the schedule stalls near the error of the continuous evolution, above chemical accuracy, however many layers it has. VQE, started from it, reaches chemical accuracy from $L = 4$, and errors below $10^{-6}$ Hartree from $L = 10$: freeing the angles repairs what the schedule cannot.}
+\ona{\gdef\alH{0.42\linewidth}\gdef\alW{0.56\linewidth}}\onp{\gdef\alH{0.4\linewidth}\gdef\alW{0.52\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[name=al,width=\alW,height=\alH,clip=false,ymode=log,xmin=0.5,xmax=12.5,ymin=1e-10,ymax=3,xtick={1,2,4,6,8,10,12},ytick={1e-10,1e-8,1e-6,1e-4,1e-2,1},xlabel={layers $L$},ylabel={energy error (Hartree)},thick,mark size=1.6pt,title={\scriptsize H$_4$, $1.5$~\angstrom}]
+  \addplot[blue!70!black,mark=o] table[x=L,y=disc2] {figures/ch05/adiabatic_L.dat};
+  \addplot[red!70!black,mark=*] table[x=L,y=vqe2] {figures/ch05/adiabatic_L.dat};
+  \addplot[blue!70!black,dashed,domain=0.5:12.5,samples=2] {5.6e-3};
+  \addplot[gray,densely dotted,very thick,domain=0.5:12.5,samples=2] {1.6e-3};
+  \node[note,anchor=west] (b1) at (axis cs:13.3,1.5) {blue: the schedule stalls near\\the continuous error (dashed),\\above chemical accuracy (dotted)};
+  \draw[notearrow] (b1.west) to[bend right=10] (axis cs:10.2,4.2e-3);
+  \node[note,anchor=west] (b2) at (axis cs:13.3,1e-4) {red: VQE from the schedule's\\angles, chemically accurate\\from $L = 4$};
+  \draw[notearrow] (b2.west) to[bend left=10] (axis cs:4.2,8.5e-4);
+  \node[note,anchor=west] (b3) at (axis cs:13.3,1e-8) {below $10^{-6}$ Hartree\\from $L = 10$};
+  \draw[notearrow] (b3.west) to[bend left=10] (axis cs:10.2,9e-7);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{As Fig.~\ref{fig:ch05:adiabaticL}, for H$_4$ at spacing $1.5$~\angstrom.}\label{fig:ch05:adiabaticL2}\end{figure}}
+\onp{\footnotesize Too short a $T$ for the gap: the schedule stalls; VQE does not.}
+\end{frame}
+
+\begin{frame}\ft{What the adiabatic view gives, and what it does not}
+\onp{\footnotesize}
+\ona{The adiabatic view is the clearest justification of VQE that we have, and it is worth being precise about its scope.}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \textbf{It gives} an ansatz with a bound on its model mismatch, in terms of the gap, the norms and the commutator (\ona{Proposition~\ref{propn:ch05:adiabatic}}\onp{the proposition}); a starting point with a certified error; and universality.
+    \item \textbf{It does not give the gap.} For molecules the gap along the path from the Fock operator is often large, but it shrinks as bonds are stretched\ona{, as in Fig.~\ref{fig:ch05:adiabaticT}}; for hard optimization problems it is exponentially small (\Chap~\chref{C.Annealing}), and so are the guarantees.
+    \item \textbf{It does not make training easy.} Freeing the angles is what lets VQE beat the schedule with few layers, but it also exposes the optimizer to the landscapes of \citet{bittel2021training}, below; \ona{Fig.~\ref{fig:ch05:adiabaticL}}\onp{the H$_4$ example} already shows a local minimum.
+    \item \textbf{It does not count the measurements.} The bounds are on states; each energy is still estimated from measured copies, as the worked example below shows, with the shot counts of \Chap~\chref{C.PerIteration}.
+\end{itemize}
+\ona{The same picture underlies the algorithm for combinatorial optimization of Section~\ref{sec:ch05:qaoa}, and its convergence as the depth grows (\Chap~\chref{C.QAOA}), and the warm starts of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, which replace the adiabatic starting point by one that comes from a classical algorithm.}
+\end{frame}
+
+\section{What kind of algorithm is a VQA?}
+
+\begin{frame}\ft{VQAs as local search algorithms}
+\ona{\textbf{VQAs as local search algorithms}.}
+VQAs may be argued to be local search algorithms. Recall how local search works. Having selected the stop criteria, local search generates an initial random solution $s^* = s_0$ and evaluates it, $f(s_0)=f(s^*)$. While the stop criteria are not achieved, local search perturbs $s_0$ by $\delta$, with $\delta$ small. If $f(s_{\rm upd.}) < f(s_{0})$ store $s^* = s_{\rm upd.}$. This iterates until the stop criteria are satisfied and returns the lastly stored $s^*$.
+
+Similarly, for VQAs after selecting stop criteria (usually number of iterations) the VQA begins with a randomized variational parameter $\vartheta^* = \vartheta_0$ and computes $C(\vartheta_0)$. While the stopping criteria are not satisfied it updates to $\vartheta_{\rm upd.}$ by a step of the classical optimizer. If $C(\vartheta_{\rm upd.}) < C(\vartheta^*)$ it stores $\vartheta^* = \vartheta_{\rm upd.}$ and iterates until the stopping criteria are satisfied and returns the lastly stored $\vartheta^*$.
+\end{frame}
+
+\begin{frame}\ft{VQAs are not approximation algorithms}
+\ona{\textbf{VQAs are not approximation algorithms}.}
+However, one may argue that VQAs cannot be viewed as \emph{approximation algorithms}. The reason is that an approximation algorithm for a problem $P$ is a polynomial-time algorithm that computes a solution within a guaranteed factor of the optimum for \emph{every} instance of the problem. For example, the Goemans--Williamson algorithm is an approximation algorithm which for Max-Cut provides an instance-independent performance ratio of $0.878$; such a result does not exist for VQAs in general.
+
+\ona{To turn such statements into theorems, one has to say precisely which computational problem the classical optimizer is asked to solve, and how its failure is measured. This is what \citet{bittel2021training} do, and Section~\ref{sec:ch05:formal} follows them, after a second instance of a VQA and a worked example.}
+\end{frame}
+
+\section{The quantum approximate optimization algorithm}\label{sec:ch05:qaoa}
+
 \begin{frame}\ft{A second instance: QAOA}
 \onp{\footnotesize}
 \onp{The \emph{quantum approximate optimization algorithm} (QAOA) \citep{farhi2014quantum} is the VQA for combinatorial optimization; \Chap~\chref{C.QAOA} treats it in full. Encode the objective $f$ to be maximised in a diagonal cost Hamiltonian:}
@@ -71,8 +312,8 @@ Let $H \in \Herm(\C^d)$ have smallest eigenvalue $E_0$. For every non-zero $\ket
     \item[Measurement] every qubit in the computational basis, as $H_C$ is diagonal. Each measured copy yields a bit string $x$ together with its objective $f(x)$, so the same samples estimate the energy and supply candidate solutions; the output is the best bit string seen.
     \item[Optimizer] as for VQE: derivative-free, or gradient-based with the parameter-shift rule (\Chap~\chref{C.PSR}).
 \end{description}
-\ona{Two features set QAOA apart from VQE. Its ansatz comes from adiabatic computation: \eqref{eq:ch05:qaoa} is a discretised quantum annealing from $-H_M$, whose ground state is $\ket+^{\otimes n}$, to $H_C$ (\Chap~\chref{C.Annealing}), which Section~\ref{sec:ch05:adiabatic} makes precise. And its target is a bit string rather than an energy: what matters is how often good bit strings are sampled. What QAOA achieves at fixed depth, and as the depth grows, is the subject of \Chap~\chref{C.QAOA}.}
-\onp{Its ansatz is discretised annealing from $-H_M$ to $H_C$ (\Chap~\chref{C.Annealing}, and below); its output is a bit string. Performance and convergence: \Chap~\chref{C.QAOA}.}
+\ona{In the form of Table~\ref{tab:ch05:fit}: initial state $\ket+^{\otimes n}$, generators $H_C$ and $H_M$ alternately, observable $H_C$, and $2p$ layers. Two features set QAOA apart from VQE. Its ansatz is the discretised adiabatic evolution of Section~\ref{sec:ch05:adiabatic}, with $H_0 = -H_M$, whose ground state is $\ket+^{\otimes n}$, and $H_1 = H_C$, up to the sign of $\boldsymbol\beta$ \citep{farhi2014quantum}; so Proposition~\ref{propn:ch05:adiabatic} applies, with the gap of the annealing path of \Chap~\chref{C.Annealing}. And its target is a bit string rather than an energy: what matters is how often good bit strings are sampled. Unlike VQAs in general, QAOA comes with a few guarantees: for MaxCut on 3-regular graphs, depth one achieves the ratio $0.692$ \citep{farhi2014quantum}, and warm-started QAOA inherits the ratio of the relaxation it starts from \citep{egger2021warm}. What QAOA achieves at fixed depth, and as the depth grows, is the subject of \Chap~\chref{C.QAOA}; warm starts are that of \Chap~\chref{C.WSRounded}.}
+\onp{Its ansatz is the discretised annealing of the adiabatic section above, from $-H_M$ to $H_C$; its output is a bit string. Performance and convergence: \Chap~\chref{C.QAOA}.}
 \end{frame}
 
 \section{A worked example: depth-one QAOA on the 4-cycle}\label{sec:ch05:worked}
@@ -252,229 +493,6 @@ $6$ & $0.398$ & $-0.695$ & $-3.054\pm0.033$ & $-2.983$ & $+0.140$ \ ($+0.087$) &
 \ona{And the instance is, of course, classically trivial: the 4-cycle is bipartite. The point of the example is the anatomy of one run, which is the same at a hundred qubits.}
 \end{frame}
 
-\begin{frame}\ft{VQE for molecules}
-\ona{The variational quantum eigensolver \citep{peruzzo2014variational} is the VQA for the electronic-structure problem of \Chap~\chref{C.Motivation}: $H$ is the second-quantised molecular Hamiltonian mapped to qubits, with $\mathcal O(N^4)$ Pauli terms for $N$ orbitals, and the goal is the ground-state energy. Design choices:}
-\begin{description}\setlength\itemsep{0.2em}
-    \item[Initial state] the Hartree--Fock determinant $\ket{\Psi_0}$, a computational basis state, whose energy is already the mean-field energy; the variational circuit adds correlation.
-    \item[Chemically inspired ansatz] unitary coupled cluster with singles and doubles (UCCSD), $U(\vartheta) = e^{T(\vartheta) - T(\vartheta)^\dagger}$ with excitation operators $T$; exact in a limit, deep in practice.
-    \item[Hardware-efficient ansatz] layers of single-qubit rotations and native entangling gates \citep{kandala2017hardware}; shallow and expressive, but problem-agnostic.
-    \item[Measurement] group commuting Pauli terms; the shot count to reach precision $\epsilon$ scales as $(\sum_k|h_k|)^2/\epsilon^2$ in the worst case.
-\end{description}
-\ona{On hardware, VQE has produced ground-state energies of small molecules (H$_2$, LiH, BeH$_2$) to chemical accuracy after error mitigation \citep{kandala2017hardware}. Its scaling to larger molecules is the subject of \Chap~\chref{C.EQA}.}
-\end{frame}
-
-\begin{frame}\ft{VQE as state preparation for early fault-tolerant algorithms}
-\ona{VQE has no guarantee on the quality of its output state, and there is evidence that prepare-and-measure estimation as in VQE is not competitive for industrially relevant molecules: the shot counts to reach chemical accuracy are prohibitive. \citet{zhang2022computing} propose a division of labour that keeps what VQE is good at:}
-\begin{enumerate}\setlength\itemsep{0.2em}
-    \item run VQE (or Hartree--Fock, or a short adiabatic evolution) to prepare $\ket{\phi_0}$ with overlap $\eta = |\braket{\phi_0|\psi_0}|^2$;
-    \item hand $\ket{\phi_0}$ to a ground-state property estimation routine that uses Hadamard tests of $e^{-ijH}$ and $O$ with classical Fourier post-processing, and returns $\braket{\psi_0|O|\psi_0}$ to accuracy $\epsilon$ with maximal evolution time $\widetilde{\mathcal O}(\gamma^{-1})$, regardless of how good $\ket{\phi_0}$ is, at total cost $\widetilde{\mathcal O}(\gamma^{-1}\epsilon^{-2}\eta^{-2})$ (\Chap~\chref{C.Motivation}).
-\end{enumerate}
-\ona{The variational state need not be accurate; it needs overlap. This reframes the goal of VQE from ``find the ground state'' to ``find a state with non-negligible $\eta$'', which is a lower bar, and connects to the warm starts of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, where the initial state likewise needs only a good overlap with the optimum. Example properties: entries $D_{pq} = \braket{\psi_0|a_p^\dagger a_q|\psi_0}$ of the one-particle reduced density matrix, hence charge densities and dipole moments, each a combination of four Pauli-string expectations.}
-\onp{VQE supplies overlap $\eta$; a Fourier-based post-processing of Hadamard tests supplies the guarantee \citep{zhang2022computing}. The variational state need not be accurate, only overlapping.}
-\end{frame}
-
-\section{VQE as discretised adiabatic computation}\label{sec:ch05:adiabatic}
-
-\begin{frame}\ft{From an adiabatic path to an ansatz}
-\onp{\footnotesize}
-\ona{Where do good ans\"atze come from? The answer that comes with a guarantee is adiabatic computation (\Chap~\chref{C.Annealing}). Let $H_0$ be a Hamiltonian whose ground state $\ket{\Psi_0}$ is easy to prepare, let $H_1$ be the Hamiltonian whose ground state we want, and evolve slowly along the path}
-\begin{equation}\label{eq:ch05:path}
-    H(s) = (1-s)\,H_0 + s\,H_1,\qquad i\frac{d}{dt}\ket{\psi(t)} = H(t/T)\ket{\psi(t)},\quad \ket{\psi(0)} = \ket{\Psi_0},\quad 0\le t\le T.
-\end{equation}
-\ona{By the adiabatic theorem of \Chap~\chref{C.Annealing}, a total time $T$ of the order of $1/\Delta_{\min}^2$, where $\Delta_{\min}$ is the smallest gap along the path, leaves $\ket{\psi(T)}$ close to the ground state of $H_1$; write $\varepsilon_{\rm ad}(T) = 1 - |\braket{g|\psi(T)}|^2$ for the remaining infidelity, with $\ket g$ the ground state of $H_1$. For the electronic structure problem, $H_1 = H$ is the molecular Hamiltonian and the natural $H_0$ is the \emph{Fock operator} $F = \sum_p\varepsilon_p\,a_p^\dagger a_p$ of the Hartree--Fock method, with the orbital energies $\varepsilon_p$; among states with the right numbers of electrons, its ground state is the Hartree--Fock determinant $\ket{\rm HF}$, the usual initial state of VQE. A gate-based computer cannot apply \eqref{eq:ch05:path} directly. Three steps turn the evolution into a circuit, and then into VQE:}
-\begin{enumerate}\setlength\itemsep{0.15em}
-    \item \textbf{Piecewise constant:} on the $k$-th of $L$ intervals of length $\Delta t = T/L$, replace $H(t/T)$ by $H(s_k)$, with $s_k = (k-\frac12)/L$.
-    \item \textbf{Trotter splitting:} replace $e^{-i\Delta t H(s_k)}$ by $e^{-i\beta_kH_0}\,e^{-i\gamma_kH_1}$, with $\gamma_k = s_k\Delta t$ and $\beta_k = (1-s_k)\Delta t$.
-    \item \textbf{Free the angles:} keep the circuit, and let an optimizer choose all $2L$ angles $(\boldsymbol\beta,\boldsymbol\gamma)$:
-\end{enumerate}
-\begin{equation}\label{eq:ch05:hva}
-    \ket{\Psi(\boldsymbol\beta,\boldsymbol\gamma)} = e^{-i\beta_LH_0}e^{-i\gamma_LH_1}\cdots e^{-i\beta_1H_0}e^{-i\gamma_1H_1}\ket{\Psi_0}.
-\end{equation}
-\ona{The first factor to act is $e^{-i\gamma_1H_1}$, since $e^{-i\beta_1H_0}$ would only multiply $\ket{\Psi_0}$ by a phase. Steps 1 and 2 cost an error that we bound next; step 3 can only help, as the schedule is one point in the parameter space.}
-\end{frame}
-
-\begin{frame}\ft{The discretisation, pictured}
-\ona{Figure~\ref{fig:ch05:schedule} shows the three steps for $L = 6$. The schedule $s = t/T$ becomes a staircase, and each step of the staircase becomes two pulses: one of $H_1$ for a time $\gamma_k$, one of $H_0$ for a time $\beta_k$. The share of $H_1$ grows from layer to layer as the schedule does; in VQE, the widths of the pulses become free.}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}[x=1.1cm,y=1cm,every node/.style={font=\scriptsize}]
-  \draw[-{Latex}] (0,0) -- (6.4,0) node[right] {$t$};
-  \draw[-{Latex}] (0,0) -- (0,2.6) node[above] {$s$};
-  \draw (0.07,2.2) -- (-0.07,2.2) node[left] {$1$};
-  \draw (6,0.07) -- (6,-0.07) node[below] {$T$};
-  \draw[thick,gray] (0,0) -- (6,2.2);
-  \foreach \k in {1,...,6} {\draw[very thick,blue!70!black] ({\k-1},{2.2*(\k-0.5)/6}) -- (\k,{2.2*(\k-0.5)/6});}
-  \draw[densely dotted] (4,0) -- (4,1.65); \draw[densely dotted] (5,0) -- (5,2.017);
-  \draw[{Latex}-{Latex}] (4,-0.25) -- node[below] {$\Delta t$} (5,-0.25);
-  \begin{scope}[yshift=-1.75cm]
-    \foreach \k in {1,...,6} {
-      \pgfmathsetmacro{\sk}{(\k-0.5)/6}
-      \fill[orange!70] ({\k-1},0) rectangle ({\k-1+\sk},0.5);
-      \fill[blue!30] ({\k-1+\sk},0) rectangle (\k,0.5);
-      \draw ({\k-1},0) rectangle (\k,0.5);
-      \node at ({\k-0.5},-0.22) {$k = \k$};
-    }
-    \node[anchor=east] at (-0.1,0.25) {pulses};
-  \end{scope}
-  \node[note,anchor=west] (n1) at (6.6,2.45) {the schedule $s = t/T$};
-  \draw[notearrow] (n1.west) to[bend right=15] (4.5,1.68);
-  \node[note,anchor=west] (n2) at (6.6,1.55) {step 1: $H(s_k)$ for a time $\Delta t$,\\with $s_k = (k-\frac12)/L$};
-  \draw[notearrow] (n2.west) to[bend left=10] (5.6,2.03);
-  \node[note,anchor=west] (n3) at (6.6,-1.3) {step 2: $H_1$ for $\gamma_k = s_k\Delta t$ (orange),\\then $H_0$ for $\beta_k = (1-s_k)\Delta t$ (blue)};
-  \draw[notearrow] (n3.west) -- (5.4,-1.5);
-  \node[note,anchor=north] at (3,-2.25) {step 3, VQE: the $2L$ pulse widths become free parameters;\\the adiabatic schedule is one point of the parameter space};
-\end{tikzpicture}
-\end{center}
-\ona{\caption{Discretising the adiabatic path with $L = 6$ layers. Top: the linear schedule (grey) and its piecewise-constant approximation at the midpoints (blue). Bottom: each layer as a pulse of $H_1$ followed by a pulse of $H_0$, of lengths $\gamma_k$ and $\beta_k$ with $\gamma_k + \beta_k = \Delta t$.}\label{fig:ch05:schedule}\end{figure}}
-\onp{\footnotesize A staircase, then two pulses per step; VQE frees the pulse widths.}
-\end{frame}
-
-\begin{frame}\ft{Steps 1 and 2: what the discretisation costs}
-\onp{\footnotesize}
-\begin{lem}\label{lem:ch05:duhamel}
-If $H(t)$ and $\tilde H(t)$ generate the unitaries $U(t)$ and $\tilde U(t)$ on $[0,T]$, then $\|U(T) - \tilde U(T)\|\le\int_0^T\|H(t) - \tilde H(t)\|\,dt$.
-\end{lem}
-\ona{\emph{Proof.} From $U' = -iHU$ and $\tilde U' = -i\tilde H\tilde U$, $\frac d{dt}(U^\dagger\tilde U) = iU^\dagger(H - \tilde H)\tilde U$. Integrate from $0$ to $T$ and use that unitaries preserve norms. \qed}
-\begin{lem}[First-order Trotter error]\label{lem:ch05:trotter}
-For Hermitian $A$ and $B$, $\|e^{-i(A+B)} - e^{-iA}e^{-iB}\|\le\frac12\|[A,B]\|$.
-\end{lem}
-\ona{\emph{Proof.} Let $V(t) = e^{iBt}e^{iAt}e^{-i(A+B)t}$, so that the left-hand side is $\|V(1) - \one\|$. Then $V'(t) = ie^{iBt}e^{iAt}\big(e^{-iAt}Be^{iAt} - B\big)e^{-i(A+B)t}$, and $\|e^{-iAt}Be^{iAt} - B\|\le t\|[A,B]\|$, since the derivative of $e^{-iA\tau}Be^{iA\tau}$ is $-ie^{-iA\tau}[A,B]e^{iA\tau}$. Integrating, $\|V(1) - \one\|\le\int_0^1t\,\|[A,B]\|\,dt = \frac12\|[A,B]\|$. \qed}
-\ona{Apply both to the path \eqref{eq:ch05:path}. In step 1, $\|H(t/T) - H(s_k)\| = |t/T - s_k|\,\|H_1 - H_0\|\le\|H_1-H_0\|/(2L)$ on the $k$-th interval, so by Lemma~\ref{lem:ch05:duhamel} the error is at most $T\|H_1-H_0\|/(2L)$. In step 2, Lemma~\ref{lem:ch05:trotter} with $A = \gamma_kH_1$ and $B = \beta_kH_0$ bounds the error of layer $k$ by $\frac12\beta_k\gamma_k\|[H_0,H_1]\|\le\frac18\Delta t^2\|[H_0,H_1]\|$, as $s_k(1-s_k)\le\frac14$; errors of products of unitaries add, so the $L$ layers cost at most $T^2\|[H_0,H_1]\|/(8L)$. In all,}
-\begin{equation}\label{eq:ch05:disc}
-    \big\|\ket{\psi(T)} - \ket{\Psi(\boldsymbol\beta^{\rm ad},\boldsymbol\gamma^{\rm ad})}\big\| \;\le\; \eta_L \coloneqq \frac{T\,\|H_1 - H_0\|}{2L} + \frac{T^2\,\|[H_0,H_1]\|}{8L},
-\end{equation}
-\ona{where $(\boldsymbol\beta^{\rm ad},\boldsymbol\gamma^{\rm ad})$ are the angles of the schedule. Both terms fall like $1/L$; second-order splittings would make the second fall like $1/L^2$.}
-\onp{\footnotesize Steps 1 and 2 cost $\eta_L$: both terms fall like $1/L$; commuting $H_0, H_1$ would make step 2 exact.}
-\end{frame}
-
-\begin{frame}\ft{Step 3: the ansatz contains the adiabatic algorithm}
-\onp{\scriptsize}
-\begin{propn}\label{propn:ch05:adiabatic}
-At the angles of the schedule, the state \eqref{eq:ch05:hva} has approximation error, relative to the spectral width of $H_1$, at most
-\begin{equation*}
-    \delta \;\le\; \varepsilon_{\rm ad}(T) + \eta_L.
-\end{equation*}
-Hence the model mismatch $\delta_m$ of the ansatz with $L$ layers obeys the same bound, and so does the result of any optimizer started at these angles that never increases the energy.
-\end{propn}
-\ona{\emph{Proof.} For any state $\ket\phi$ with $|\braket{g|\phi}|^2 = 1-\epsilon$, expanding in eigenvectors gives $\braket{\phi|H_1|\phi} - E_0\le\epsilon\,w(H_1)$, so $\ket{\psi(T)}$ has $\delta\le\varepsilon_{\rm ad}(T)$. For unit vectors $\phi,\phi'$ and any $c\in\R$, $|\braket{\phi|H_1|\phi} - \braket{\phi'|H_1|\phi'}|\le2\|H_1 - c\one\|\,\|\phi-\phi'\|$; with $c$ the midpoint of the spectrum, $2\|H_1 - c\one\| = w(H_1)$, and \eqref{eq:ch05:disc} adds at most $\eta_L$ to $\delta$. \qed}
-\begin{itemize}\setlength\itemsep{0.2em}
-    \item \textbf{A polynomial ansatz with a guarantee.} If the gap along the path is at least inverse-polynomial and the norms are polynomial, then $T$ and $L = \mathcal O\big((T\|H_1-H_0\| + T^2\|[H_0,H_1]\|)/\epsilon\big)$ are polynomial, and the ansatz contains a state with $\delta\le\epsilon$. As adiabatic computation is universal \citep{aharonov2007adiabatic}, this family of ans\"atze is too.
-    \item \textbf{A certified starting point.} The schedule gives angles with a known error. An optimizer started there can only improve on them: a warm start in the sense of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, whose guarantee survives the persistent local minima of \citet{bittel2021training}, although it does not promise the global optimum.
-    \item \textbf{QAOA is the special case} $H_0 = -H_M$, $H_1 = H_C$, $\ket{\Psi_0} = \ket+^{\otimes n}$ \citep{farhi2014quantum}, up to the sign of $\boldsymbol\beta$; the worked example above is one layer of it.
-\end{itemize}
-\end{frame}
-
-\begin{frame}\ft{The gates, for a molecule}
-\onp{\footnotesize}
-\ona{Under the Jordan--Wigner transformation (\Chap~\chref{C.Motivation}), $a_p^\dagger a_p = \frac12(\one - Z_p)$, so the two kinds of layer in \eqref{eq:ch05:hva} are very different.}
-\begin{itemize}\setlength\itemsep{0.2em}
-    \item \textbf{The Fock layer is cheap.} $F = \mathrm{const} - \frac12\sum_p\varepsilon_pZ_p$, so $e^{-i\beta F}$ is, up to a phase, a product of single-qubit rotations $R_Z(-\beta\varepsilon_p)$.
-    \item \textbf{The molecular layer is not.} $H = \sum_\alpha h_\alpha P_\alpha$ has $\mathcal O(N^4)$ Pauli strings for $N$ orbitals, which do not commute. One more Trotter splitting, $e^{-i\gamma H}\approx\prod_\alpha e^{-i\gamma h_\alpha P_\alpha}$, turns each factor into a Pauli rotation: a ladder of CNOTs around one $R_Z$, as in \eqref{eq:ch05:rzz}.
-    \item \textbf{Untying the angles.} Giving each group of commuting terms its own angle in each layer yields the \emph{Hamiltonian variational ansatz} of \citet{Wecker2015}: more parameters, a richer ansatz, and a harder optimization.
-    \item \textbf{H$_2$ is too easy.} In the minimal basis, the states reachable from $\ket{\rm HF}$ span two dimensions. One layer with free angles, $e^{-i\beta F}e^{-i\gamma H}\ket{\rm HF}$, already reaches the exact ground energy, while the schedule itself, with $T = 16$, needs $L = 9$ layers for chemical accuracy, $1.6$ mHa.
-\end{itemize}
-\ona{All numbers in this section come from \texttt{code/ch05\_adiabatic.py}, which builds the qubit Hamiltonians from the integrals computed by PySCF, as in \Chap~\chref{C.Motivation}, checks their ground energies against the full configuration interaction of PySCF, and works in the sector with the right numbers of spin-up and spin-down electrons, which both $F$ and $H$ preserve.}
-\end{frame}
-
-\begin{frame}\ft{How long must the evolution be?}
-\ona{Figure~\ref{fig:ch05:adiabaticT} shows the error of the continuous evolution \eqref{eq:ch05:path} as a function of $T$, in units of $\hbar$ per Hartree, for H$_2$ at $0.75$~\angstrom{} and for a linear chain of four hydrogen atoms, H$_4$, at spacings $1.0$ and $1.5$~\angstrom{}, on eight qubits. Along the paths, the gap within the singlet states shrinks to $0.52$~Hartree at $1.0$~\angstrom{} and to $0.17$~Hartree at $1.5$~\angstrom{}, both at $s = 1$, and the stretched chain is correspondingly slower. The errors fall roughly like $1/T^2$, the rate of a linear schedule.}
-\ona{\gdef\atH{0.4\linewidth}}\onp{\gdef\atH{0.34\linewidth}}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}
-\begin{axis}[width=0.5\linewidth,height=\atH,clip=false,xmode=log,ymode=log,log basis x=2,xmin=1,xmax=64,ymin=3e-6,ymax=0.3,xtick={1,2,4,8,16,32,64},xticklabels={1,2,4,8,16,32,64},xlabel={total time $T$},ylabel={energy error (Hartree)},thick,mark size=1.6pt]
-  \addplot[green!45!black,mark=*] table[x=T,y=m0] {figures/ch05/adiabatic_T.dat};
-  \addplot[blue!70!black,mark=*] table[x=T,y=m1] {figures/ch05/adiabatic_T.dat};
-  \addplot[red!70!black,mark=*] table[x=T,y=m2] {figures/ch05/adiabatic_T.dat};
-  \addplot[gray,densely dotted,very thick,domain=1:64,samples=2] {1.6e-3};
-  \node[note,anchor=west] at (axis cs:72,4.0e-4) {H$_4$, $1.5$~\angstrom};
-  \node[note,anchor=west] at (axis cs:72,5.8e-5) {H$_4$, $1.0$~\angstrom};
-  \node[note,anchor=west] at (axis cs:72,6.8e-6) {H$_2$, $0.75$~\angstrom};
-  \node[note,anchor=west] at (axis cs:72,1.6e-3) {chemical accuracy};
-  \node[note,anchor=south west] (c2) at (axis cs:1.1,1.2e-5) {the smaller the gap,\\the longer the evolution};
-  \draw[notearrow] (c2.north) to[bend left=20] (axis cs:8,1.6e-2);
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\ona{\caption{The adiabatic evolution \eqref{eq:ch05:path} from the Fock operator to the molecular Hamiltonian, in the minimal basis: the energy error at time $T$ above the exact ground energy. Of the times computed, chemical accuracy, $1.6$~mHa (dotted), is first reached at $T = 4$ for H$_2$, $T = 16$ for H$_4$ at $1.0$~\angstrom{} and $T = 64$ at $1.5$~\angstrom.}\label{fig:ch05:adiabaticT}\end{figure}}
-\onp{\footnotesize Errors fall like $1/T^2$; the stretched chain, with the smaller gap, needs the longest evolution.}
-\end{frame}
-
-\begin{frame}\ft{The schedule versus VQE: H$_4$ at $1.0$~\angstrom}
-\ona{Figures~\ref{fig:ch05:adiabaticL} and~\ref{fig:ch05:adiabaticL2} fix $T = 16$ and vary the number of layers $L$, for the two H$_4$ chains. Blue: the discretised schedule, with the angles of steps 1 and 2. Red: VQE, that is, BFGS on all $2L$ angles, started at the schedule. The schedule is accurate only once $\Delta t = T/L$ is small. VQE reaches chemical accuracy from $L = 6$, but it is not monotone in $L$: it does worse with five layers than with four, as BFGS stops at a local minimum.}
-\ona{\gdef\alH{0.42\linewidth}\gdef\alW{0.56\linewidth}}\onp{\gdef\alH{0.4\linewidth}\gdef\alW{0.52\linewidth}}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}
-\begin{axis}[name=al,width=\alW,height=\alH,clip=false,ymode=log,xmin=0.5,xmax=12.5,ymin=1e-10,ymax=3,xtick={1,2,4,6,8,10,12},ytick={1e-10,1e-8,1e-6,1e-4,1e-2,1},xlabel={layers $L$},ylabel={energy error (Hartree)},thick,mark size=1.6pt,title={\scriptsize H$_4$, $1.0$~\angstrom}]
-  \addplot[blue!70!black,mark=o] table[x=L,y=disc1] {figures/ch05/adiabatic_L.dat};
-  \addplot[red!70!black,mark=*] table[x=L,y=vqe1] {figures/ch05/adiabatic_L.dat};
-  \addplot[blue!70!black,dashed,domain=0.5:12.5,samples=2] {8.1e-4};
-  \addplot[gray,densely dotted,very thick,domain=0.5:12.5,samples=2] {1.6e-3};
-  \node[note,anchor=west] (a1) at (axis cs:13.3,1.5) {blue: the schedule, accurate only\\once $\Delta t = T/L$ is small};
-  \draw[notearrow] (a1.west) to[bend right=10] (axis cs:10.2,1.2e-3);
-  \node[note,anchor=west] (a2) at (axis cs:13.3,1e-2) {not monotone: a local\\minimum at $L = 5$};
-  \draw[notearrow] (a2.west) to[bend right=15] (axis cs:5.2,3.4e-2);
-  \node[note,anchor=west] (a3) at (axis cs:13.3,1e-5) {red: VQE from the schedule's\\angles, chemically accurate\\from $L = 6$};
-  \draw[notearrow] (a3.west) to[bend left=10] (axis cs:6.2,1.0e-4);
-  \node[note,anchor=west] (a4) at (axis cs:13.3,1e-8) {dashed: the continuous\\evolution; dotted: chemical\\accuracy, $1.6$ mHa};
-  \draw[notearrow] (a4.west) to[bend left=15] (axis cs:12.4,8.1e-4);
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\ona{\caption{The discretised adiabatic schedule (blue) and VQE started from it (red), for H$_4$ at spacing $1.0$~\angstrom{} with $T = 16$: energy errors above the exact ground energy as functions of the number of layers $L$. Dashed: the continuous evolution for the same $T$. Dotted: chemical accuracy.}\label{fig:ch05:adiabaticL}\end{figure}}
-\onp{\footnotesize The schedule needs small $\Delta t$; VQE from its angles needs few layers, but can stop at local minima.}
-\end{frame}
-
-\begin{frame}\ft{The schedule versus VQE: H$_4$ at $1.5$~\angstrom}
-\ona{At $1.5$~\angstrom{} the gap is smaller, and $T = 16$ is too short: the schedule stalls near the error of the continuous evolution, above chemical accuracy, however many layers it has. VQE, started from it, reaches chemical accuracy from $L = 4$, and errors below $10^{-6}$ Hartree from $L = 10$: freeing the angles repairs what the schedule cannot.}
-\ona{\gdef\alH{0.42\linewidth}\gdef\alW{0.56\linewidth}}\onp{\gdef\alH{0.4\linewidth}\gdef\alW{0.52\linewidth}}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}
-\begin{axis}[name=al,width=\alW,height=\alH,clip=false,ymode=log,xmin=0.5,xmax=12.5,ymin=1e-10,ymax=3,xtick={1,2,4,6,8,10,12},ytick={1e-10,1e-8,1e-6,1e-4,1e-2,1},xlabel={layers $L$},ylabel={energy error (Hartree)},thick,mark size=1.6pt,title={\scriptsize H$_4$, $1.5$~\angstrom}]
-  \addplot[blue!70!black,mark=o] table[x=L,y=disc2] {figures/ch05/adiabatic_L.dat};
-  \addplot[red!70!black,mark=*] table[x=L,y=vqe2] {figures/ch05/adiabatic_L.dat};
-  \addplot[blue!70!black,dashed,domain=0.5:12.5,samples=2] {5.6e-3};
-  \addplot[gray,densely dotted,very thick,domain=0.5:12.5,samples=2] {1.6e-3};
-  \node[note,anchor=west] (b1) at (axis cs:13.3,1.5) {blue: the schedule stalls near\\the continuous error (dashed),\\above chemical accuracy (dotted)};
-  \draw[notearrow] (b1.west) to[bend right=10] (axis cs:10.2,4.2e-3);
-  \node[note,anchor=west] (b2) at (axis cs:13.3,1e-4) {red: VQE from the schedule's\\angles, chemically accurate\\from $L = 4$};
-  \draw[notearrow] (b2.west) to[bend left=10] (axis cs:4.2,8.5e-4);
-  \node[note,anchor=west] (b3) at (axis cs:13.3,1e-8) {below $10^{-6}$ Hartree\\from $L = 10$};
-  \draw[notearrow] (b3.west) to[bend left=10] (axis cs:10.2,9e-7);
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\ona{\caption{As Fig.~\ref{fig:ch05:adiabaticL}, for H$_4$ at spacing $1.5$~\angstrom.}\label{fig:ch05:adiabaticL2}\end{figure}}
-\onp{\footnotesize Too short a $T$ for the gap: the schedule stalls; VQE does not.}
-\end{frame}
-
-\begin{frame}\ft{What the adiabatic view gives, and what it does not}
-\onp{\footnotesize}
-\ona{The adiabatic view is the clearest justification of VQE and QAOA that we have, and it is worth being precise about its scope.}
-\begin{itemize}\setlength\itemsep{0.25em}
-    \item \textbf{It gives} an ansatz with a bound on its model mismatch, in terms of the gap, the norms and the commutator (\ona{Proposition~\ref{propn:ch05:adiabatic}}\onp{the proposition}); a starting point with a certified error; and universality.
-    \item \textbf{It does not give the gap.} For molecules the gap along the path from the Fock operator is often large, but it shrinks as bonds are stretched\ona{, as in Fig.~\ref{fig:ch05:adiabaticT}}; for hard optimization problems it is exponentially small (\Chap~\chref{C.Annealing}), and so are the guarantees.
-    \item \textbf{It does not make training easy.} Freeing the angles is what lets VQE beat the schedule with few layers, but it also exposes the optimizer to the landscapes of \citet{bittel2021training}, below; \ona{Fig.~\ref{fig:ch05:adiabaticL}}\onp{the H$_4$ example} already shows a local minimum.
-    \item \textbf{It does not count the measurements.} The bounds are on states; each energy is still estimated from copies, as in the worked example, with the shot counts of \Chap~\chref{C.PerIteration}.
-\end{itemize}
-\ona{The same picture underlies the convergence proof for QAOA as the depth grows (\Chap~\chref{C.QAOA}), and the warm starts of \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}, which replace the adiabatic starting point by one that comes from a classical algorithm.}
-\end{frame}
-
-\section{What kind of algorithm is a VQA?}
-
-\begin{frame}\ft{VQAs as local search algorithms}
-\ona{\textbf{VQAs as local search algorithms}.}
-VQAs may be argued to be local search algorithms. Recall how local search works. Having selected the stop criteria, local search generates an initial random solution $s^* = s_0$ and evaluates it, $f(s_0)=f(s^*)$. While the stop criteria are not achieved, local search perturbs $s_0$ by $\delta$, with $\delta$ small. If $f(s_{\rm upd.}) < f(s_{0})$ store $s^* = s_{\rm upd.}$. This iterates until the stop criteria are satisfied and returns the lastly stored $s^*$.
-
-Similarly, for VQAs after selecting stop criteria (usually number of iterations) the VQA begins with a randomized variational parameter $\vartheta^* = \vartheta_0$ and computes $C(\vartheta_0)$. While the stopping criteria are not satisfied it updates to $\vartheta_{\rm upd.}$ by a step of the classical optimizer. If $C(\vartheta_{\rm upd.}) < C(\vartheta^*)$ it stores $\vartheta^* = \vartheta_{\rm upd.}$ and iterates until the stopping criteria are satisfied and returns the lastly stored $\vartheta^*$.
-\end{frame}
-
-\begin{frame}\ft{VQAs are not approximation algorithms}
-\ona{\textbf{VQAs are not approximation algorithms}.}
-However, one may argue that VQAs cannot be viewed as \emph{approximation algorithms}. The reason is that an approximation algorithm for a problem $P$ is a polynomial-time algorithm that computes a solution within a guaranteed factor of the optimum for \emph{every} instance of the problem. For example, the Goemans--Williamson algorithm is an approximation algorithm which for Max-Cut provides an instance-independent performance ratio of $0.878$; such a result does not exist for VQAs in general.
-
-\ona{There are exceptions: for MaxCut on 3-regular graphs, depth-one QAOA achieves ratio at least $0.692$ \citep{farhi2014quantum}, and warm-started QAOA inherits the ratio of the relaxation it starts from \citep{egger2021warm}; see \Chaps~\chref{C.QAOA} and~\chref{C.WSRounded}.}
-\ona{To turn such statements into theorems, one has to say precisely which computational problem the classical optimizer is asked to solve, and how its failure is measured. This is what \citet{bittel2021training} do, and the rest of this \chap{} follows them.}
-\end{frame}
-
 \section{Training as a computational problem}\label{sec:ch05:formal}
 
 \begin{frame}\ft{What a formalisation must fix}
@@ -500,7 +518,7 @@ However, one may argue that VQAs cannot be viewed as \emph{approximation algorit
     \item[Task] Find $\boldsymbol\phi\in\R^L$ minimising $\braket{O(\boldsymbol\phi)}$.
 \end{description}
 \end{probl}
-\ona{The oracle stands for the quantum computer, idealised in two ways: it is deterministic, as if one post-selected on the runs that give a correct estimate, and its precision is whatever the algorithm asks for, as long as it is inverse-polynomial, which polynomially many shots achieve. The noise that this idealisation hides is the subject of \Chap~\chref{C.IterationComplexity}. An algorithm for Problem~\ref{p:ch05:oracle} is a classical algorithm that may call the oracle, each call counting as one step. Whatever is hard for it is therefore hard because of the classical optimization alone; a better quantum computer would not help.}
+\ona{The oracle stands for the quantum computer, idealised in two ways: it is deterministic, as if one post-selected on the runs that give a correct estimate, and its precision is whatever the algorithm asks for, as long as it is inverse-polynomial, which polynomially many shots achieve. The noise that this idealisation hides is the subject of \Chap~\chref{C.IterationComplexity}. An algorithm for Problem~\ref{p:ch05:oracle} is a classical algorithm that may call the oracle, each call counting as one step. Whatever is hard for it is therefore hard because of the classical optimization alone; a better quantum computer would not help. The ans\"atze of Table~\ref{tab:ch05:fit}, and QAOA with its initial state absorbed in the same way, are instances.}
 \begin{propn}[\citet{bittel2021training}]\label{propn:ch05:oracle}
 Unless $\mathbf P = \mathbf{NP}$, no deterministic classical algorithm solves \ona{Problem~\ref{p:ch05:oracle}}\onp{the oracular problem} in polynomial time.
 \end{propn}
@@ -534,23 +552,6 @@ Unless $\mathbf P = \mathbf{NP}$, no deterministic classical algorithm solves \o
 \end{center}
 \ona{\caption{Problem~\ref{p:ch05:oracle} as a picture. The oracle, the dashed box, prepares $\ket{\Psi(\boldsymbol\phi)}$ by $L$ layers applied to $\ket0^{\otimes N}$ and returns the energy of $O$ to the precision requested; the classical algorithm chooses the parameters. Lower bounds on the running time of the classical algorithm hold however good the quantum computer is.}\label{fig:ch05:oracle}\end{figure}}
 \onp{\footnotesize Inside the box: an idealised quantum computer. Outside: the classical optimizer, whose cost the theorems bound.}
-\end{frame}
-
-\mode<all>{\gdef\fittab#1#2#3#4#5{\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}>{\raggedright\arraybackslash}p{#5\linewidth}@{}}\toprule
-VQA & initial state & generators $H_i$ & observable $O$ & layers $L$ \\\midrule
-hardware-efficient VQE & $\ket0^{\otimes N}$ & $\frac12Y_k$, $\frac12Z_k$ on one qubit, $\frac12Z_kZ_l$ on two & molecular $H = \sum_kh_kP_k$ & number of gates \\
-UCCSD, Trotterised & $\ket{\rm HF}$, a basis state & $i(\tau_k - \tau_k^\dagger)$ for an excitation $\tau_k$: a sum of Pauli strings & molecular $H$ & excitations $\times$ Trotter steps \\
-QAOA of depth $p$ & $\ket+^{\otimes n}$ & $H_C$ and the mixer $H_M = \sum_jX_j$, alternately & cost $H_C$ & $2p$ \\\bottomrule
-\end{tabular}}}
-\begin{frame}\ft{The variational algorithms we know are instances}
-\ona{The formalisation contains the variational algorithms of this course, Table~\ref{tab:ch05:fit}. Two conventions make them fit. First, a layer may act on all qubits at once, and one parameter may control many gates, as $\gamma$ controls all the $ZZ$ rotations of a QAOA layer: the generator is then their sum. Second, the initial state $\ket0^{\otimes N}$ is no restriction. A fixed initial state $V\ket0^{\otimes N}$, such as the Hartree--Fock determinant $X^{x}\ket0^{\otimes N}$ or $\ket+^{\otimes n}$, is absorbed by conjugation,}
-\begin{equation}
-    U_L(\phi_L)\cdots U_1(\phi_1)V\ket0 = V\,e^{-i\phi_LV^\dagger H_LV}\cdots e^{-i\phi_1V^\dagger H_1V}\ket0,
-\end{equation}
-\ona{so that one replaces every $H_i$ by $V^\dagger H_iV$ and $O$ by $V^\dagger OV$. When $V$ is a product of single-qubit Clifford gates, such as $X$ and the Hadamard gate, Pauli strings go to Pauli strings and the size of the instance does not change.}
-\onp{\begin{center}\scriptsize\fittab{0.15}{0.13}{0.27}{0.15}{0.12}\end{center}
-\footnotesize A fixed initial state $V\ket0$ is absorbed: $H_i\mapsto V^\dagger H_iV$, $O\mapsto V^\dagger OV$.}
-\ona{\begin{table}[htb]\centering\caption{Three variational algorithms as instances of Problem~\ref{p:ch05:oracle}, after the initial state is absorbed into the generators and the observable. Here $\tau_k$ is a fermionic excitation operator mapped to qubits.}\label{tab:ch05:fit}\footnotesize\fittab{0.15}{0.13}{0.27}{0.15}{0.12}\end{table}}
 \end{frame}
 
 \begin{frame}\ft{Training without a quantum computer}
