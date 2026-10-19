@@ -19,7 +19,7 @@
     \item The exponential quantum advantage hypothesis (\Chap~\chref{C.EQA}).
     \item Inapproximability and the Unique Games Conjecture (\Chap~\chref{C.Inapprox}).
     \item The adiabatic theorem and quantum speedup via quantum annealing (\Chap~\chref{C.Annealing}).
-    \item The variational quantum eigensolver (\Chap~\chref{C.VQE}).
+    \item Variational quantum algorithms, from the variational quantum eigensolver to the hardness of training (\Chap~\chref{C.VQE}).
     \item The quantum approximate optimization algorithm, and its convergence (\Chap~\chref{C.QAOA}).
     \item The parameter-shift rule (\Chap~\chref{C.PSR}).
     \item Iteration complexity of QAOA with the parameter-shift rule (\Chap~\chref{C.IterationComplexity}).
@@ -629,7 +629,7 @@ Gurobi & $1$ & $1$ & $1$ \\\bottomrule
 \begin{frame}\ft{Bad news I: the angles are hard to find}
 \ona{The landscape $F_p(\boldsymbol\theta)$ is a trigonometric polynomial in $2p$ variables, riddled with local minima even at $p=1$ \citep{Vijendran2025}. Worse, finding the global minimum is provably hard:}
 \begin{itemize}\setlength\itemsep{0.3em}
-    \item Training a VQA to additive error below $(1-\alpha_{\max})/2$ is \textbf{NP}-hard \citep{bittel2021training}, even for a single layer, and even on logarithmically many qubits.
+    \item Training a VQA is \textbf{NP}-hard \citep{bittel2021training}, even for a single layer, and even on logarithmically many qubits; no polynomial-time algorithm guarantees an error below $(1-\alpha_{\max})/2$ of the spectral width, unless $\mathbf P = \mathbf{NP}$ (\Chap~\chref{C.VQE}).
     \item Deciding the depth $p$ needed to reach a target energy is \textbf{QCMA}-hard \citep{bittelQCMA}.
     \item In an idealised digitised setting, deciding whether a depth-58 QAOA reaches a target energy is \emph{undecidable} \citep{korpas2025undecidable}.
 \end{itemize}

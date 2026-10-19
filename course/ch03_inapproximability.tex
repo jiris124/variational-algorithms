@@ -9,7 +9,7 @@
 \lecture{Inapproximability and the Unique Games Conjecture}{Lect03}
 \chapter{Inapproximability and the Unique Games Conjecture}\label{C.Inapprox}
 
-\ona{In \Chap~\chref{C.Motivation} we saw that the Goemans--Williamson algorithm cuts, in expectation, at least $\alpha_{\rm GW} \approx 0.878$ of the edges that an optimal cut would. In this \chap{} we ask whether one can do better in polynomial time, by any algorithm, classical or quantum. The answer depends on a conjecture, the Unique Games Conjecture of \citet{khot2002power}, which we state in several equivalent forms, and on a delicate piece of analysis showing that, if it holds, the constant $\alpha_{\rm GW}$ cannot be improved. In September 2026 a preprint \citep{OAI:The-Unique-Games-Theorem-September-23-2026} claimed a proof of the conjecture; it has not yet been peer reviewed, and we describe what it claims and what would follow from it. We then turn from the quality of solutions to the training of variational circuits, and give a sketch of the proof of \citet{bittel2021training} that finding the optimal parameters of a variational quantum algorithm is $\mathbf{NP}$-hard, even when the quantum part is trivial. Our sources are the survey \citep{abbas2024challenges}, the appendices of \citet{egger2021warm}, the survey of \citet{KhotSurvey}, and \citet{bittel2021training}.}
+\ona{In \Chap~\chref{C.Motivation} we saw that the Goemans--Williamson algorithm cuts, in expectation, at least $\alpha_{\rm GW} \approx 0.878$ of the edges that an optimal cut would. In this \chap{} we ask whether one can do better in polynomial time, by any algorithm, classical or quantum. The answer depends on a conjecture, the Unique Games Conjecture of \citet{khot2002power}, which we state in several equivalent forms, and on a delicate piece of analysis showing that, if it holds, the constant $\alpha_{\rm GW}$ cannot be improved. In September 2026 a preprint \citep{OAI:The-Unique-Games-Theorem-September-23-2026} claimed a proof of the conjecture; it has not yet been peer reviewed, and we describe what it claims and what would follow from it. The hardness of training a variational circuit, as opposed to the quality of the solutions it can reach, is the subject of \Chap~\chref{C.VQE}. Our sources are the survey \citep{abbas2024challenges}, the appendices of \citet{egger2021warm}, and the survey of \citet{KhotSurvey}.}
 
 \section{Complexity classes for optimization}
 
@@ -559,130 +559,6 @@ Let it be $\mathbf{NP}$-hard to decide whether the maximum cut of a MaxCut insta
 \ona{This is why the histograms of \Chap~\chref{C.WSRounded} mark $11/13$: on weighted instances that, and not $0.878$, is the yardstick.}
 \end{frame}
 
-\section{Hardness of training: Bittel and Kliesch}
-
-\begin{frame}\ft{Training a variational algorithm is $\mathbf{NP}$-hard}
-\ona{So far we have bounded the quality of the solutions that any polynomial-time algorithm can guarantee. \citet{bittel2021training} show that the classical optimization inside a variational algorithm is itself hard, quite apart from the quantum part: even with exact expectation values supplied by an oracle, and even when the Hilbert space has polynomial dimension so that everything can be simulated classically, finding the optimal parameters is $\mathbf{NP}$-hard.}
-\begin{thm}[\citet{bittel2021training}]\label{thm:ch03:bittel}
-Minimising $\braket{O(\boldsymbol\phi)} = \braket{\Psi(\boldsymbol\phi)|O|\Psi(\boldsymbol\phi)}$ over the parameters of a variational circuit is $\mathbf{NP}$-hard: (a) with oracle access to the expectation values; (b) on $\mathcal O(\log d)$ qubits; (c) with a single layer; (d) for QAOA with one layer and Hamiltonians of norm at most $3$; (e) for free-fermionic circuits. Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm guarantees an optimization error, relative to the spectral width of $O$, below $(1-\alpha_{\max})/2$ for QAOA, where $\alpha_{\max}$ is the best achievable ratio for MaxCut, and none guarantees any error below $1$ in the oracle setting.
-\end{thm}
-\ona{The proof is a chain of reductions, all starting from MaxCut (Fig.~\ref{fig:ch03:chain}). We sketch the first two links in full and indicate the rest; all details are in \Chap~\chref{C.PerIteration}.}
-\end{frame}
-
-\begin{frame}\ft{The chain of reductions}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}[every node/.style={font=\scriptsize},box/.style={draw,rounded corners,fill=blue!6,minimum width=2.6cm,minimum height=0.95cm,align=center},lab/.style={font=\tiny,align=center,inner sep=1pt}]
-  \node[box,fill=gray!12] (mc) at (0,0) {MaxCut\\$\max_v \mathrm{cut}(v)$};
-  \node[box] (cmc) at (4.6,0) {continuous\\MaxCut, $\min_{\boldsymbol\phi}\mu$};
-  \node[box] (orc) at (9.2,0) {oracle VQA\\$d$ qubits, $d$ layers};
-  \node[box] (log) at (9.2,-2.3) {$\mathcal O(\log d)$ qubits\\$d$ layers};
-  \node[box] (one) at (4.6,-2.3) {one layer};
-  \node[box] (qaoa) at (0,-2.3) {QAOA, $p = 1$\\$\|H_b\|,\|H_c\|\le3$};
-  \draw[-{Latex},thick] (mc) -- node[lab,above=2pt] {$v_i = \cos\phi_i$;\\rounding is free} (cmc);
-  \draw[-{Latex},thick] (cmc) -- node[lab,above=2pt] {$R_Y(\phi_i)$ on qubit $i$;\\$\braket{Z_i} = \cos\phi_i$} (orc);
-  \draw[-{Latex},thick] (orc) -- node[lab,right=3pt] {phases $e^{\pm i\phi_j}$\\on $\C^{2d}$} (log);
-  \draw[-{Latex},thick] (log) -- node[lab,above=2pt] {energies $2\pi/m^j$:\\one time $t$ suffices} (one);
-  \draw[-{Latex},thick] (one) -- node[lab,above=2pt] {extra level,\\weak coupling $\tau$} (qaoa);
-\end{tikzpicture}
-\end{center}
-\ona{\caption{The reductions of \citet{bittel2021training}. Each arrow is a polynomial-time reduction that preserves the objective value exactly or to arbitrary precision; the labels name the device used at each step.}\label{fig:ch03:chain}\end{figure}}
-\onp{\footnotesize Each step preserves the objective exactly or to arbitrary precision.}
-\end{frame}
-
-\begin{frame}\ft{Proof sketch, step 1: from MaxCut to cosines}
-\ona{Let $A \in\{0,1\}^{d\times d}$ be the adjacency matrix of a graph. \emph{Continuous MaxCut} asks for $\boldsymbol\phi \in [0,2\pi)^d$ minimising}
-\begin{equation}\label{eq:ch03:mu}
-    \mu(\boldsymbol\phi) \;=\; \tfrac14\sum_{i,j}A_{ij}\,\big(\cos\phi_i\cos\phi_j - 1\big).
-\end{equation}
-\ona{\textbf{Claim.} $\min_{\boldsymbol\phi}\mu = -\mathrm{MaxCut}(A)$, and from any $\boldsymbol\phi$ one obtains in polynomial time a cut of value at least $-\mu(\boldsymbol\phi)$.}
-\ona{\emph{Proof.} Fix all coordinates but $\phi_i$. Since $A$ is symmetric with zero diagonal,}
-\begin{equation}
-    \mu(\boldsymbol\phi) \;=\; \cos\phi_i\,\Big[\tfrac12\sum_{j\ne i}A_{ij}\cos\phi_j\Big] \;+\; C_i,
-\end{equation}
-\ona{with $C_i$ independent of $\phi_i$. As a function of $\phi_i$, then, $\mu$ is affine in $\cos\phi_i \in [-1,1]$, and is smallest at $\phi_i = 0$ or $\phi_i = \pi$. Moving the coordinates one at a time to whichever of $0, \pi$ is better never increases $\mu$, and after $d$ steps $\boldsymbol\phi \in \{0,\pi\}^d$. There, $v_i = \cos\phi_i \in \{\pm1\}$ and}
-\begin{equation}
-    \mu \;=\; \tfrac14\sum_{i,j}A_{ij}(v_iv_j - 1) \;=\; -\tfrac12\sum_{i,j}A_{ij}\,\mathbb 1[v_i \ne v_j] \;=\; -\,\mathrm{cut}(v). \qquad\square
-\end{equation}
-\ona{The reduction preserves values exactly, so continuous MaxCut is $\mathbf{NP}$-hard, and no polynomial-time algorithm approximates it better than MaxCut itself. Note also that at the points of $\{0,\pi\}^d$ the gradient of $\mu$ vanishes: its local minima there are the cuts that cannot be improved by moving one vertex, and gradient methods guarantee no more than single-vertex local search, a ratio of $1/2$.}
-\onp{\footnotesize $\mu$ is affine in each $\cos\phi_i$ $\Rightarrow$ round coordinates to $\{0,\pi\}$ one at a time without loss; on $\{0,\pi\}^d$, $\mu = -\mathrm{cut}$.}
-\end{frame}
-
-\begin{frame}\ft{The landscape of continuous MaxCut}
-\ona{Figure~\ref{fig:ch03:landscape} shows $\mu$ for the 4-cycle $v_1v_2v_3v_4$ with $\phi_3 = 0$ and $\phi_4 = \pi$ held fixed, where
-\begin{equation*}
-    \mu(\phi_1,\phi_2) = \tfrac12\big(\cos\phi_1\cos\phi_2 + \cos\phi_2 - \cos\phi_1 - 5\big).
-\end{equation*}}
-\ona{\gdef\lsH{0.48\linewidth}}\onp{\gdef\lsH{0.36\linewidth}}
-\ona{\begin{figure}[htb]}\begin{center}
-\begin{tikzpicture}
-\begin{axis}[width=0.52\linewidth,height=\lsH,view={0}{90},xmin=0,xmax=360,ymin=0,ymax=360,xtick={0,90,180,270,360},xticklabels={$0$,$\frac\pi2$,$\pi$,$\frac{3\pi}2$,$2\pi$},ytick={0,90,180,270,360},yticklabels={$0$,$\frac\pi2$,$\pi$,$\frac{3\pi}2$,$2\pi$},xlabel={$\phi_1$},ylabel={$\phi_2$},colorbar,colorbar style={width=0.25cm,font=\tiny},colormap/viridis,point meta min=-4,point meta max=-2,enlargelimits=false,axis on top]
-  \addplot3[surf,shader=interp,domain=0:360,y domain=0:360,samples=41] {0.5*(cos(x)*cos(y)+cos(y)-cos(x)-5)};
-  \draw[-{Latex},very thick,white] (axis cs:120,240,0) -- (axis cs:4,240,0);
-  \draw[-{Latex},very thick,white] (axis cs:4,240,0) -- (axis cs:4,184,0);
-  \fill[white] (axis cs:120,240,0) circle (2.5pt);
-  \node[white,font=\tiny,above] at (axis cs:120,240,0) {start};
-  \fill[red] (axis cs:0,180,0) circle (3pt);
-  \fill[red] (axis cs:360,180,0) circle (3pt);
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\ona{\caption{Continuous MaxCut on the 4-cycle with $\phi_3 = 0$, $\phi_4 = \pi$ fixed. The minimum $-4$ (red) is at $(\phi_1,\phi_2) = (0,\pi)$, the maximum cut of the 4-cycle. The white arrows show the rounding of the proof: first $\phi_1$ is moved to the better of $0$ and $\pi$ with $\phi_2$ fixed, then $\phi_2$; neither move increases $\mu$.}\label{fig:ch03:landscape}\end{figure}}
-\onp{\footnotesize Minimum $-4 = -\mathrm{MaxCut}(C_4)$ at $(0,\pi)$; arrows: coordinate-wise rounding.}
-\end{frame}
-
-\begin{frame}\ft{Proof sketch, step 2: a circuit that computes $\mu$}
-\ona{Take $d$ qubits in $\ket0^{\otimes d}$, apply $R_Y(\phi_i) = e^{-i\phi_iY_i/2}$ to qubit $i$, and measure}
-\begin{equation}
-    O \;=\; \tfrac14\sum_{i,j}A_{ij}\big(Z_iZ_j - \one\big).
-\end{equation}
-\ona{The state is a product, $\bigotimes_i\big(\cos\tfrac{\phi_i}2\ket0 + \sin\tfrac{\phi_i}2\ket1\big)$, with $\braket{Z_i} = \cos\phi_i$ and $\braket{Z_iZ_j} = \cos\phi_i\cos\phi_j$ for $i\ne j$, so $\braket{O(\boldsymbol\phi)} = \mu(\boldsymbol\phi)$ exactly. An algorithm that minimises $\braket{O(\boldsymbol\phi)}$, given an oracle for its values, therefore solves MaxCut. This circuit has no entanglement at all: the hardness lies wholly in the classical optimization.}
-\begin{itemize}\setlength\itemsep{0.25em}
-    \item \textbf{No error below $1$.} Replace $O$ by $(-1)^{k-1}O^{\otimes k}$ on $k$ copies of the circuit. Its expectation is $-|\mu|^k$ and its spectral width $\mathrm{MaxCut}^k$, so an algorithm of ratio $\alpha$ incurs relative error $1-\alpha^k \to 1$.
-    \item \textbf{Logarithmically many qubits.} On $\C^{2d}$, the state $(2d)^{-1/2}\sum_j\big(e^{-i\phi_j}\ket{2j-1} + e^{i\phi_j}\ket{2j}\big)$ and a suitable $O$ again give $\mu(\boldsymbol\phi)$, now on $\mathcal O(\log d)$ qubits; the problem is then classically simulable, and its decision version $\mathbf{NP}$-complete.
-    \item \textbf{One layer, and QAOA.} With energies $E_j = 2\pi/m^j$, a single time $t$ makes all the phases $E_jt$ approximate any $\boldsymbol\phi$, so one parameter suffices; an extra level weakly coupled to the rest turns this into a QAOA circuit of depth one (\Chap~\chref{C.PerIteration}).
-\end{itemize}
-\end{frame}
-
-\begin{frame}\ft{Inapproximability of training}
-\onp{\scriptsize}
-\ona{\citet{bittel2021training} do not stop at $\mathbf{NP}$-hardness of finding the optimum; they also bound how close to it a polynomial-time algorithm can be guaranteed to come. The yardstick is the \emph{optimization error}: the smallest $\rho \in [0,1]$ such that}
-\begin{equation}\label{eq:ch03:rho}
-    \frac{\braket{O}_{\rm alg} - \braket{O}_{\min}}{\lambda_{\max}(O) - \lambda_{\min}(O)} \;\le\; \rho \qquad\text{on all instances,}
-\end{equation}
-\ona{where $\braket{O}_{\rm alg}$ is the value at the parameters returned and the denominator, the spectral width, makes $\rho$ independent of the scale of $O$. Unless $\mathbf P = \mathbf{NP}$:}
-\begin{itemize}\setlength\itemsep{0.25em}
-    \item \textbf{With oracle access, no $\rho < 1$.} Take $k$ copies of the circuit of step 2 and the observable $(-1)^{k-1}O^{\otimes k}$, whose eigenvalues lie in $[-\mathrm{MC}^k,0]$, with $\mathrm{MC}$ the maximum cut. The expectation is $-|\mu(\boldsymbol\phi)|^k$. An algorithm with error $\rho<1$ would return $\boldsymbol\phi$ with $|\mu(\boldsymbol\phi)| \ge (1-\rho)^{1/k}\,\mathrm{MC}$, and rounding as in step 1 would give a cut within a factor $(1-\rho)^{1/k} \to 1$ of the optimum, for any $k$: an approximation scheme for MaxCut, which is $\mathbf{APX}$-hard.
-    \item \textbf{For QAOA of depth one, $\rho \ge (1-\alpha_{\max})/2$}, where $\alpha_{\max}$ is the best ratio achievable for MaxCut in polynomial time. In their construction $\braket{H_c}_{\min} = 1 - 2\mathrm{MC}/|E|$ with spectral width $2$, so a cut of ratio $\alpha$ gives error $\tfrac12(1-\alpha)\,2\mathrm{MC}/|E| \ge (1-\alpha)/2$, as $\mathrm{MC}\ge|E|/2$. With H\accent23 astad's bound $\alpha_{\max} \le 16/17$ this is $\rho \ge 1/34 \approx 0.029$; under the Unique Games Conjecture, $\alpha_{\max} = \alpha_{\rm GW}$ and $\rho \ge 0.061$, unconditionally if the 2026 claimed proof holds. Gradient methods, whose fixed points are the local optima of single-vertex moves, have $\alpha = 1/2$ and hence $\rho \ge 1/4$.
-    \item \textbf{The depth, too.} For every $\epsilon>0$ it is $\mathbf{QCMA}$-hard to approximate the smallest depth of an ansatz that reaches a target energy within a factor $N^{1-\epsilon}$, where $N$ is the size of the instance \citep{bittelQCMA}.
-\end{itemize}
-\onp{\footnotesize Error $\rho$ relative to the spectral width. Oracle: no $\rho<1$; QAOA: $\rho\ge(1-\alpha_{\max})/2$, i.e., $\ge 1/34$, or $\ge 0.061$ under UGC; depth: $\mathbf{QCMA}$-hard within $N^{1-\epsilon}$.}
-\end{frame}
-
-\begin{frame}\ft{Training, if the Unique Games Theorem holds}
-\onp{\scriptsize}
-\ona{The bounds of the previous slide are stated relative to $\alpha_{\max}$, the best ratio achievable for MaxCut in polynomial time, and so they sharpen if Theorem~\ref{thm:ch03:ugt} is correct. Two cases must be distinguished, according to the computer on which the training runs.}
-\begin{itemize}\setlength\itemsep{0.3em}
-    \item \textbf{Classical training.} Goemans--Williamson achieves $\alpha_{\rm GW}$, and if the theorem holds and $\mathbf P\ne\mathbf{NP}$, no polynomial-time algorithm achieves more on every instance, so that $\alpha_{\max} = \alpha_{\rm GW}$. Every polynomial-time classical training procedure for QAOA of depth one then has optimization error
-    \begin{equation*}
-        \rho \;\ge\; \tfrac12(1-\alpha_{\rm GW}) \;\approx\; 0.061,
-    \end{equation*}
-    with no assumption beyond $\mathbf P\ne\mathbf{NP}$. Without the theorem, the unconditional bound was $1/34 \approx 0.029$, from H\accent23 astad's $16/17$.
-    \item \textbf{Training with a quantum computer in the loop.} An optimizer that queries a quantum device, or runs any other quantum subroutine, is a polynomial-time quantum algorithm. If it guaranteed $\rho < (1-\alpha_{\rm GW})/2$, the reduction of \citet{bittel2021training} would turn it into a polynomial-time quantum algorithm approximating MaxCut beyond $\alpha_{\rm GW}$. By the theorem, that would decide 3-SAT, so the same bound holds unless $\mathbf{NP}\subseteq\mathbf{BQP}$. The quantum device does not help with the hard instances in any case: those of the reduction live on $\mathcal O(\log d)$ qubits and can be simulated classically, so the difficulty lies in the search over parameters.
-    \item \textbf{What is unchanged.} The oracle setting already excludes any guarantee $\rho<1$ assuming only $\mathbf P\ne\mathbf{NP}$, or $\mathbf{NP}\not\subseteq\mathbf{BQP}$ for quantum optimizers. Gradient methods guarantee no more than $\rho\ge1/4$ in any case, as their fixed points are the cuts that cannot be improved by moving one vertex. The $\mathbf{QCMA}$-hardness of approximating the optimal depth \citep{bittelQCMA} does not involve unique games.
-\end{itemize}
-\ona{In short, if the theorem holds, a relative error of about $6\%$ of the spectral width is the best that any efficient training procedure, classical or quantum, can guarantee on all instances of depth-one QAOA, unless $\mathbf{NP}\subseteq\mathbf{BQP}$. As before, this says nothing about typical instances.}
-\end{frame}
-
-\begin{frame}\ft{What the theorem says, and what it does not}
-\begin{itemize}\setlength\itemsep{0.3em}
-    \item It says that in the worst case no polynomial-time training procedure finds the optimal parameters, nor even parameters within a fixed fraction of the spectral width of the optimum, unless $\mathbf P = \mathbf{NP}$. The difficulty lies in the classical optimization, not in the quantum hardware or in estimating expectation values.
-    \item It does not say that good parameters are hard to find for typical instances; \Chap~\chref{C.PerIteration} finds that they often are not.
-    \item Nor does it say that local minima are useless: a warm start which inherits a classical guarantee keeps it whatever the optimizer does (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}).
-\end{itemize}
-\ona{Later work has extended the picture. Besides the hardness of approximating the depth \citep{bittelQCMA}, in an idealised digitised setting the training problem is even undecidable \citep{korpas2025undecidable}; and for a constant number of angles there are tractable regimes \citep{sakos2026global}.}
-\onp{\footnotesize Later: undecidability \citep{korpas2025undecidable}; tractable constant-angle regimes \citep{sakos2026global}.}
-\end{frame}
-
 \mode<all>{\gdef\quanttab#1#2#3#4{\begin{tabular}{>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}}\toprule
 problem & before the theorem & if the theorem holds & still assumed \\\midrule
 unique games, entangled provers & value approximable by SDP; entangled UGC false & unchanged; the reduction's ``no'' instances must contain games with classical value $\le\delta$ and entangled value near $1$ (our inference) & $\mathbf P\ne\mathbf{NP}$ \\
@@ -691,13 +567,13 @@ Quantum MaxCut, true (entangled) value & UG-hard beyond $0.956$ & $\mathbf{NP}$-
 local Hamiltonians, quantum PCP & $\mathbf{NP}$-hard within some constant; $\mathbf{QMA}$-hardness open & unchanged & --- \\
 QAOA for MaxCut, angles found in polynomial time & beating $\alpha_{\rm GW}$ would refute the UGC or give $\mathbf{NP}\subseteq\mathbf{BQP}$ & impossible on all instances unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP}$ \\
 QAOA for MaxCut, angles as advice & as above, with $\mathbf{BQP/poly}$ & impossible unless $\mathbf{NP}\subseteq\mathbf{BQP/poly}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP/poly}$ \\
-training QAOA, classical optimizer & $\rho\ge1/34$ unless $\mathbf P=\mathbf{NP}$ & $\rho\ge0.061$ unless $\mathbf P=\mathbf{NP}$ & $\mathbf P\ne\mathbf{NP}$ \\
-training QAOA, quantum in the loop & as above, with $\mathbf{BQP}$ & $\rho\ge0.061$ unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP}$ \\\bottomrule
+training QAOA, classical optimizer & $\Delta\ge1/34$ unless $\mathbf P=\mathbf{NP}$ & $\Delta\ge0.061$ unless $\mathbf P=\mathbf{NP}$ & $\mathbf P\ne\mathbf{NP}$ \\
+training QAOA, quantum in the loop & as above, with $\mathbf{BQP}$ & $\Delta\ge0.061$ unless $\mathbf{NP}\subseteq\mathbf{BQP}$ & $\mathbf{NP}\not\subseteq\mathbf{BQP}$ \\\bottomrule
 \end{tabular}}}
 \begin{frame}\ft{Quantum variants, if the Unique Games Theorem holds}
 \ona{Theorem~\ref{thm:ch03:ugt} concerns the classical value of classical constraints, and the preprint draws no quantum consequences. Table~\ref{tab:ch03:quantum} summarises those that follow from it together with known results. Some entries are our own inferences, and are marked as such.}
 \onp{\vspace{-0.8em}\begin{center}\tiny\quanttab{0.17}{0.25}{0.30}{0.15}\end{center}}
-\ona{\begin{table}[htb]\centering\caption{Quantum variants, before and after the claimed Unique Games Theorem \citep{OAI:The-Unique-Games-Theorem-September-23-2026}. Entangled-prover unique games: \citet{kempe2010unique}. Quantum MaxCut: \citet{hwang2023unique}, with the constant $\alpha_{\rm BOV}$ of the product-state algorithm of Bri\"et, Oliveira and Vallentin; the vector-valued Borell inequality needed for the product-state result is claimed in a 2026 preprint of \citet{heilman2026sharp}. Training: \citet{bittel2021training} and the previous slides. The whole table assumes that the preprint is correct.}\label{tab:ch03:quantum}\footnotesize\quanttab{0.2}{0.25}{0.27}{0.18}\end{table}}
+\ona{\begin{table}[htb]\centering\caption{Quantum variants, before and after the claimed Unique Games Theorem \citep{OAI:The-Unique-Games-Theorem-September-23-2026}. Entangled-prover unique games: \citet{kempe2010unique}. Quantum MaxCut: \citet{hwang2023unique}, with the constant $\alpha_{\rm BOV}$ of the product-state algorithm of Bri\"et, Oliveira and Vallentin; the vector-valued Borell inequality needed for the product-state result is claimed in a 2026 preprint of \citet{heilman2026sharp}. Training: \citet{bittel2021training}, with $\Delta$ the optimization error of \Chap~\chref{C.VQE}. The whole table assumes that the preprint is correct.}\label{tab:ch03:quantum}\footnotesize\quanttab{0.2}{0.25}{0.27}{0.18}\end{table}}
 \end{frame}
 
 \section{Structural obstructions and average-case hardness}
@@ -733,9 +609,6 @@ Show that every cut of a triangle separates at most two of its three edges, and 
 \begin{frame}\ft{Exercises, continued}
 \begin{exe}[The constant]
 Show that the minimum in \eqref{eq:ch03:alpha} is attained where $\tan(\theta/2) = \theta$ for $\theta = \arccos\rho$, and compute $\theta^\ast$ and $\alpha_{\rm GW}$ to four digits.
-\end{exe}
-\begin{exe}[Continuous MaxCut]
-For the triangle, write out $\mu(\phi_1,\phi_2,\phi_3)$ from \eqref{eq:ch03:mu}, find its minimum, and show that the set of minimisers is not finite. Does the rounding of the proof still reach a maximum cut?
 \end{exe}
 \begin{exe}[Dictators]
 Show that a dictator passes the test with probability $(1-\rho)/2$, and compute the pass probability of the majority function on three bits as a function of $\rho$.
