@@ -2,6 +2,7 @@
 # Build the course.
 #   ./build.sh            full handout (handoutsbeamer.pdf) and full slide deck (overheadsbeamer.pdf)
 #   ./build.sh chNN       one chapter standalone, as handout (chNN_*.pdf) and as slides (slides_chNN_*.pdf)
+#   ./build.sh solutions  the sheets of worked solutions, solutions_chNN.tex (build the chapters first)
 #   ./build.sh all        everything
 # Auxiliary files go to build/.
 set -u
@@ -27,6 +28,8 @@ chapter() { # chapter <basename without .tex>
 case "${1:-full}" in
   full) run handoutsbeamer handoutsbeamer.tex; run overheadsbeamer overheadsbeamer.tex ;;
   all)  run handoutsbeamer handoutsbeamer.tex; run overheadsbeamer overheadsbeamer.tex
-        for f in ch[0-9][0-9]_*.tex; do chapter "${f%.tex}"; done ;;
+        for f in ch[0-9][0-9]_*.tex; do chapter "${f%.tex}"; done
+        for f in solutions_*.tex; do run "${f%.tex}" "$f"; done ;;
+  sol*) for f in solutions_*.tex; do run "${f%.tex}" "$f"; done ;;
   ch*)  for f in $1*.tex; do chapter "${f%.tex}"; done ;;
 esac

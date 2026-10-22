@@ -234,6 +234,9 @@ course/*.snm
 course/*.synctex.gz
 course/*.synctex(busy)
 
+# worked solutions, kept out of the public repository
+course/solutions_ch05.tex
+
 # TeX intermediate files (anywhere in the repository)
 *.aux
 *.bbl
