@@ -294,6 +294,74 @@ A VQA proceeds in the same way. It starts from initial parameters $\vartheta_0$,
 \onp{\footnotesize Local search is captured by the class $\mathbf{PLS}$ \citep{johnson1988easy}; whether a local optimum can always be found in polynomial time is open.}
 \end{frame}
 
+\begin{frame}\ft{The light cone of a shallow circuit}\label{fr:ch05:lightcone}
+\onp{\footnotesize}
+\ona{Local search is local in the space of solutions. A shallow circuit is local in a second sense, which concerns the graph on which it acts. Consider a circuit on $n$ qubits, one for each vertex of a graph $G = (V,E)$, each of whose $p$ layers consists of mutually commuting two-qubit gates along edges of $G$ and of single-qubit gates. The quantum approximate optimization algorithm (QAOA), introduced in Section~\ref{sec:ch05:qaoa}, is of this form: each of its layers applies a $ZZ$ rotation along every edge, and then an $X$ rotation to every qubit. Conjugating an operator supported on a set $S$ of vertices by such a layer gives an operator supported on $S$ and its neighbours, since the gates along edges that do not touch $S$ commute with it and cancel. After $p$ layers, therefore, $U^\dagger Z_iZ_jU$ acts only on the vertices within distance $p$ of the edge $ij$, its \emph{light cone}, and its expectation in a product initial state depends only on the subgraph formed by the edges within distance $p$ of $ij$ \citep{farhi2014quantum,farhi2020worst}. In a $D$-regular graph the light cone of an edge contains at most $2\sum_{k=0}^{p}(D-1)^k$ vertices, however large $n$ may be.}
+\ona{A circuit of fixed depth is thus a \emph{local algorithm}, in the sense of distributed computing: the expected value of each term of the cost function is determined by a neighbourhood of bounded radius. A classical algorithm is similarly called $k$-local if the side to which it assigns each vertex depends only on the neighbourhood of radius $k$ of that vertex, together with random numbers attached to the vertices. If the girth of a $D$-regular graph exceeds $2p+1$, the light cone of every edge is the same tree (Fig.~\ref{fig:ch05:lightcone}), and the expected cut fraction of QAOA of depth $p$ is then a function of $D$, $p$ and the angles alone, the same for all such graphs, whatever their size.}
+\onp{After $p$ layers, $U^\dagger Z_iZ_jU$ acts only on the vertices within distance $p$ of the edge $ij$, its light cone \citep{farhi2014quantum,farhi2020worst}. QAOA of fixed depth is a \emph{local algorithm}; on $D$-regular graphs of girth $>2p+1$ every light cone is the same tree.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[every node/.style={font=\scriptsize},edge/.style={thick},stub/.style={gray,densely dotted,thick}]
+  \fill[blue!10] (0,0) ellipse (2.35 and 2.0);
+  \fill[blue!25] (0,0) ellipse (1.62 and 1.25);
+  \draw[stub] (-1.084,1.568) -- (-0.856,1.920) (-1.084,1.568) -- (-1.275,1.942) (-1.841,1.038) -- (-2.127,1.346) (-1.841,1.038) -- (-2.250,0.944) (-1.841,-1.038) -- (-2.250,-0.944) (-1.841,-1.038) -- (-2.127,-1.346) (-1.084,-1.568) -- (-1.275,-1.942) (-1.084,-1.568) -- (-0.856,-1.920) (1.841,1.038) -- (2.250,0.944) (1.841,1.038) -- (2.127,1.346) (1.084,1.568) -- (1.275,1.942) (1.084,1.568) -- (0.856,1.920) (1.084,-1.568) -- (0.856,-1.920) (1.084,-1.568) -- (1.275,-1.942) (1.841,-1.038) -- (2.127,-1.346) (1.841,-1.038) -- (2.250,-0.944);
+  \draw[edge] (-0.550,0.000) -- (-1.124,0.819) (-1.124,0.819) -- (-1.084,1.568) (-1.124,0.819) -- (-1.841,1.038) (-0.550,0.000) -- (-1.124,-0.819) (-1.124,-0.819) -- (-1.841,-1.038) (-1.124,-0.819) -- (-1.084,-1.568) (0.550,0.000) -- (1.124,0.819) (1.124,0.819) -- (1.841,1.038) (1.124,0.819) -- (1.084,1.568) (0.550,0.000) -- (1.124,-0.819) (1.124,-0.819) -- (1.084,-1.568) (1.124,-0.819) -- (1.841,-1.038);
+  \foreach \p in {{(-1.124,0.819)},{(-1.084,1.568)},{(-1.841,1.038)},{(-1.124,-0.819)},{(-1.841,-1.038)},{(-1.084,-1.568)},{(1.124,0.819)},{(1.841,1.038)},{(1.084,1.568)},{(1.124,-0.819)},{(1.084,-1.568)},{(1.841,-1.038)}} \fill \p circle (1.5pt);
+  \draw[very thick,red!70!black] (-0.55,0) -- (0.55,0);
+  \fill[red!70!black] (-0.55,0) circle (1.8pt) node[below=1pt] {$i$};
+  \fill[red!70!black] (0.55,0) circle (1.8pt) node[below=1pt] {$j$};
+  \node[note,anchor=west] (n1) at (2.75,1.45) {after one layer, $\braket{Z_iZ_j}$ depends\\only on the dark region};
+  \draw[notearrow] (n1.west) to[bend right=15] (1.47,0.53);
+  \node[note,anchor=west] (n2) at (2.75,0.35) {after two layers, also on\\the light region};
+  \draw[notearrow] (n2.west) to[bend left=10] (2.3,-0.25);
+  \node[note,anchor=west] (n3) at (2.75,-0.95) {the rest of the graph, dotted,\\does not affect $\braket{Z_iZ_j}$};
+  \draw[notearrow] (n3.west) to[bend left=10] (2.22,-1.3);
+  \node[note,anchor=north] at (0,-2.15) {if the girth exceeds $2p+1$, the light cone is a tree,\\the same for every such graph};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The light cone of an edge $ij$ in a $3$-regular graph of large girth. After $p$ layers of QAOA, the expectation $\braket{Z_iZ_j}$ depends only on the vertices within distance $p$ of the edge: the dark region for $p = 1$, and the dark and light regions together for $p = 2$.}\label{fig:ch05:lightcone}\end{figure}}
+\end{frame}
+
+\begin{frame}\ft{Locality as an obstacle}
+\onp{\footnotesize}
+\ona{The light cone limits what a shallow circuit can achieve, for the circuit cannot distinguish graphs that look alike locally.}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \ona{\citet{farhi2020worst} observe that random $D$-regular graphs and random bipartite $D$-regular graphs both look locally like trees: if $(D-1)^{2p}<n^A$ for some $A<1$, almost all light cones are trees. QAOA of depth $p$ therefore has the same expected cut fraction on both ensembles. A random $D$-regular graph has no cut much larger than half of its edges when $D$ is large, whereas a bipartite graph can be cut entirely, and so the approximation ratio of QAOA on random bipartite $D$-regular graphs is only $1/2$ for large $D$. To do better, QAOA must, in their words, see the whole graph, and its depth must grow at least logarithmically with $n$. For the maximum independent set, the same argument gives a ratio that tends to $0$ as $D$ grows.}\onp{\citet{farhi2020worst}: random graphs and random bipartite graphs look alike locally, so QAOA with $(D-1)^{2p}<n^A$, $A<1$, has the same cut fraction on both, and its ratio on bipartite graphs is only $1/2$ for large $D$. QAOA must see the whole graph.}
+    \item \ona{\citet{Bravyi2020} use, in addition, a symmetry. The initial state $\ket+^{\otimes n}$ and all the gates of QAOA commute with the global flip $X^{\otimes n}$, so that the output distribution gives the same probability to a bit string and to its complement. On a bipartite graph, the two maximum cuts are complements of each other, at Hamming distance $n$, and on a good expander every near-optimal cut lies near one of them. For bipartite $D$-regular expanders they show that QAOA reaches a fraction $\frac56 + \frac{\sqrt{D-1}}{3D}$ of the maximum cut only at depth $P\ge\log_2(n/4096)/(3(D+1))$.}\onp{\citet{Bravyi2020}: QAOA commutes with $X^{\otimes n}$; on bipartite expanders the two optimal cuts are $n$ apart, and a fraction $\frac56 + \frac{\sqrt{D-1}}{3D}$ of the maximum cut needs depth $\ge\log_2(n/4096)/(3(D+1))$.}
+    \item \ona{\citet{depalma2023limitations} recast such arguments in terms of quantum optimal transport. If the light cone of a noiseless circuit acting on $\ket0^{\otimes n}$, the largest number of output qubits that a single input qubit can influence, is $B$, then any two sets of bit strings that each have probability at least $\mu_0$ in the output distribution lie within Hamming distance $3B\sqrt{n/\mu_0}$ of each other. A symmetric output distribution concentrated on near-optimal cuts places probability near both maximum cuts, which are $n$ apart, and $B$ must then be at least of order $\sqrt n$. In the setting of \citet{Bravyi2020}, the fraction $\frac56 + \frac{\sqrt{D-1}}{3D}$ thus requires depth $P\ge\log(n/576)/(2\log(D+1))$, an improvement that is exponential in $D$. For $D\ge55$ this fraction is below the ratio $0.878$ of Goemans--Williamson, and for $D = 55$ the bound already excludes depth one when $n\gtrsim10^6$, where the earlier bound required $n\gtrsim10^{54}$. With local depolarising noise of rate $q$, they show moreover that at depths of order $1/q$ it is exponentially unlikely that even a single measured string beats efficient classical algorithms for problems such as MaxCut; earlier results of this kind concerned only the expected value.}\onp{\citet{depalma2023limitations}: with a light cone of $B$ qubits, two sets of probability $\ge\mu_0$ are within Hamming distance $3B\sqrt{n/\mu_0}$; the same fraction then needs depth $\ge\log(n/576)/(2\log(D+1))$, exponentially better in $D$. With depolarising noise of rate $q$, beating classical algorithms at depth of order $1/q$ is exponentially unlikely, even for a single string.}
+\end{itemize}
+\end{frame}
+
+\mode<all>{\gdef\nupdata{(1,0.3033) (2,0.4075) (3,0.4726) (4,0.5157) (5,0.5476) (6,0.5721) (7,0.5915) (8,0.6073) (9,0.6203) (10,0.6314) (11,0.6408) (12,0.6490) (13,0.6561) (14,0.6623) (15,0.6679) (16,0.6729) (17,0.6773)}}
+\begin{frame}\ft{Local algorithms, quantum and classical}
+\onp{\footnotesize}
+\ona{Since QAOA of fixed depth is a local algorithm, it is natural to compare it with local classical algorithms on the graphs on which its performance can be computed exactly, the regular graphs of large girth. \citet{marwaha2021local} derives, for QAOA of depth two, an expression for the expected cut fraction on any $D$-regular graph of girth greater than $5$ that does not depend on the size of the graph. For every $D\ge2$ and every such graph, depth two cuts more edges in expectation than depth one, but there is a $2$-local randomised classical algorithm that cuts more than depth two on all of them. Marwaha conjectures that for every constant $p$ some local classical algorithm does as well as QAOA of depth $p$ on all graphs.}
+\ona{\citet{basso2021quantum} carry the analysis to any depth. Looking at a single tree, they derive an iteration that computes the expected cut fraction of QAOA of depth $p$ on $D$-regular graphs of girth greater than $2p+1$, for any $D$ and any angles, at a cost of $\mathcal O(p^24^p)$. As $D\to\infty$, at the optimal angles, the cut fraction is $\frac12 + \bar\nu_p/\sqrt D + o(1/\sqrt D)$, with the values of Fig.~\ref{fig:ch05:nup}. The best classical algorithms known to them that rest on no unproven conjecture, among them Goemans--Williamson, achieve $\frac12 + (2/\pi)/\sqrt D$ on these graphs as the girth and $D$ grow, with $2/\pi\approx0.6366$; at depth $11$, $\bar\nu_{11} = 0.6408$, and QAOA does better on graphs of girth greater than $23$ when $D$ is large. A classical message-passing algorithm also does better than $2/\pi$, and comes asymptotically close to the optimum if the space of solutions has no overlap gap property, an assumption that has not been proved. The optimum on random $D$-regular graphs is $\frac12 + \Pi_*/\sqrt D + o(1/\sqrt D)$, where $\Pi_* = 0.763166\ldots$ is the Parisi value, and they conjecture that $\bar\nu_p\to\Pi_*$ as $p\to\infty$. The same iteration gives the expected performance of QAOA on the Sherrington--Kirkpatrick model.}
+\onp{\citet{marwaha2021local}: on $D$-regular graphs of girth $>5$, a $2$-local classical algorithm beats QAOA of depth two. \citet{basso2021quantum}: an iteration on a single tree gives the cut fraction $\frac12 + \bar\nu_p/\sqrt D$ as $D\to\infty$; at depth $11$, $\bar\nu_{11} = 0.6408$ exceeds the $2/\pi$ of the best classical algorithms that rest on no conjecture.}
+\ona{\gdef\nuH{0.42\linewidth}\gdef\nuW{0.62\linewidth}}\onp{\gdef\nuH{0.34\linewidth}\gdef\nuW{0.56\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=\nuW,height=\nuH,clip=false,axis lines=left,xmin=0,xmax=21,ymin=0.25,ymax=0.8,xtick={1,5,10,15,20},ytick={0.3,0.4,0.5,0.6,0.7,0.8},xlabel={depth $p$},ylabel={$\bar\nu_p$},yticklabel style={/pgf/number format/fixed}]
+  \addplot[only marks,mark=*,mark size=1.6pt,blue!70!black] coordinates {\nupdata};
+  \addplot[only marks,mark=o,mark size=1.6pt,blue!70!black] coordinates {(18,0.6813) (19,0.6848) (20,0.6879)};
+  \addplot[dashed,thick,orange!80!black,domain=0:21,samples=2] {0.6366};
+  \addplot[densely dotted,thick,green!40!black,domain=0:21,samples=2] {0.7632};
+  \fill[red!70!black] (axis cs:11,0.6408) circle (2.2pt);
+  \node[note,anchor=south west] (a) at (axis cs:0.5,0.81) {dotted, the optimum, the Parisi value $\Pi_* = 0.7632$};
+  \draw[notearrow] ([xshift=0.6cm]a.south west) -- (axis cs:3,0.7632);
+  \node[note,anchor=west] (b) at (axis cs:22,0.6) {dashed, $2/\pi$, the best classical\\algorithms resting on no conjecture};
+  \draw[notearrow] (b.west) to[bend left=10] (axis cs:21.2,0.6366);
+  \node[note,anchor=north west] (c) at (axis cs:12,0.52) {at depth $11$, $\bar\nu_{11} = 0.6408 > 2/\pi$};
+  \draw[notearrow] (c.north west) to[bend left=20] (axis cs:11,0.63);
+  \node[note,anchor=west] (d) at (axis cs:22,0.72) {open circles, lower bounds};
+  \draw[notearrow] (d.west) to[bend right=10] (axis cs:20.4,0.6879);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The cut fraction $\frac12 + \bar\nu_p/\sqrt D$ of QAOA of depth $p$ at optimal angles on $D$-regular graphs of girth greater than $2p+1$, as $D\to\infty$, after \citet[Tables~1 and~2]{basso2021quantum}. For $p\le17$ the angles are optimised; for $p = 18$, $19$, $20$ they are extrapolated, and the values are lower bounds. The dashed line is the value of the best classical algorithms that rest on no unproven conjecture, and the dotted line the optimum on random regular graphs.}\label{fig:ch05:nup}\end{figure}}
+
+\ona{Two observations put these results in perspective. First, the analysis is classical: the expected cut fraction is computed from a single light cone, but to obtain a cut of that size one must run QAOA on a quantum computer and sample from it. Second, the same light cones occur in random bipartite graphs, on which every edge can be cut; by the argument of \citet{farhi2020worst}, QAOA of fixed depth has the same cut fraction there, and so an approximation ratio close to $1/2$ for large $D$. What is a good performance on one family of graphs is a poor one on another that looks the same locally.}
+\end{frame}
+
 \begin{frame}\ft{VQAs are not approximation algorithms}
 On the other hand, VQAs are not \emph{approximation algorithms} in the usual sense. An approximation algorithm for a problem is a polynomial-time algorithm that returns, on \emph{every} instance, a solution within a guaranteed factor of the optimum. The Goemans--Williamson algorithm for MaxCut, for example, guarantees the ratio $0.878$ on every instance. No such guarantee is known for VQAs in general.
 
@@ -529,24 +597,24 @@ $6$ & $0.398$ & $-0.695$ & $-3.054\pm0.033$ & $-2.983$ & $+0.140$ \ ($+0.087$) &
 \ona{The fourth point requires comment. The minimum of a real function is a real number which may have no finite representation, and the same is true of the parameters at which it is attained. We adopt the usual convention that a minimisation problem is solved if it is solved to exponential precision, that is, up to an error $2^{-\mathrm{poly}}$ in the size of the input. The hardness results below do not, therefore, derive from any difficulty in writing down the minimum.}
 \end{frame}
 
-\begin{frame}\ft{Training with a quantum computer: the oracular problem}
+\begin{frame}\ft{Training VQA with a quantum computer}
 \onp{\footnotesize}
-\begin{probl}[VQA minimisation, oracular formulation]\label{p:ch05:oracle}
+\begin{probl}[Training VQA]\label{p:ch05:oracle}
 \begin{description}\setlength\itemsep{0.1em}
     \item[Instance] Generators $H_1,\dots,H_L$ and an observable $O$ on $N$ qubits, each given as a real combination of polynomially many Pauli strings.
     \item[Oracle] For $\ket{\Psi(\boldsymbol\phi)} = U_L(\phi_L)\cdots U_1(\phi_1)\ket{0}^{\otimes N}$ with $U_i(\phi) = e^{-i\phi H_i}$, an oracle returns $\braket{O(\boldsymbol\phi)} = \braket{\Psi(\boldsymbol\phi)|O|\Psi(\boldsymbol\phi)}$ for any $\boldsymbol\phi$ up to any desired additive error $1/\mathrm{poly}$.
     \item[Task] Find $\boldsymbol\phi\in\R^L$ minimising $\braket{O(\boldsymbol\phi)}$.
 \end{description}
 \end{probl}
-\ona{The oracle represents the quantum computer, idealised in two respects. It is deterministic, as if one post-selected on the runs that give a correct estimate, and it delivers whatever precision the algorithm requests, provided this is inverse-polynomial, which polynomially many shots suffice to achieve. The noise that this idealisation conceals is studied in \Chap~\chref{C.IterationComplexity}. An algorithm for Problem~\ref{p:ch05:oracle} is a classical algorithm that may call the oracle, each call counting as a single step. Whatever is hard for such an algorithm is therefore hard because of the classical optimization alone, and a better quantum computer would not help. The variational algorithms of Table~\ref{tab:ch05:fit} are instances of the problem.}
+\ona{The oracle represents the quantum computer, idealised in two respects. It is deterministic, as if one post-selected on the runs that give a correct estimate, and it delivers whatever precision the algorithm requests, provided this is inverse-polynomial, which polynomially many shots suffice to achieve. The noise that this idealisation conceals is studied in \Chap~\chref{C.IterationComplexity}. An algorithm for training VQA (Problem~\ref{p:ch05:oracle}) is a classical algorithm that may call the oracle, each call counting as a single step. Whatever is hard for such an algorithm is therefore hard because of the classical optimization alone, and a better quantum computer would not help. The variational algorithms of Table~\ref{tab:ch05:fit} are instances of the problem.}
 \begin{propn}[\citet{bittel2021training}]\label{propn:ch05:oracle}
-Unless $\mathbf P = \mathbf{NP}$, no deterministic classical algorithm solves \ona{Problem~\ref{p:ch05:oracle}}\onp{the oracular problem} in polynomial time.
+Unless $\mathbf P = \mathbf{NP}$, no deterministic classical algorithm solves training VQA\ona{ (Problem~\ref{p:ch05:oracle})} in polynomial time.
 \end{propn}
 \ona{This alone is not surprising. If the ansatz can reach every computational basis state and $O$ is a diagonal Ising Hamiltonian, then minimising over the ansatz includes finding the ground state of $O$, which is $\mathbf{NP}$-hard (\Chap~\chref{C.Inapprox}). The interest lies in how little the proof requires, and in the variants below, in which the ground-state problem is easy and training is nevertheless hard.}
 \end{frame}
 
 \begin{frame}\ft{The oracle, pictured}
-\ona{Figure~\ref{fig:ch05:oracle} shows Problem~\ref{p:ch05:oracle} as a circuit inside a box. Everything inside the box is the idealised quantum computer, and everything outside it is the classical algorithm, whose running time the hardness results bound from below.}
+\ona{Figure~\ref{fig:ch05:oracle} shows training VQA (Problem~\ref{p:ch05:oracle}) as a circuit inside a box. Everything inside the box is the idealised quantum computer, and everything outside it is the classical algorithm, whose running time the hardness results bound from below.}
 \ona{\begin{figure}[htb]}\begin{center}
 \begin{tikzpicture}[every node/.style={font=\scriptsize},layer/.style={draw,fill=blue!6,rounded corners=2pt,minimum width=1.05cm,minimum height=1.55cm,align=center}]
   \draw[rounded corners=8pt,dashed,thick,gray,fill=gray!4] (-0.75,0.55) rectangle (6.15,-1.95);
@@ -570,7 +638,7 @@ Unless $\mathbf P = \mathbf{NP}$, no deterministic classical algorithm solves \o
   \draw[notearrow] (n4.west) -- (alg.east);
 \end{tikzpicture}
 \end{center}
-\ona{\caption{Problem~\ref{p:ch05:oracle}. The oracle, shown as the dashed box, prepares $\ket{\Psi(\boldsymbol\phi)}$ by applying $L$ layers to $\ket0^{\otimes N}$ and returns the energy of $O$ to the requested precision; the classical algorithm chooses the parameters. Lower bounds on the running time of the classical algorithm hold however good the quantum computer may be.}\label{fig:ch05:oracle}\end{figure}}
+\ona{\caption{Training VQA (Problem~\ref{p:ch05:oracle}). The oracle, shown as the dashed box, prepares $\ket{\Psi(\boldsymbol\phi)}$ by applying $L$ layers to $\ket0^{\otimes N}$ and returns the energy of $O$ to the requested precision; the classical algorithm chooses the parameters. Lower bounds on the running time of the classical algorithm hold however good the quantum computer may be.}\label{fig:ch05:oracle}\end{figure}}
 \onp{\footnotesize Inside the box is an idealised quantum computer; outside it is the classical optimizer, whose cost the theorems bound.}
 \end{frame}
 
@@ -581,7 +649,7 @@ verifier & a deterministic classical algorithm & a quantum circuit & a quantum c
 yes instance & some $y$ is accepted & some $y$ is accepted with probability $\ge\frac23$ & some $\ket\xi$ is accepted with probability $\ge\frac23$ \\
 no instance & every $y$ is rejected & every $y$ is accepted with probability $\le\frac13$ & every $\ket\xi$ is accepted with probability $\le\frac13$ \\
 complete problem & SAT; MaxCut, decision version & low energy of a $3$-local Hamiltonian in a state prepared by $k$ gates & low energy of a $2$-local Hamiltonian in any state \\
-in this \chap{} & training in polynomial dimension & training with a quantum computer & the ground energy itself \\\bottomrule
+in this \chap{} & training VQA in polynomial dimension & training VQA, with a quantum computer & the ground energy itself \\\bottomrule
 \end{tabular}}}}
 \begin{frame}\ft{The classes $\mathbf{NP}$, $\mathbf{QCMA}$ and $\mathbf{QMA}$}\label{fr:ch05:classes}
 \onp{\footnotesize}
@@ -601,19 +669,19 @@ Let $A = (A_{\rm yes},A_{\rm no})$ be a promise problem and $p$ a polynomial.
 \ona{Table~\ref{tab:ch05:classes} sets the three definitions side by side. Since a classical algorithm can be simulated by a quantum circuit, and a bit string is a computational basis state, $\mathbf{NP}\subseteq\mathbf{QCMA}\subseteq\mathbf{QMA}$; and $\mathbf{BQP}\subseteq\mathbf{QCMA}$, as a verifier may ignore its certificate. Neither containment is known to be strict. The constants $\frac23$ and $\frac13$ are arbitrary: any two thresholds separated by an inverse polynomial in $|x|$ give the same classes, since the verification may be repeated and the majority taken, with as many copies of the certificate as there are repetitions \citep{kitaev2002classical}. Deciding whether the ground energy of a $2$-local Hamiltonian is below $a$ or above $b$, with $b - a\ge1/\mathrm{poly}$, is $\mathbf{QMA}$-complete \citep{kitaev2002classical,kempe2006complexity}. A $\mathbf{QCMA}$ certificate, by contrast, is a classical description, such as a circuit that prepares a low-energy state. Indeed, deciding whether a $3$-local Hamiltonian has a state of energy below a given value that can be prepared by at most $k$ elementary gates is $\mathbf{QCMA}$-complete \citep{wocjan2003two}; the restriction on the preparation is precisely what distinguishes this problem from the $\mathbf{QMA}$-complete one, and it is the restriction that a variational ansatz imposes.}
 \onp{\begin{center}\scriptsize\classtab{0.13}{0.22}{0.27}{0.27}\end{center}
 $\mathbf{NP}\subseteq\mathbf{QCMA}\subseteq\mathbf{QMA}$ and $\mathbf{BQP}\subseteq\mathbf{QCMA}$; neither containment is known to be strict. The constants $\frac23$ and $\frac13$ may be replaced by any two thresholds separated by an inverse polynomial.}
-\ona{\begin{table}[htb]\centering\caption{The classes $\mathbf{NP}$, $\mathbf{QCMA}$ and $\mathbf{QMA}$ of Definition~\ref{defn:ch05:classes}, for an instance $x$ and certificates of length $p(|x|)$, with the problems of this \chap{} that belong to them. The verifiers run in time polynomial in $|x|$, and the training problems are the decision versions of Problems~\ref{p:ch05:vqa} and \ref{p:ch05:oracle}.}\label{tab:ch05:classes}\footnotesize\classtab{0.15}{0.23}{0.27}{0.27}\end{table}}
+\ona{\begin{table}[htb]\centering\caption{The classes $\mathbf{NP}$, $\mathbf{QCMA}$ and $\mathbf{QMA}$ of Definition~\ref{defn:ch05:classes}, for an instance $x$ and certificates of length $p(|x|)$, with the problems of this \chap{} that belong to them. The verifiers run in time polynomial in $|x|$, and the training problems are the decision versions of training VQA in polynomial dimension and of training VQA (Problems~\ref{p:ch05:vqa} and~\ref{p:ch05:oracle}).}\label{tab:ch05:classes}\footnotesize\classtab{0.15}{0.23}{0.27}{0.27}\end{table}}
 \end{frame}
 
-\begin{frame}\ft{Training without a quantum computer}
+\begin{frame}\ft{Training VQA without a quantum computer}
 \onp{\footnotesize}
 \ona{If the Hilbert space has polynomial dimension $n$, that is, if there are only $\mathcal O(\log n)$ qubits, then the state $\ket{\Psi(\boldsymbol\phi)}$ and its energy can be computed classically in polynomial time, and the oracle is not needed. It is then convenient to work in the computational basis.}
-\begin{probl}[VQA minimisation]\label{p:ch05:vqa}
+\begin{probl}[Training VQA in polynomial dimension]\label{p:ch05:vqa}
 \begin{description}\setlength\itemsep{0.1em}
     \item[Instance] An initial state $\ket{\Psi_0}\in\C^n$, generators $H_1,\dots,H_L\in\Herm(\C^n)$ and an observable $O\in\Herm(\C^n)$, given as vectors and matrices.
     \item[Task] Find $\boldsymbol\phi\in\R^L$ minimising $\braket{O(\boldsymbol\phi)}$ for $\ket{\Psi(\boldsymbol\phi)} = U_L(\phi_L)\cdots U_1(\phi_1)\ket{\Psi_0}$.
 \end{description}
 \end{probl}
-\ona{Since a matrix on $\lceil\log_2n\rceil$ qubits has at most $\mathcal O(n^2)$ Pauli coefficients, this is a special case of Problem~\ref{p:ch05:oracle}, with an oracle that can be computed classically. The \emph{decision version} asks, for a given threshold $a\in\R$, whether some $\boldsymbol\phi$ achieves $\braket{O(\boldsymbol\phi)}\le a$. With the convention on precision, it lies in $\mathbf{NP}$, the parameters being a certificate that can be checked in polynomial time. The decision version of Problem~\ref{p:ch05:oracle}, with a polynomial-time quantum computer in place of the oracle and an inverse-polynomial gap about $a$, lies in $\mathbf{QCMA}$: the parameters are a classical certificate, and the quantum computer checks it \citep{bittel2021training,bittelQCMA}. This allows the two sources of difficulty to be distinguished.}
+\ona{Since a matrix on $\lceil\log_2n\rceil$ qubits has at most $\mathcal O(n^2)$ Pauli coefficients, this is a special case of training VQA (Problem~\ref{p:ch05:oracle}), with an oracle that can be computed classically. The \emph{decision version} asks, for a given threshold $a\in\R$, whether some $\boldsymbol\phi$ achieves $\braket{O(\boldsymbol\phi)}\le a$. With the convention on precision, it lies in $\mathbf{NP}$, the parameters being a certificate that can be checked in polynomial time. The decision version of training VQA, with a polynomial-time quantum computer in place of the oracle and an inverse-polynomial gap about $a$, lies in $\mathbf{QCMA}$: the parameters are a classical certificate, and the quantum computer checks it \citep{bittel2021training,bittelQCMA}. This allows the two sources of difficulty to be distinguished.}
 \begin{itemize}\setlength\itemsep{0.1em}
     \item The ansatz. Deciding the ground energy of a local Hamiltonian is $\mathbf{QMA}$-complete \citep{kitaev2002classical,kempe2006complexity}, the certificate being a quantum state. If a polynomial-size ansatz always reached the ground energy, its parameters would be classical certificates; hence, if $\mathbf{QCMA}\ne\mathbf{QMA}$, every such ansatz fails on some Hamiltonians, whatever the optimizer.
     \item The optimizer. Even when the ground-state problem is easy and the ground energy is within reach of the ansatz, finding the best parameters is $\mathbf{NP}$-hard, as we show below.
@@ -627,9 +695,9 @@ $\mathbf{NP}\subseteq\mathbf{QCMA}\subseteq\mathbf{QMA}$ and $\mathbf{BQP}\subse
   \draw[rounded corners=12pt,thick,fill=blue!5] (-4.4,-2.25) rectangle (2.4,2.25);
   \node[anchor=north west,align=left] at (-4.3,2.2) {$\mathbf{QMA}$: quantum certificates\\local Hamiltonians: $\mathbf{QMA}$-complete};
   \draw[rounded corners=10pt,thick,fill=green!7] (-4.05,-1.95) rectangle (2.05,0.95);
-  \node[anchor=north west,align=left] at (-3.95,0.9) {$\mathbf{QCMA}$: classical certificate, quantum check\\training on qubits, with a quantum computer};
+  \node[anchor=north west,align=left] at (-3.95,0.9) {$\mathbf{QCMA}$: classical certificate, quantum check\\training VQA, with a quantum computer};
   \draw[rounded corners=8pt,thick,fill=orange!10] (-3.7,-1.7) rectangle (0.7,-0.3);
-  \node at (-1.5,-1.0) {$\mathbf{NP}$\\training in polynomial dimension:\\$\mathbf{NP}$-complete (step 3)};
+  \node at (-1.5,-1.0) {$\mathbf{NP}$\\training VQA in polynomial\\dimension, $\mathbf{NP}$-complete (step 3)};
   \node[note,anchor=west] (nq) at (2.75,1.7) {certificate: the ground\\state itself, a quantum state};
   \draw[notearrow] (nq.west) -- (2.25,1.55);
   \node[note,anchor=west] (nc) at (2.75,0.45) {certificate: the parameters $\boldsymbol\phi$,\\checked on a quantum computer};
@@ -644,15 +712,15 @@ $\mathbf{NP}\subseteq\mathbf{QCMA}\subseteq\mathbf{QMA}$ and $\mathbf{BQP}\subse
 \onp{\footnotesize Certificates: $\boldsymbol\phi$ checked classically ($\mathbf{NP}$), $\boldsymbol\phi$ checked on a quantum computer ($\mathbf{QCMA}$), a quantum state ($\mathbf{QMA}$).}
 \end{frame}
 
-\begin{frame}\ft{QAOA as a training problem}
+\begin{frame}\ft{Training QAOA}
 \onp{\footnotesize}
-\begin{probl}[QAOA minimisation]\label{p:ch05:qaoa}
+\begin{probl}[Training QAOA]\label{p:ch05:qaoa}
 \begin{description}\setlength\itemsep{0.1em}
     \item[Instance] Hamiltonians $H_b,H_c\in\Herm(\C^n)$, and the number of layers $L$, written in unary.
     \item[Task] For $\ket{\Psi(\boldsymbol\beta,\boldsymbol\gamma)} = U_b(\beta_L)U_c(\gamma_L)\cdots U_b(\beta_1)U_c(\gamma_1)\ket{\Psi_0}$, where $\ket{\Psi_0}$ is the ground state of $H_b$, $U_b(\beta) = e^{-i\beta H_b}$ and $U_c(\gamma) = e^{-i\gamma H_c}$, find $\boldsymbol\beta,\boldsymbol\gamma\in\R^L$ minimising $\braket{H_c(\boldsymbol\beta,\boldsymbol\gamma)} = \braket{\Psi(\boldsymbol\beta,\boldsymbol\gamma)|H_c|\Psi(\boldsymbol\beta,\boldsymbol\gamma)}$.
 \end{description}
 \end{probl}
-\ona{This problem differs from Problem~\ref{p:ch05:vqa} in three respects: there are only two generators, used alternately, as in the discretised annealing of Section~\ref{sec:ch05:adiabatic}; the observable is one of them; and the initial state is not free, but is the ground state of $H_b$. QAOA for MaxCut is the case $H_b = -\sum_jX_j$, whose ground state is $\ket+^{\otimes n}$, and $H_c = H_C$, the diagonal cost Hamiltonian of Section~\ref{sec:ch05:qaoa}. The hardness proofs below use small matrices given explicitly, and therefore apply to any formulation that contains them.}
+\ona{Training QAOA differs from training VQA in polynomial dimension (Problem~\ref{p:ch05:vqa}) in three respects: there are only two generators, used alternately, as in the discretised annealing of Section~\ref{sec:ch05:adiabatic}; the observable is one of them; and the initial state is not free, but is the ground state of $H_b$. QAOA for MaxCut is the case $H_b = -\sum_jX_j$, whose ground state is $\ket+^{\otimes n}$, and $H_c = H_C$, the diagonal cost Hamiltonian of Section~\ref{sec:ch05:qaoa}. The hardness proofs below use small matrices given explicitly, and therefore apply to any formulation that contains them.}
 \begin{itemize}\setlength\itemsep{0.15em}
     \item The number of layers is written in unary because, in binary, an input of $\mathcal O(\log L)$ bits could ask for $L$ layers, and the evaluation of a single energy would take time exponential in the size of the input. In unary, the circuit is no longer than its description.
     \item If the eigenvalues of $H_b$ and $H_c$ are integers, the energy is $2\pi$-periodic in every angle, and one may restrict attention to $\boldsymbol\beta,\boldsymbol\gamma\in[0,2\pi)^L$, as for MaxCut.
@@ -696,11 +764,11 @@ The \emph{optimization error} of an algorithm is the smallest $\Delta\in[0,1]$ s
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:bittel}
 The following are $\mathbf{NP}$-hard:
 \begin{enumerate}\setlength\itemsep{0.05em}
-    \item[(a)] \ona{Problem~\ref{p:ch05:oracle}}\onp{the oracular problem}, with single-qubit rotations on $d$ qubits;
-    \item[(b)] \ona{Problem~\ref{p:ch05:vqa}}\onp{VQA minimisation} in dimension $2d$, that is, on $\mathcal O(\log d)$ qubits, with $d$ layers or with one, its decision version being $\mathbf{NP}$-complete;
-    \item[(c)] \ona{Problem~\ref{p:ch05:qaoa}}\onp{QAOA minimisation} with one layer;
-    \item[(d)] \ona{Problem~\ref{p:ch05:qaoa}}\onp{QAOA minimisation} with $d$ layers, angles in $[0,2\pi)$, and $\|H_b\|= 3$, $\|H_c\| = 1$;
-    \item[(e)] the analogue of \ona{Problem~\ref{p:ch05:vqa}}\onp{VQA minimisation} for free fermions.
+    \item[(a)] training VQA\ona{ (Problem~\ref{p:ch05:oracle})}, with single-qubit rotations on $d$ qubits;
+    \item[(b)] training VQA in polynomial dimension\ona{ (Problem~\ref{p:ch05:vqa})}, already in dimension $2d$, that is, on $\mathcal O(\log d)$ qubits, with $d$ layers or with one, its decision version being $\mathbf{NP}$-complete;
+    \item[(c)] training QAOA\ona{ (Problem~\ref{p:ch05:qaoa})} with one layer;
+    \item[(d)] training QAOA with $d$ layers, angles in $[0,2\pi)$, and $\|H_b\|= 3$, $\|H_c\| = 1$;
+    \item[(e)] training VQA for free fermions\ona{ (Problem~\ref{p:ch05:ff})}.
 \end{enumerate}
 Moreover, unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm has optimization error $\Delta<1$ for (a), nor $\Delta < (1-\alpha_{\max})/2$ for (d), where $\alpha_{\max}$ is the best approximation ratio for MaxCut achievable in polynomial time.
 \end{thm}
@@ -742,7 +810,7 @@ Given $A$, find $\boldsymbol\phi\in[0,2\pi)^d$ minimising
 \end{equation}
 \end{probl}
 \begin{lem}[\citet{bittel2021training}]\label{lem:ch05:cmc}
-$\min_{\boldsymbol\phi}\mu = -\mathrm{MC}$, and from any $\boldsymbol\phi$ one obtains in polynomial time a cut of value at least $-\mu(\boldsymbol\phi)$. Hence \ona{Problem~\ref{p:ch05:cmc}}\onp{continuous MaxCut} is $\mathbf{NP}$-hard, and unless $\mathbf P = \mathbf{NP}$ no polynomial-time algorithm approximates it within a ratio better than $\alpha_{\max}$.
+$\min_{\boldsymbol\phi}\mu = -\mathrm{MC}$, and from any $\boldsymbol\phi$ one obtains in polynomial time a cut of value at least $-\mu(\boldsymbol\phi)$. Hence continuous MaxCut\ona{ (Problem~\ref{p:ch05:cmc})} is $\mathbf{NP}$-hard, and unless $\mathbf P = \mathbf{NP}$ no polynomial-time algorithm approximates it within a ratio better than $\alpha_{\max}$.
 \end{lem}
 \ona{\emph{Proof.} Fix all the coordinates except $\phi_i$. Since $A$ is symmetric with zero diagonal,}
 \begin{equation}
@@ -891,7 +959,7 @@ $\min_{\boldsymbol\phi}\mu = -\mathrm{MC}$, and from any $\boldsymbol\phi$ one o
 
 \begin{frame}\ft{Step 2: a circuit that computes $\mu$}
 \onp{\footnotesize}
-\ona{\emph{Proof of Proposition~\ref{propn:ch05:oracle}.} We reduce Problem~\ref{p:ch05:cmc} to Problem~\ref{p:ch05:oracle}. Take $N = d$ qubits and $L = d$ layers with generators $H_i = \frac12Y_i$, so that $U_i(\phi_i) = R_Y(\phi_i)$ acts on qubit $i$, together with the Ising observable}
+\ona{\emph{Proof of Proposition~\ref{propn:ch05:oracle}.} We reduce continuous MaxCut (Problem~\ref{p:ch05:cmc}) to training VQA (Problem~\ref{p:ch05:oracle}). Take $N = d$ qubits and $L = d$ layers with generators $H_i = \frac12Y_i$, so that $U_i(\phi_i) = R_Y(\phi_i)$ acts on qubit $i$, together with the Ising observable}
 \begin{equation}
     O \;=\; \tfrac14\sum_{i,j}A_{ij}\big(Z_iZ_j - \one\big).
 \end{equation}
@@ -899,7 +967,7 @@ $\min_{\boldsymbol\phi}\mu = -\mathrm{MC}$, and from any $\boldsymbol\phi$ one o
 \begin{equation}
     \braket{O(\boldsymbol\phi)} \;=\; \mu(\boldsymbol\phi) \qquad\text{exactly.}
 \end{equation}
-\ona{The instance has $d$ generators and $\mathcal O(d^2)$ Pauli strings, and the oracle can be simulated, since $\mu(\boldsymbol\phi)$ is a sum of $\mathcal O(d^2)$ products of cosines. A polynomial-time algorithm for Problem~\ref{p:ch05:oracle}, with the oracle replaced by this computation and followed by the rounding of Lemma~\ref{lem:ch05:cmc}, would therefore solve MaxCut in polynomial time. \qed}
+\ona{The instance has $d$ generators and $\mathcal O(d^2)$ Pauli strings, and the oracle can be simulated, since $\mu(\boldsymbol\phi)$ is a sum of $\mathcal O(d^2)$ products of cosines. A polynomial-time algorithm for training VQA, with the oracle replaced by this computation and followed by the rounding of Lemma~\ref{lem:ch05:cmc}, would therefore solve MaxCut in polynomial time. \qed}
 \begin{itemize}\setlength\itemsep{0.15em}
     \item The circuit creates no entanglement, and the ground state of $O$, a computational basis state, lies in the ansatz, so that $\braket{O}_{\min} = \lambda_{\min}(O) = -\mathrm{MC}$ and $\delta_m = 0$. The hardness lies entirely in the classical optimization.
     \item The eigenvalues of $O$ are the numbers $-\mathrm{cut}(z)$, $z\in\{0,1\}^d$, so that $w(O) = \mathrm{MC}$, and a training algorithm with optimization error $\Delta$ is a MaxCut algorithm with ratio $1-\Delta$. Unless $\mathbf P = \mathbf{NP}$, therefore, $\Delta\ge1-\alpha_{\max}$.
@@ -909,7 +977,7 @@ $\min_{\boldsymbol\phi}\mu = -\mathrm{MC}$, and from any $\boldsymbol\phi$ one o
 \begin{frame}\ft{Boosting, and the absence of any guarantee}
 \onp{\footnotesize}
 \begin{cor}[\citet{bittel2021training}]\label{cor:ch05:boost}
-Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm for \ona{Problem~\ref{p:ch05:oracle}}\onp{the oracular problem} has optimization error $\Delta<1$.
+Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm for training VQA\ona{ (Problem~\ref{p:ch05:oracle})} has optimization error $\Delta<1$.
 \end{cor}
 \ona{\emph{Proof.} Take $k$ copies of the circuit of step 2, on $kd$ qubits, all controlled by the same parameters, $\tilde U(\boldsymbol\phi) = U(\boldsymbol\phi)^{\otimes k}$, and the observable}
 \begin{equation}
@@ -953,9 +1021,9 @@ Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm for \ona{Problem~
 
 \begin{frame}\ft{Step 3: logarithmically many qubits}
 \onp{\scriptsize}
-\ona{The circuit of step 2 acts on $d$ qubits, and it is only its special structure that makes its energy easy to compute. To show that the hardness does not depend on this, \citet{bittel2021training} encode Problem~\ref{p:ch05:cmc} in a Hilbert space of dimension $2d$, in which every quantity is given by a small matrix computation.}
+\ona{The circuit of step 2 acts on $d$ qubits, and it is only its special structure that makes its energy easy to compute. To show that the hardness does not depend on this, \citet{bittel2021training} encode continuous MaxCut in a Hilbert space of dimension $2d$, in which every quantity is given by a small matrix computation.}
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:log}
-\ona{Problem~\ref{p:ch05:vqa}}\onp{VQA minimisation} is $\mathbf{NP}$-hard already in dimension $n = 2d$ with $L = d$ layers, and its decision version is $\mathbf{NP}$-complete.
+Training VQA in polynomial dimension\ona{ (Problem~\ref{p:ch05:vqa})} is $\mathbf{NP}$-hard already in dimension $n = 2d$ with $L = d$ layers, and its decision version is $\mathbf{NP}$-complete.
 \end{thm}
 \ona{\emph{Proof.} Take the uniform initial state $\ket{\Psi_0} = \ket{+_{2d}} = (2d)^{-1/2}\sum_{k=1}^{2d}\ket k$ and the diagonal generators $H_j = \ket{2j-1}\!\bra{2j-1} - \ket{2j}\!\bra{2j}$, which impose opposite phases on the $j$-th pair of basis states,}
 \begin{equation}
@@ -969,7 +1037,7 @@ Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm for \ona{Problem~
 \begin{equation}
     \braket{O(\boldsymbol\phi)} = \tfrac18\sum_{i,j}A_{ij}\big(\cos(\phi_i-\phi_j) + \cos(\phi_i+\phi_j) - 2\big) = \mu(\boldsymbol\phi).
 \end{equation}
-\ona{This reduces Problem~\ref{p:ch05:cmc} to Problem~\ref{p:ch05:vqa}. For the decision version, a parameter vector is a certificate that can be checked in polynomial time. \qed}
+\ona{This reduces continuous MaxCut to training VQA in polynomial dimension. For the decision version, a parameter vector is a certificate that can be checked in polynomial time. \qed}
 \onp{The observable $O = -\frac d8L_W$ is a negative multiple of the Laplacian of the doubled graph, and $\braket{O(\boldsymbol\phi)} = \mu(\boldsymbol\phi)$.}
 \end{frame}
 
@@ -1051,17 +1119,71 @@ Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm for \ona{Problem~
 \begin{defn}[\citet{bittel2021training}]
 Energies $E_1,\dots,E_d$ form an \emph{$\epsilon$-approximate ergodic spectrum} if for every $\boldsymbol\phi\in[0,2\pi)^d$ there is a $t\ge0$ with $|\phi_j - E_jt|_{2\pi}\le\epsilon$ for all $j$, where $|x|_{2\pi} = \min_{k\in\mathbb Z}|x-2\pi k|$.
 \end{defn}
-\ona{By Kronecker's theorem, energies that are linearly independent over the rationals form an $\epsilon$-approximate ergodic spectrum for every $\epsilon>0$, but the times required may be very large, and such energies cannot be written down exactly. A clock serves better.}
+\ona{Geometrically, $\boldsymbol\phi$ is a point of the torus $[0,2\pi)^d$, a cube whose opposite faces are identified, and $\max_j|\phi_j-\phi'_j|_{2\pi}$ is the distance between two of its points in the maximum norm. A single layer traces the curve $t\mapsto\boldsymbol Et \bmod 2\pi$, a straight line which, on reaching a face of the cube, re-enters through the opposite face. The energies form an $\epsilon$-approximate ergodic spectrum if and only if this line passes within distance $\epsilon$ of every point of the torus, or, equivalently, if every closed cube of side $2\epsilon$ in the torus meets the line.}
+\onp{Geometrically, the line $t\mapsto\boldsymbol Et \bmod 2\pi$ on the torus $[0,2\pi)^d$ passes within $\epsilon$ of every point: every cube of side $2\epsilon$ meets it.}
+\end{frame}
+
+\begin{frame}\ft{Ergodic spectra on the torus}
+\onp{\footnotesize}
+\ona{Figure~\ref{fig:ch05:ergodic} shows the case $d = 2$, in which the torus is a square with opposite sides identified. If $E_2/E_1$ is rational, the line closes after finitely many turns and consists of finitely many parallel strands, and it is $\epsilon$-dense for a small $\epsilon$ only if these strands lie close together. If $E_2/E_1$ is irrational, the line never closes, and by Kronecker's theorem it comes arbitrarily close to every point, so that the energies form an $\epsilon$-approximate ergodic spectrum for every $\epsilon>0$. By the same theorem, in any dimension $d$, energies that are linearly independent over the rationals have this property, and almost all real energies are of this kind.}
+\ona{Such a generic spectrum is, however, of no use in a reduction. A reduction from MaxCut is an algorithm that must write down the instance it produces, here the generator $H$, in time polynomial in the size of the graph, and each energy $E_j$ must therefore be specified by polynomially many bits; in the usual encoding, it is a rational number whose numerator and denominator have polynomially many digits. Rational energies are linearly dependent over the rationals, and Kronecker's theorem says nothing about them: the line closes after a finite time, and whether it then passes within $\epsilon$ of every point depends on the energies chosen. Nor does it help to round generic energies to finitely many bits. The line of the rounded energies stays close to the original line only for a time inversely proportional to the rounding error, and the theorem itself gives no bound on the time after which the original line is $\epsilon$-dense, and hence no bound on the number of bits required. The proof of Theorem~\ref{thm:ch05:onelayer} needs an explicit spectrum, with energies of polynomially many bits, for which $\epsilon$ is provably smaller than $1/(2|E|)$, and this is why \citet{bittel2021training} construct one of their own. Their clock, shown for $d = 2$ in Fig.~\ref{fig:ch05:ergodic}(b), is rational, and its strands are evenly spaced, $2\pi/m$ apart.}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[x=2.4cm,y=2.4cm,every node/.style={font=\scriptsize},strand/.style={blue!70!black,thick}]
+  \foreach \sx in {0,1.9} {
+    \fill[gray!5] (\sx,0) rectangle (\sx+1,1);
+  }
+  \draw[strand] (0,0) -- (1,0.618) (0,0.618) -- (0.618,1) (0.618,0) -- (1,0.236);
+  \draw[dashed,thick,red!70!black] (0.485,0.54) rectangle (0.845,0.9);
+  \fill[red!70!black] (0.665,0.72) circle (1.3pt);
+  \foreach \k in {0,...,3} \draw[strand] (1.9,\k/4) -- (2.9,\k/4+1/4);
+  \foreach \t in {0,...,15} \fill[blue!70!black] ({1.9+mod(\t,4)/4},\t/16) circle (1.3pt);
+  \draw[dashed,thick,red!70!black] (2.275,0.625) rectangle (2.525,0.875);
+  \fill[red!70!black] (2.4,0.75) circle (1.3pt);
+  \foreach \sx in {0,1.9} {
+    \draw[thick] (\sx,0) rectangle (\sx+1,1);
+    \draw[thick,-{Stealth[length=4pt]}] (\sx+0.44,0) -- (\sx+0.56,0);
+    \draw[thick,-{Stealth[length=4pt]}] (\sx+0.44,1) -- (\sx+0.56,1);
+    \draw[thick,-{Stealth[length=4pt]Stealth[length=4pt]}] (\sx,0.3) -- (\sx,0.44);
+    \draw[thick,-{Stealth[length=4pt]Stealth[length=4pt]}] (\sx+1,0.3) -- (\sx+1,0.44);
+    \node[below] at (\sx,0) {$0$};
+    \node[below] at (\sx+1,0) {$2\pi$};
+    \node[left] at (\sx,1) {$2\pi$};
+    \node[below=1pt] at (\sx+0.5,0) {$\phi_1$};
+    \node[left] at (\sx,0.62) {$\phi_2$};
+  }
+  \draw[decorate,decoration={brace,amplitude=3pt}] (2.94,0.5) -- (2.94,0.25) node[midway,right=3pt] {$2\pi/m$};
+  \node[note,anchor=south west] (na) at (0.02,1.1) {an empty square of side $2\epsilon$: the\\line does not yet come within $\epsilon$ of\\its centre};
+  \draw[notearrow] ([xshift=1.2cm]na.south west) to[bend right=10] (0.665,0.9);
+  \node[note,anchor=west] (nb) at (3.05,0.86) {the point farthest from the\\line; the square of side $2\pi/m$\\about it meets two strands};
+  \draw[notearrow] (nb.west) to[bend right=10] (2.53,0.83);
+  \node[note,anchor=west] (nc) at (3.05,0.08) {the integer times\\$t = 0,1,\dots,15$};
+  \draw[notearrow] (nc.west) to[bend left=10] (2.66,0.19);
+  \node[align=center] at (0.5,-0.36) {(a) $E_2/E_1 = (\sqrt5-1)/2$,\\after two turns of $\phi_1$};
+  \node[align=center] at (2.4,-0.36) {(b) the clock with $m = 4$,\\$\boldsymbol E = (2\pi/4,\,2\pi/16)$};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The line $t\mapsto\boldsymbol Et \bmod 2\pi$ on the torus for $d = 2$, drawn as a square whose opposite sides are identified, as the arrows indicate. (a) An irrational direction, after two turns of $\phi_1$. The line will eventually pass within any distance $\epsilon$ of every point, but it has not yet done so: the dashed square, of side $2\epsilon$ with $\epsilon\approx0.19\cdot2\pi$, does not meet it. (b) The clock of Lemma~\ref{lem:ch05:clock} with $m = 4$. The line closes after $16$ units of time, during which $\phi_1$ makes four turns and $\phi_2$ one, and its four strands are $2\pi/m$ apart, so that every square of side $2\pi/m$ meets it. The dots are the integer times $t = 0,\dots,15$, which form a sheared grid of spacing $2\pi/m$.}\label{fig:ch05:ergodic}\end{figure}}
+\onp{Energies linearly independent over $\mathbb Q$ are $\epsilon$-dense for every $\epsilon$ (Kronecker), but they are irrational, and a reduction must write each energy with polynomially many bits. Bittel and Kliesch therefore construct a rational spectrum, the clock, whose strands are evenly spaced.}
+\end{frame}
+
+\begin{frame}\ft{The clock}
+\onp{\scriptsize}
 \begin{lem}[\citet{bittel2021training}]\label{lem:ch05:clock}
 For an integer $m\ge2$, the energies $E_j = 2\pi/m^j$, $j = 1,\dots,d$, form a $4\pi/m$-approximate ergodic spectrum, with integer times $0\le t<m^d$.
 \end{lem}
-\ona{\emph{Proof.} Write the target angles in base $m$. Let $s_j = \lfloor m\phi_j/2\pi\rfloor\in\{0,\dots,m-1\}$, and let $t = \sum_{k=1}^ds_km^{k-1}$ be the number with digits $s_d\cdots s_2s_1$. Then}
-\begin{equation}
-    E_jt \;=\; 2\pi\sum_{k>j}s_km^{k-1-j} \;+\; \frac{2\pi s_j}m \;+\; 2\pi\sum_{k<j}s_km^{k-1-j}.
-\end{equation}
-\ona{The first sum is a multiple of $2\pi$. By the choice of $s_j$, the middle term is within $2\pi/m$ of $\phi_j$. The last sum is at most $2\pi(m-1)\sum_{k<j}m^{k-1-j}<2\pi/m$. Hence $|\phi_j - E_jt|_{2\pi}<4\pi/m$. \qed}
+\ona{\emph{Proof.} The proof is a trick with digits in base $m$, in four steps.}
+\begin{itemize}\setlength\itemsep{0.1em}
+    \item[(1)] Round each target phase down to a digit in base $m$, $s_j = \lfloor m\phi_j/2\pi\rfloor\in\{0,\dots,m-1\}$, so that $0\le\phi_j - 2\pi s_j/m<2\pi/m$.
+    \item[(2)] Pack the digits into a single integer time, $t = \sum_{k=1}^ds_km^{k-1}$, the number whose digits in base $m$ are $s_d\cdots s_2s_1$; thus $0\le t<m^d$.
+    \item[(3)] Expand $E_jt = 2\pi\sum_ks_km^{k-1-j}$, and split the terms into three groups,
+    \begin{equation}
+        E_jt \;=\; \underbrace{2\pi\sum_{k>j}s_km^{k-1-j}}_{\in\,2\pi\mathbb Z} \;+\; \frac{2\pi s_j}m \;+\; \underbrace{2\pi\sum_{k<j}s_km^{k-1-j}}_{\in\,[0,\,2\pi/m)}.
+    \end{equation}
+    The terms with $k>j$ are integer multiples of $2\pi$, and vanish modulo $2\pi$. The term with $k = j$ is $2\pi s_j/m$, which is within $2\pi/m$ of $\phi_j$ by step (1). The terms with $k<j$ form a small fractional tail\ona{: since $s_k\le m-1$, their sum is at most $2\pi(m-1)\sum_{k=1}^{j-1}m^{k-1-j} = 2\pi(m^{j-1}-1)/m^j<2\pi/m$}\onp{, of less than $2\pi/m$, since $s_k\le m-1$}.
+    \item[(4)] Add the two errors: $|\phi_j - E_jt|_{2\pi}<2\pi/m + 2\pi/m = 4\pi/m$, for every $j$.\ona{ \qed}
+\end{itemize}
+\ona{The two errors in fact have opposite signs, since the rounding in step (1) is downwards and the tail in step (3) is non-negative, so that $|\phi_j - E_jt|_{2\pi}<2\pi/m$; the weaker bound of the lemma suffices for what follows.}
 \ona{Hand $j$ turns once in $m^j$ units of time, $m$ times more slowly than hand $j-1$. For $m = 10$ it points, apart from a small contribution from the lower digits, at the $j$-th digit of $t$ from the right, as on an odometer (Exercise~\ref{exe:ch05:clock}).}
-\onp{The digits of $t$ in base $m$ set the hands; the error is less than $2\pi/m$ from rounding plus $2\pi/m$ from the lower digits.}
 \end{frame}
 
 \begin{frame}\ft{An example of the clock}
@@ -1092,10 +1214,21 @@ For an integer $m\ge2$, the energies $E_j = 2\pi/m^j$, $j = 1,\dots,d$, form a $
 \onp{\footnotesize At $t = 416$ the digits $4,1,6$ set hands $3,2,1$, with errors below a fifth of a turn.}
 \end{frame}
 
+\begin{frame}\ft{How long the clock must run}
+\onp{\footnotesize}
+\ona{The picture on the torus also explains why the clock must run for so long. Suppose that the segment $\{\boldsymbol Et : 0\le t\le T\}$ passes within $\epsilon\le\pi/2$ of every point of the torus, and let $E_{\max} = \max_j|E_j|$. Every point of the segment lies within $\epsilon$ of one of the $K+1$ points $\boldsymbol Et_k$ with $t_k = k\epsilon/E_{\max}$ and $0\le k\le K = \lfloor TE_{\max}/\epsilon\rfloor$, and every point of the torus therefore lies within $2\epsilon$ of one of them. The $K+1$ cubes of side $4\epsilon$ about these points thus cover the torus, whose volume is $(2\pi)^d$, so that $(K+1)(4\epsilon)^d\ge(2\pi)^d$, and hence}
+\onp{Covering the torus by cubes shows that, for $\epsilon\le\pi/2$, the fastest hand of any $\epsilon$-dense segment of the line makes}
+\begin{equation}\label{eq:ch05:turns}
+    \frac{TE_{\max}}{2\pi} \;\ge\; \frac{\epsilon}{2\pi}\Big(\Big(\frac{\pi}{2\epsilon}\Big)^d - 1\Big)\ona{.}\onp{\quad\text{turns.}}
+\end{equation}
+\ona{The left-hand side is the number of turns made by the fastest hand, which must therefore grow exponentially with $d$, whatever the energies. For the clock, with $\epsilon = 4\pi/m$ and $m\ge8$, the bound requires $\frac2m\big((m/8)^d-1\big)$ turns, and the fastest hand in fact makes about $m^{d-1}$ turns during $0\le t<m^d$. A single parameter can thus come close to every point only along a curve that winds around the torus exponentially often, and the energy $\mu(\boldsymbol Et)$ along it, a sum of cosines with the frequencies $E_i\pm E_j$ for the edges $ij$, oscillates accordingly; this is the origin of the many local minima in Fig.~\ref{fig:ch05:onelayer}. The time itself is exponentially large, but it is a single real number, and an integer $t<m^d$ has only $d\log_2m$ bits.}
+\onp{For the clock, with $\epsilon = 4\pi/m$, at least $\frac2m\big((m/8)^d-1\big)$ turns are needed, and the fastest hand makes about $m^{d-1}$. A single parameter reaches every point only along a curve that winds around the torus exponentially often, which is why $\mu(\boldsymbol Et)$ has so many local minima.}
+\end{frame}
+
 \begin{frame}\ft{The reduction with one layer}
 \onp{\footnotesize}
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:onelayer}
-\ona{Problem~\ref{p:ch05:vqa}}\onp{VQA minimisation} is $\mathbf{NP}$-hard with a single layer, $L = 1$.
+Training VQA in polynomial dimension\ona{ (Problem~\ref{p:ch05:vqa})} is $\mathbf{NP}$-hard with a single layer, $L = 1$.
 \end{thm}
 \ona{\emph{Proof.} Keep $\ket{\Psi_0}$ and $O$ from step 3, and use the single generator $H = \sum_jE_j(\ket{2j-1}\!\bra{2j-1} - \ket{2j}\!\bra{2j})$ with the energies of Lemma~\ref{lem:ch05:clock}, so that $\braket{O(t)} = \mu(\boldsymbol Et)$. It remains to determine how fine the clock must be. Since $|\partial\mu/\partial\phi_j|\le\frac12\deg(j)$, and the degrees sum to $2|E|$,}
 \begin{equation}
@@ -1161,7 +1294,7 @@ For a time-independent Hamiltonian on logarithmically many qubits, minimising $\
 \begin{frame}\ft{Step 5: QAOA with one layer}
 \onp{\scriptsize}
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:qaoa1}
-\ona{Problem~\ref{p:ch05:qaoa}}\onp{QAOA minimisation} is $\mathbf{NP}$-hard with a single layer, $L = 1$.
+Training QAOA\ona{ (Problem~\ref{p:ch05:qaoa})} is $\mathbf{NP}$-hard with a single layer, $L = 1$.
 \end{thm}
 \ona{\emph{Proof.} QAOA differs from step 4 in that the initial state must be the ground state of $H_b$, and the observable must be $H_c$. Both requirements are met by adding a single level. On $\C^{2d+1}$, let}
 \begin{equation}
@@ -1217,7 +1350,7 @@ For a time-independent Hamiltonian on logarithmically many qubits, minimising $\
 \onp{\scriptsize}
 \ona{The energies $2\pi/m^j$ of step 5 span $d$ orders of magnitude, and a device implementing them would require $d\log m$ bits of precision. With $d$ layers, small integer spectra suffice.}
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:qaoad}
-\ona{Problem~\ref{p:ch05:qaoa}}\onp{QAOA minimisation} is $\mathbf{NP}$-hard with $L = d$ layers and angles in $[0,2\pi)$, even for $H_b$ and $H_c$ with integer eigenvalues, $\|H_b\| = 3$ and $\|H_c\| = 1$, and with $\braket{H_c}_{\min} = 1 - 2\,\mathrm{MC}/|E|$.
+Training QAOA\ona{ (Problem~\ref{p:ch05:qaoa})} is $\mathbf{NP}$-hard with $L = d$ layers and angles in $[0,2\pi)$, even for $H_b$ and $H_c$ with integer eigenvalues, $\|H_b\| = 3$ and $\|H_c\| = 1$, and with $\braket{H_c}_{\min} = 1 - 2\,\mathrm{MC}/|E|$.
 \end{thm}
 \ona{\emph{Idea of the construction.} The Hilbert space is the direct sum of $2d+1$ copies of $\C^d\otimes\C^d\otimes\C^2\otimes\C^2$, with basis states $\ket{i,j,a,b}$ labelled by an ordered pair of vertices and two bits. The ground state of $H_b$, which is the initial state, is the uniform superposition over the edges $ij$ and the bits, in the first copy. Each half-layer moves amplitude one copy further, $U_c(\gamma_k)$ with amplitude $\sin(\gamma_k/2)$ and $U_b(\beta_k)$ with amplitude $\sin\beta_k$; the latter also attaches the phase $e^{ia(\beta_k+\pi/2)}$ to the components with $i = k$, and $e^{(-1)^bia(\beta_k+\pi/2)}$ to those with $j = k$. After all $d$ layers, the last copy carries the phases of all the $\beta_k$, and there $H_c$ measures their interference. Amplitude left behind in the other copies can only add energy, since $H_c$ is positive semidefinite there. The result is}
 \begin{equation}
@@ -1259,7 +1392,7 @@ For a time-independent Hamiltonian on logarithmically many qubits, minimising $\
 \begin{frame}\ft{A lower bound on the optimization error of QAOA}
 \onp{\footnotesize}
 \begin{cor}[\citet{bittel2021training}]\label{cor:ch05:qaoa}
-Unless $\mathbf P = \mathbf{NP}$, every polynomial-time algorithm for \ona{Problem~\ref{p:ch05:qaoa}}\onp{QAOA minimisation}, and hence for \ona{Problem~\ref{p:ch05:vqa}}\onp{VQA minimisation}, has optimization error $\Delta\ge(1-\alpha_{\max})/2$.
+Unless $\mathbf P = \mathbf{NP}$, every polynomial-time algorithm for training QAOA\ona{ (Problem~\ref{p:ch05:qaoa})}, and hence for training VQA in polynomial dimension\ona{ (Problem~\ref{p:ch05:vqa})}, has optimization error $\Delta\ge(1-\alpha_{\max})/2$.
 \end{cor}
 \ona{\emph{Proof.} On the instances of Theorem~\ref{thm:ch05:qaoad}, $w(H_c) = 2$ and $\braket{H_c}_{\min} = 1-2\,\mathrm{MC}/|E|$. An algorithm with optimization error $\Delta$ returns angles with $\braket{H_c}_a\le1-2\,\mathrm{MC}/|E| + 2\Delta$, from which a cut can be read off of value at least}
 \begin{equation}
@@ -1269,7 +1402,7 @@ Unless $\mathbf P = \mathbf{NP}$, every polynomial-time algorithm for \ona{Probl
 \begin{itemize}\setlength\itemsep{0.2em}
     \item With the bound $\alpha_{\max}\le16/17$ of H\accent23 astad \citep{Hstad2001}, $\Delta\ge1/34\approx0.029$. Under the Unique Games Conjecture, $\alpha_{\max} = \alpha_{\rm GW}$ and $\Delta\ge0.061$.
     \item A local minimum at a locally optimal cut of value $\mathrm{MC}/2$ has $\braket{H_c}_a - \braket{H_c}_{\min} = \mathrm{MC}/|E|\ge1/2$, so that gradient methods, and other methods that may stop at local minima, have $\Delta\ge1/4$, without any assumption on $\mathbf P$ and $\mathbf{NP}$.
-    \item The boosting of \ona{Corollary~\ref{cor:ch05:boost}}\onp{the oracular problem} does not apply, since a tensor power of $H_c$ is not the cost Hamiltonian of a QAOA circuit with mixer $H_b$; whether $\Delta$ can be pushed towards $1$ for QAOA is open.
+    \item The boosting used for training VQA\ona{ in Corollary~\ref{cor:ch05:boost}} does not apply, since a tensor power of $H_c$ is not the cost Hamiltonian of a QAOA circuit with mixer $H_b$; whether $\Delta$ can be pushed towards $1$ for QAOA is open.
 \end{itemize}
 \end{frame}
 
@@ -1281,18 +1414,18 @@ Unless $\mathbf P = \mathbf{NP}$, every polynomial-time algorithm for \ona{Probl
     \item The ground state $\rho[H_0]$ of a quadratic $H_0$ fills the modes of the negative eigenvalues of $h_0$, and its \emph{correlation matrix} $\Gamma_{ij} = \Tr(c_j^\dagger c_i\,\rho)$ is the projector onto their span.
     \item Expectations are given by $\Tr(O\rho) = \sum_{ij}o_{ij}\Gamma_{ji} = \Tr(o\,\Gamma)$.
 \end{itemize}
-\begin{probl}[VQA minimisation, free fermions]\label{p:ch05:ff}
+\begin{probl}[Training VQA for free fermions]\label{p:ch05:ff}
 Given coefficient matrices $h_0,h_1,\dots,h_L,o\in\Herm(\C^n)$, find $\boldsymbol\phi\in\R^L$ minimising $\Tr\big(O\,U(\boldsymbol\phi)\,\rho[H_0]\,U(\boldsymbol\phi)^\dagger\big)$, where $U(\boldsymbol\phi) = e^{-i\phi_LH_L}\cdots e^{-i\phi_1H_1}$.
 \end{probl}
 \begin{thm}[\citet{bittel2021training}]\label{thm:ch05:ff}
-\ona{Problem~\ref{p:ch05:ff}}\onp{The free-fermion problem} is $\mathbf{NP}$-hard, even when the initial state $\rho[H_0]$ is pure.
+Training VQA for free fermions\ona{ (Problem~\ref{p:ch05:ff})} is $\mathbf{NP}$-hard, even when the initial state $\rho[H_0]$ is pure.
 \end{thm}
 \ona{\emph{Proof.} Take $n = 2d$ modes, $h_0 = \one - \frac2nJ$, where $J$ is the all-ones matrix, $h_j = \ket{2j-1}\!\bra{2j-1} - \ket{2j}\!\bra{2j}$ as in step 3, and $o = O$, the matrix of step 3. The spectrum of $h_0$ is $(-1,1,\dots,1)$, with eigenvector $\ket{+_{2d}}$ for $-1$, so that the ground state is pure: it is a single fermion in the mode $n^{-1/2}\sum_jc_j^\dagger$, with $\Gamma = \ket{+_{2d}}\!\bra{+_{2d}}$. The generators commute, and}
 \begin{equation}
     \braket{O(\boldsymbol\phi)} = \Tr\big(o(\boldsymbol\phi)\,\Gamma\big) = \braket{+_{2d}|\,e^{i\sum_j\phi_jh_j}\,o\,e^{-i\sum_j\phi_jh_j}\,|+_{2d}} = \mu(\boldsymbol\phi),
 \end{equation}
 \ona{by the computation of step 3, a single fermion in $2d$ modes being a $2d$-level system. \qed{} (The published version has $h_0 = \one - J/n$, whose spectrum $(0,1,\dots,1)$ would give a degenerate ground state; with the factor $2$ one obtains the spectrum stated there.)}
-\onp{A single fermion in $2d$ modes is a $2d$-level system, and the free-fermion problem therefore contains step 3.}
+\onp{A single fermion in $2d$ modes is a $2d$-level system, and training VQA for free fermions therefore contains step 3.}
 \end{frame}
 
 \begin{frame}\ft{One fermion in $2d$ modes}
@@ -1321,24 +1454,24 @@ Given coefficient matrices $h_0,h_1,\dots,h_L,o\in\Herm(\C^n)$, find $\boldsymbo
 
 \mode<all>{\gdef\sumtab#1#2#3#4{\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}@{}}\toprule
 setting & size & layers & unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm achieves \\\midrule
-oracle, rotations (step 2) & $d$ qubits & $d$ & $\Delta<1$ \\
-dimension $2d$ (steps 3, 4) & $\mathcal O(\log d)$ qubits & $d$, or $1$ & the optimum \\
-QAOA (step 5) & $\mathcal O(\log d)$ qubits & $1$ & the optimum \\
-QAOA, bounded energies (step 6) & $\mathcal O(\log d)$ qubits & $d$ & $\Delta<\frac12(1-\alpha_{\max})$, that is, $\frac1{34}$, or $0.061$ under the UGC \\
-free fermions (step 7) & $2d$ modes & $d$ & the optimum \\\midrule
+training VQA, rotations (step 2) & $d$ qubits & $d$ & $\Delta<1$ \\
+training VQA in dimension $2d$ (steps 3, 4) & $\mathcal O(\log d)$ qubits & $d$, or $1$ & the optimum \\
+training QAOA (step 5) & $\mathcal O(\log d)$ qubits & $1$ & the optimum \\
+training QAOA, bounded energies (step 6) & $\mathcal O(\log d)$ qubits & $d$ & $\Delta<\frac12(1-\alpha_{\max})$, that is, $\frac1{34}$, or $0.061$ under the UGC \\
+training VQA for free fermions (step 7) & $2d$ modes & $d$ & the optimum \\\midrule
 local methods on step 6 & & & $\Delta<\frac14$, unconditionally \\\bottomrule
 \end{tabular}}}
 \begin{frame}\ft{A summary of the hardness results}
 \ona{Table~\ref{tab:ch05:summary} collects what the reductions exclude. In every row the energy can be computed efficiently, by a quantum computer in the first row and classically in the others, so that the obstruction lies in the search over the parameters.}
-\onp{\begin{center}\scriptsize\sumtab{0.25}{0.15}{0.09}{0.38}\end{center}}
-\ona{\begin{table}[htb]\centering\caption{The hardness results of \citet{bittel2021training}. ``The optimum'' means that it is $\mathbf{NP}$-hard to find parameters that are optimal up to exponential precision; $\Delta$ is the optimization error of Definition~\ref{defn:ch05:opterr}.}\label{tab:ch05:summary}\footnotesize\sumtab{0.25}{0.15}{0.09}{0.38}\end{table}}
+\onp{\begin{center}\scriptsize\sumtab{0.3}{0.17}{0.08}{0.33}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{The hardness results of \citet{bittel2021training}. ``The optimum'' means that it is $\mathbf{NP}$-hard to find parameters that are optimal up to exponential precision; $\Delta$ is the optimization error of Definition~\ref{defn:ch05:opterr}.}\label{tab:ch05:summary}\footnotesize\sumtab{0.3}{0.17}{0.08}{0.33}\end{table}}
 \end{frame}
 
 \begin{frame}\ft{The excluded guarantees on a common scale}
 \ona{Figure~\ref{fig:ch05:deltaline} shows, on a common scale, the optimization errors that cannot be guaranteed in each setting of Table~\ref{tab:ch05:summary}. For QAOA, no guarantee below $1/34$ is possible in polynomial time unless $\mathbf P = \mathbf{NP}$, and none below $0.061$ if the Unique Games Conjecture holds as well. Methods that may stop at a local minimum cannot guarantee less than $1/4$. For general VQAs with an oracle, nothing below the trivial value $1$ can be guaranteed at all.}
 \ona{\begin{figure}[htb]}\begin{center}
 \begin{tikzpicture}[x=6.5cm,every node/.style={font=\scriptsize}]
-  \foreach \y/\l in {2.0/{QAOA (step 6)},1.0/{local methods},0/{oracle (step 2)}} {\draw[gray!50] (0,\y) -- (1,\y); \node[anchor=east] at (-0.02,\y) {\l};}
+  \foreach \y/\l in {2.0/{training QAOA (step 6)},1.0/{local methods},0/{training VQA (step 2)}} {\draw[gray!50] (0,\y) -- (1,\y); \node[anchor=east] at (-0.02,\y) {\l};}
   \fill[red!55] (0,1.84) rectangle (1/34,2.16);
   \fill[orange!50] (1/34,1.84) rectangle (0.061,2.16);
   \fill[gray!45] (0,0.84) rectangle (0.25,1.16);
@@ -1355,8 +1488,8 @@ local methods on step 6 & & & $\Delta<\frac14$, unconditionally \\\bottomrule
   \draw[notearrow] (n4.west) -- (0.997,0.0);
 \end{tikzpicture}
 \end{center}
-\ona{\caption{The optimization errors $\Delta$ that cannot be guaranteed, shaded, in three settings: QAOA with bounded energies (Corollary~\ref{cor:ch05:qaoa}), methods that may stop at local minima on the same instances, and general VQAs with an oracle (Corollary~\ref{cor:ch05:boost}). The unshaded values are not excluded by these results, and whether they can be achieved is open.}\label{fig:ch05:deltaline}\end{figure}}
-\onp{\footnotesize Excluded are $\Delta<\frac1{34}$, or $0.061$ under the UGC, for QAOA; $\Delta<\frac14$ for local methods; and $\Delta<1$ with an oracle.}
+\ona{\caption{The optimization errors $\Delta$ that cannot be guaranteed, shaded, in three settings: training QAOA with bounded energies (Corollary~\ref{cor:ch05:qaoa}), methods that may stop at local minima on the same instances, and training VQA (Corollary~\ref{cor:ch05:boost}). The unshaded values are not excluded by these results, and whether they can be achieved is open.}\label{fig:ch05:deltaline}\end{figure}}
+\onp{\footnotesize Excluded are $\Delta<\frac1{34}$, or $0.061$ under the UGC, for training QAOA; $\Delta<\frac14$ for local methods; and $\Delta<1$ for training VQA.}
 \end{frame}
 
 \begin{frame}\ft{Training, if the Unique Games Theorem holds}
