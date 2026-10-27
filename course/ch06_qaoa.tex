@@ -9,295 +9,985 @@
 \lecture{The Quantum Approximate Optimization Algorithm}{Lect06}
 \chapter{The Quantum Approximate Optimization Algorithm}\label{C.QAOA}
 
-\ona{This \chap{} defines QAOA \citep{farhi2014quantum}, the variational algorithm for combinatorial optimization that the rest of the course studies, recalls from \Chap~\chref{C.VQE} that training it is \textbf{NP}-hard \citep{bittel2021training}, and then proves that it nevertheless converges as the depth grows, following the elementary proof of \citet{binkowski2023elementary}, which also covers the constrained \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum}. The first part is adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{\Chap~\chref{C.VQE} introduced variational quantum algorithms, in which a classical optimizer chooses the parameters of a quantum circuit, and among them the quantum approximate optimization algorithm (QAOA) of \citet{farhi2014quantum}, which is designed for combinatorial optimization. It worked through an example of depth one and showed that training QAOA is $\mathbf{NP}$-hard. We first recall the definitions, and then describe how the present \chap{} is organised.}
 
-\section{Quantum Approximate Optimization Algorithm}\label{sec:ch06:qaoa}
-
-\begin{frame}\ft{Quantum Approximate Optimization Algorithm}
-Variational quantum algorithms can be thought of as quantum randomized algorithms as well, and find many interesting applications. One of the very first applications that sparked the interest of the community is in the context of the Max-Cut problem. Farhi \emph{et al.} introduced the quantum approximate optimization algorithm (QAOA) \citep{farhi2014quantum} as a candidate algorithm to improve upon Max-Cut best bounds, although it is well understood that unless $\textbf{P}=\textbf{NP}$, this is $\textbf{NP}$-hard to achieve. Nevertheless, there is nothing that forbids VQAs to achieve exponential speedups in theory, thus a lot of hope is placed upon them.
-\end{frame}
-
-\begin{frame}\ft{MAXCUT}
-\ona{\textbf{Max-Cut}} Given a graph $G=(V, E)$ as the input, the Max-Cut problem amounts to finding a partition of the vertex set $V$ into two subsets, $S$ and its complement $V \backslash S$, such that the number of edges going between $S$ and $V \backslash S$ is maximized. That is, we define a cut in the graph $G$ as a pair $(S, V \backslash S)$, where $S \subseteq V$. The edge set of the cut $(S, V \backslash S)$ is
-\begin{align*}
-    E(S, V \backslash S)=\{e \in E:|e \cap S|=|e \cap(V \backslash S)|=1\}
-\end{align*}
-\ona{(see Fig. \ref{fig:ch06:maxcut})}, and the size of this cut is $|E(S, V \backslash S)|$, i.e., the number of edges.
-\ona{\begin{figure}[htb]
-    \centering
-    \includegraphics[scale=0.25]{figures/vqa/maxcut.png}
-    \caption{An example of a maximum cut (in bold).}
-    \label{fig:ch06:maxcut}
-\end{figure}}
-\onp{\begin{center}\includegraphics[height=0.3\textheight]{figures/vqa/maxcut.png}\end{center}}
-\end{frame}
-
-\begin{frame}\ft{MAXCUT}
-\onp{\footnotesize}
-\begin{probl}[Max-Cut]\label{p:ch06:maxcut}\hfill
-\begin{description}[noitemsep,leftmargin=0.5cm,font=\normalfont]
-\item[Instance] An unweighted undirected graph $ G=(V,E) $ represented by an adjacency matrix $ A \in \{0,1\}^{d \times d} $ with the vertex set $ V $ of cardinality $ |V|=d $.
-\item[Task] Determine a subset $ S \subseteq V $ that maximizes the size of the cut $ |E(S, V \backslash S)| $, which corresponds to maximizing $ \sum_{i \in S, j \in V \backslash S} A_{i j} $.
-\end{description}
-\end{probl}
-    The decision version of the MaxCut problem is \textbf{NP}-complete\ona{ \citep{Garey1976}}.
-The optimization version is \textbf{APX}-hard \ona{\citep{lee2021classifying}} with the optimal (classical) ratio $\alpha_{\rm{max}}=\alpha_{\rm{GW}} \approx 0.878$ of the Goemans--Williamson algorithm \ona{\citep{Goemans1995}} under the assumption that the \emph{Unique Games Conjecture} (UGC) is true. Thus, under UGC, finding a polynomial time algorithm that improves upon the Goemans--Williamson bound is itself a \textbf{NP}-hard problem. However, if the UGC is false, it has been proven that $\alpha_{\max } \leq \frac{16}{17} \approx 0.941$\ona{ \citep{Hstad2001}}.
-\end{frame}
-
-\begin{frame}\ft{MAXCUT as an Ising Hamiltonian}
-\ona{To run QAOA, we encode a cut by $z \in \{-1,1\}^d$ with $z_i = 1$ iff $i \in S$; then edge $(i,j)$ is cut iff $z_i z_j = -1$, and the cut size is $\frac12\sum_{(i,j)\in E}(1 - z_i z_j)$. Replacing $z_i$ by the Pauli matrix $Z_i$ yields the cost Hamiltonian}
-\begin{equation}\label{eq:ch06:HC}
-    H_C = -\frac{1}{2}\sum_{(i,j) \in E} w_{ij}\,(\one - Z_i Z_j),
-\end{equation}
-\ona{which is diagonal in the computational basis with $\braket{x|H_C|x} = -\text{cut}(x)$, so that its ground states are the maximum cuts. QAOA then prepares}
+\begin{frame}\ft{QAOA, recalled}
+\onp{\footnotesize QAOA is one of the variational quantum algorithms of the previous lecture (\Chap~\chref{C.VQE}).\\[0.4em]}
+\ona{An objective $f:\{0,1\}^n\to\R$, to be maximised, is encoded in the diagonal \emph{cost Hamiltonian} $H_C$, with $H_C\ket x = -f(x)\ket x$, whose ground states are the optimal bit strings. For MaxCut on a graph $G = (V,E)$, $H_C = -\frac12\sum_{ij\in E}(\one - Z_iZ_j)$. QAOA of depth $p$ prepares the state}
+\onp{Cost Hamiltonian $H_C\ket x = -f(x)\ket x$; for MaxCut, $H_C = -\frac12\sum_{ij\in E}(\one - Z_iZ_j)$. QAOA of depth $p$:}
 \begin{equation}\label{eq:ch06:qaoa}
-    \ket{\psi(\boldsymbol\beta,\boldsymbol\gamma)} = \prod_{k=1}^{p} e^{-i\beta_k H_M}\, e^{-i\gamma_k H_C}\ket{+}^{\otimes n}, \quad H_M = \sum_{j} X_j,
+    \ket{\psi_p(\boldsymbol\beta,\boldsymbol\gamma)} = e^{-i\beta_pH_M}e^{-i\gamma_pH_C}\cdots e^{-i\beta_1H_M}e^{-i\gamma_1H_C}\ket+^{\otimes n},\qquad H_M = \sum_{j=1}^nX_j,
 \end{equation}
-\ona{and minimises $F_p(\boldsymbol\beta,\boldsymbol\gamma) = \braket{\psi|H_C|\psi}$ over the $2p$ angles. The cost unitary $e^{-i\gamma H_C}$ is a product of two-qubit $ZZ$ rotations, one per edge, and the mixer $e^{-i\beta H_M}$ is a product of single-qubit $X$ rotations.}
-\onp{Ground states of $H_C$ are maximum cuts; $e^{-i\gamma H_C}$ is one $ZZ$ rotation per edge; $e^{-i\beta H_M}$ is one $X$ rotation per qubit.}
-\end{frame}
-
-\begin{frame}\ft{Depth one is classically easy}
-\ona{At $p=1$, the expectation of each edge term $\braket{Z_iZ_j}$ depends only on the neighbourhoods of $i$ and $j$, and has a closed form \citep{farhi2014quantum,Wang2018}. For a $D$-regular triangle-free graph,}
-\begin{equation}
-    \frac{F_1(\beta,\gamma)}{|E|} = -\frac{1}{2} - \frac{1}{4}\sin(4\beta)\sin(\gamma)\cos^{D-1}(\gamma),
+\ona{and minimises $F_p(\boldsymbol\beta,\boldsymbol\gamma) = \braket{\psi_p|H_C|\psi_p}$ over the $2p$ angles. For MaxCut, $-F_p$ is the expected size of the cut obtained by measuring $\ket{\psi_p}$, and the \emph{approximation ratio} at given angles is $-F_p/\mathrm{MC}$, where $\mathrm{MC}$ denotes the maximum cut. In the notation of \Chaps~\chref{C.Annealing} and~\chref{C.VQE}, the circuit discretises the path}
+\onp{A classical optimizer minimises $F_p(\boldsymbol\beta,\boldsymbol\gamma) = \braket{\psi_p|H_C|\psi_p}$ over the $2p$ angles. The circuit discretises the path}
+\begin{equation}\label{eq:ch06:path}
+    H(s) = (1-s)\,H_0 + s\,H_1,\qquad H_0 = -H_M,\quad H_1 = H_C,\qquad 0\le s\le1,
 \end{equation}
-\ona{which for $D=3$ is optimised at $\beta = \pi/8$, $\gamma = \arctan(1/\sqrt2)$ and gives the ratio $0.6924$ of \citet{farhi2014quantum}. Two consequences: (i) depth-one landscapes can be scanned exactly on a classical computer, which is how iterative angle-setting methods of \Chap~\chref{C.PerIteration} are initialised; (ii) depth one alone is far from GW's $0.878$.}
-\onp{\begin{itemize}\item closed form per edge; for 3-regular triangle-free graphs the optimum ratio is $0.6924$ \citep{farhi2014quantum}; \item depth-one landscapes are exactly computable classically \citep{Wang2018}, and far from GW.\end{itemize}}
+\ona{whose initial ground state $\ket+^{\otimes n}$ is the ground state of $H_0$. Since $e^{-i\beta H_0} = e^{i\beta H_M}$, the two descriptions differ only in the sign of $\boldsymbol\beta$. As in \Chap~\chref{C.VQE}, $T$ denotes the total time of the evolution $i\frac d{dt}\ket{\psi(t)} = H(t/T)\ket{\psi(t)}$, and $\Delta(s)$ and $\Delta_{\min}$ the gap above the ground level and its minimum along the path.}
+\onp{whose initial ground state $\ket+^{\otimes n}$ is that of $H_0$; the sign of $\boldsymbol\beta$ is immaterial.}
 \end{frame}
 
-\section{Training QAOA is NP-hard}
+\ona{This \chap{} is organised around a single observation: the difficulty of QAOA lies in its angles. If we knew how to choose them, the algorithm would converge to an optimal solution as its depth grows; we do not know how to choose them, although many methods have been proposed.}
 
-\begin{frame}\ft{Training QAOA is \textbf{NP}-hard}
-\ona{\Chap~\chref{C.VQE} formalised the training of a variational algorithm, following \citet{bittel2021training}, and proved it $\mathbf{NP}$-hard. For QAOA the conclusions are these, with $\Delta$ the optimization error, measured in units of the spectral width of the cost Hamiltonian $H_c$:}
-\begin{itemize}\setlength\itemsep{0.25em}
-    \item Minimising $\braket{H_c(\boldsymbol\beta,\boldsymbol\gamma)}$ is $\mathbf{NP}$-hard already for one layer, on a Hilbert space of polynomial dimension, where every energy can be computed classically; and for $d$ layers with $\|H_b\| = 3$ and $\|H_c\| = 1$.
-    \item Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm guarantees $\Delta<(1-\alpha_{\max})/2$ on every instance, where $\alpha_{\max}$ is the best polynomial-time ratio for MaxCut: $\Delta\ge1/34$, or $\Delta\ge0.061$ under the Unique Games Conjecture.
-    \item The landscape contains \emph{persistent} local minima, the local optima of MaxCut under single-vertex moves, and methods that may stop at a local minimum have $\Delta\ge1/4$.
-\end{itemize}
-\ona{The hardness is a worst-case statement about the classical optimization; see \Chap~\chref{C.PerIteration} for how angles are set in practice.}
+\ona{The first half of the observation is a theorem. We prove, following \citet{binkowski2023elementary}, that for every instance some depth and some angles bring the state arbitrarily close to the optimal solutions, both for unconstrained problems and for constrained problems whose mixer preserves the feasible set, as in the quantum alternating operator ansatz of \citet{hadfield2019quantum}; this is the main part of the \chap{}. The proof writes the angles down: they are those of a discretised adiabatic schedule. The length of the schedule that suffices, however, depends on the spectral gap, which is not known in advance and is exponentially small on hard instances, and the depth grows with that length. At the depths that devices allow, the angles must therefore be found in some other way, and training QAOA is $\mathbf{NP}$-hard in the worst case.}
+
+\ona{The second half concerns the methods that have been proposed for finding the angles. We give a short account of the classical optimizers that search for them, derivative-free, quasi-Newton and second-order. We then summarise, in a series of tables, the methods for setting the angles compared by \citet{guo2026setting}, and the variants of the circuit and of the outer loop collected in the survey of \citet{abbas2024challenges}, together with the results of their numerical and experimental comparisons. None of these methods comes with a guarantee of the kind that the convergence theorem gives. Throughout, we use the notation of \Chaps~\chref{C.Annealing} and~\chref{C.VQE}.}
+
+\begin{frame}\ft{The angles of QAOA}
+\onp{\begin{itemize}\setlength\itemsep{0.5em}
+    \item If the angles are known, QAOA converges: for every instance, some depth and some angles bring the state arbitrarily close to the optimal solutions.
+    \item The proof gives the angles, those of a discretised adiabatic schedule, but the length of the schedule depends on the gap, which is unknown and exponentially small on hard instances.
+    \item At low depth the angles must be found otherwise, and training QAOA is $\mathbf{NP}$-hard (\Chap~\chref{C.VQE}).
+    \item Many methods have been proposed: optimizers, rules for setting the angles, and variants of the circuit and of the loop. None comes with a guarantee.
+\end{itemize}}
 \end{frame}
 
+\section{The algorithm at low depth}\label{sec:ch06:lowdepth}
 
-\ona{\section*{Convergence of QAOA}}
-\begin{frame}\ft{Does it converge?}
-\ona{We know that training QAOA to optimality is hard. A separate question is whether the ansatz is \emph{expressive} enough: is there, for every instance, a depth $p$ and angles such that $\ket{\vec\beta,\vec\gamma}$ is close to an optimal solution? \citet{farhi2014quantum} sketched an argument via the adiabatic theorem (\Chap~\chref{C.Annealing}); \citet{binkowski2023elementary} make it rigorous and general. The rest of this \chap{} follows their proof. We switch to maximisation, which makes the statements more compact.}
-\onp{Expressivity: for every instance, is there a depth and angles reaching the optimum? Yes, via the adiabatic theorem; we prove it, following \citet{binkowski2023elementary}.}
-\end{frame}
-
-\section{Setting}
-
-\begin{frame}\ft{Combinatorial optimization problems and their encoding}
-\ona{We restrict to maximisation, which makes the proofs read more compactly. A generic combinatorial optimization problem (COP) of size $N$ is}
-\begin{equation}\label{eq:ch06c:cop}
-    \max_{\boldsymbol z \in S} f(\boldsymbol z), \qquad S \subseteq \{0,1\}^N,
+\begin{frame}\ft{Depth one in closed form}
+\onp{\footnotesize}
+\ona{At depth one the light cone of an edge (\Chap~\chref{C.VQE}) contains only the edge and the neighbours of its ends, and $\braket{Z_iZ_j}$ can be computed by hand. For a $D$-regular graph without triangles \citep{farhi2014quantum,Wang2018},}
+\begin{equation}\label{eq:ch06:depthone}
+    \frac{F_1(\beta,\gamma)}{|E|} = -\frac12 + \frac12\,\sin4\beta\,\sin\gamma\,\cos^{D-1}\gamma.
 \end{equation}
-\ona{with objective $f$ and feasible set $S$; the problem is unconstrained if $S = \{0,1\}^N$; $S_{\max}$ denotes the set of maximisers. Encoding on $N$ qubits, $\mathcal H = \C^{2^N}$:}
-\begin{align}
-    C &\coloneqq \sum_{\boldsymbol z} f(\boldsymbol z)\,\ket{\boldsymbol z}\!\bra{\boldsymbol z} && \text{(objective Hamiltonian)},\\
-    \mathcal S &\coloneqq \spn\{\ket{\boldsymbol z} : \boldsymbol z \in S\}, \quad
-    \mathcal S_{\max} \coloneqq \spn\{\ket{\boldsymbol z} : \boldsymbol z \in S_{\max}\} && \text{(solution spaces)}.
-\end{align}
-\ona{$\mathcal S_{\max}$ is the eigenspace of $C|_{\mathcal S}$ for its largest eigenvalue, and we consider \emph{any} highest-energy state of $C|_{\mathcal S}$ an optimal solution.}
-\end{frame}
-
-\begin{frame}\ft{QAA and QAOA}
-\ona{The \emph{quantum adiabatic algorithm} (QAA) evolves an initial state $\ket\iota$, a highest-energy state of $H_{\rm init}$, under the linear interpolation}
-\begin{equation}\label{eq:ch06c:interp}
-    H_{\rm lin(H_{\rm init}, C)}(t) \coloneqq (1-t)\,H_{\rm init} + t\,C, \qquad t \in [0,1],
+\ona{For the 4-cycle, with $D = 2$ and $|E| = 4$, this is the function $-2 + \sin4\beta\sin2\gamma$ of the worked example of \Chap~\chref{C.VQE}. The minimum is attained at $\beta = \pi/8$ and $\tan\gamma = -1/\sqrt{D-1}$, where the expected cut fraction is}
+\begin{equation}\label{eq:ch06:depthonebest}
+    \frac12 + \frac1{2\sqrt D}\Big(1 - \frac1D\Big)^{(D-1)/2} \;\longrightarrow\; \frac12 + \frac{e^{-1/2}}{2\sqrt D}\approx\frac12 + \frac{0.3033}{\sqrt D}\qquad(D\to\infty).
 \end{equation}
-\ona{slowed down by a parameter $T$: the actual evolution is under $H(s/T)$ for $s \in [0,T]$. The \emph{quantum approximate optimization algorithm} \citep{farhi2014quantum} fixes $\ket\iota = \ket{+}^{\otimes N}$, the non-degenerate highest-energy state of $B = \sum_n X^{(n)}$, and prepares}
-\begin{equation}\label{eq:ch06c:qaoa}
-    \ket{\vec\beta,\vec\gamma} \coloneqq \Big(\prod_{q=1}^{p} U_B(\beta_q) U_C(\gamma_q)\Big)\ket{+}^{\otimes N}, \qquad U_B(\beta) = e^{-i\beta B},\ U_C(\gamma) = e^{-i\gamma C},
-\end{equation}
-\ona{optimising $F_p(\vec\beta,\vec\gamma) = \braket{\vec\beta,\vec\gamma|C|\vec\beta,\vec\gamma}$. The \emph{quantum alternating operator ansatz} \citep{hadfield2019quantum} replaces $U_B$ by a problem-specific mixer $U_M$ that (i) preserves feasibility, $U_M(\beta)\mathcal S \subseteq \mathcal S$, and (ii) mixes fully: for all feasible $\ket{\boldsymbol z},\ket{\boldsymbol z'}$ there are $r, \beta$ with $\braket{\boldsymbol z|U_M^r(\beta)|\boldsymbol z'} \ne 0$.}
-\onp{QAA: adiabatic evolution along \eqref{eq:ch06c:interp}. QAOA: discrete alternation \eqref{eq:ch06c:qaoa}. Alternating operator ansatz: any feasibility-preserving, fully mixing $U_M$ instead of $U_B$.}
+\ona{For $D = 2$ this gives $3/4$, the value of the worked example. For $D = 3$ it gives $0.6924$, and since the maximum cut is at most $|E|$, the approximation ratio of depth one on every $3$-regular graph is at least $0.6924$, as \citet{farhi2014quantum} showed. The constant $0.3033$ is the value $\bar\nu_1$ of the large-girth analysis of \citet{basso2021quantum} recalled in \Chap~\chref{C.VQE}. At depth two the ratio on every $3$-regular graph is at least $0.7559$, and at depth three it is at least $0.7924$ if a conjecture on the worst-case graphs holds \citep{PhysRevA.103.042612}. All these values lie below the $0.9326$ that semidefinite programming achieves on graphs of maximum degree three (\Chap~\chref{C.Inapprox}). The formula \eqref{eq:ch06:depthone} has been checked against a simulation of the circuit by \texttt{code/ch06\_figures.py}.}
+\onp{$D = 2$: $3/4$, as in \Chap~\chref{C.VQE}. $D = 3$: $0.6924$ on every $3$-regular graph \citep{farhi2014quantum}. Depth two: $0.7559$; depth three, under a conjecture: $0.7924$ \citep{PhysRevA.103.042612}. Semidefinite programming: $0.9326$.}
 \end{frame}
 
-\begin{frame}\ft{Phase separators}
-\begin{defn}[Phase separator]\label{def:ch06c:phase}
-Given a COP with solution space $\mathcal S$ and optimal solution space $\mathcal S_{\max}$, a Hamiltonian $H$ is a \emph{phase separator Hamiltonian} iff (i) $H$ is diagonal in the computational basis, and (ii) the eigenspace of $H|_{\mathcal S}$ for its largest eigenvalue is $\mathcal S_{\max}$. The corresponding parametrised phase separator is $U_P(H,\gamma) \coloneqq e^{-i\gamma H}$.
-\end{defn}
-\ona{The objective Hamiltonian $C$ is a phase separator, but so is any diagonal Hamiltonian that ranks the feasible solutions in the same way at the top. Diagonality is what makes the convergence proof go through: adding a diagonal matrix does not destroy irreducibility.}
-\end{frame}
+\begin{frame}\ft{Depth one against the degree}
+\ona{Figure~\ref{fig:ch06:depthone} compares depth one with the algorithm of Goemans and Williamson (\Chap~\chref{C.Motivation}) on the same instances: twenty random $D$-regular graphs with $22$ vertices for each $D$ from $2$ to $11$. The angles of QAOA are optimised for each instance with the formula of \citet[Theorem~1]{Wang2018}, which extends \eqref{eq:ch06:depthone} to graphs with triangles; the semidefinite relaxation is solved by SCS, as in \Chap~\chref{C.Motivation}, and the maximum cut is found by enumeration. Both methods are randomised. The figure shows the mean and the standard deviation of the cut fraction returned by a single run, that is, by one measured string or by one random hyperplane, over the instances and over the randomness of the method. Most of the spread of QAOA is due to the measurement: over the instances alone, the standard deviation of its expected cut fraction is at most $0.01$, since by the formula of Wang et al.\ it depends on a regular graph only through its triangles.}
 
-\section{Convergence of the QAA}
-
-\begin{frame}\ft{Two theorems from the shelf}
-\begin{thm}[Adiabatic theorem without gap condition, \citet{Teufel2001}]\label{thm:ch06c:adiabatic}
-Let $H(\cdot) \in C^2([0,1], \mathcal L(\mathcal H))$ be self-adjoint, $U_T(t)$ the evolution under $H(s/T)$ rescaled to $t \in [0,1]$, $\lambda(t)$ an eigenvalue of $H(t)$ with spectral projection $\mathbb P(t)$, and $P \in C^2([0,1],\mathcal L(\mathcal H))$ a family of projections with $H(t)P(t) = \lambda(t)P(t)$ and $P(t) = \mathbb P(t)$ for almost all $t$. Then
-$\lim_{T\to\infty} (\one - P(t))\,U_T(t)\,P(0) = 0$ uniformly in $t$.
-\end{thm}
-\ona{In words: starting in the eigenspace of $\lambda(0)$, one stays in the eigenspace of $\lambda(t)$ in the adiabatic limit, provided the projections can be continued $C^2$-smoothly \emph{through} level crossings. \citet{farhi2014quantum} used the classical version that forbids crossings altogether.}
-\begin{thm}[Perron--Frobenius]\label{thm:ch06c:pf}
-A component-wise non-negative, irreducible matrix $A \in \C^{n\times n}$ has a non-degenerate largest eigenvalue.
-\end{thm}
-\ona{Recall that $A$ is \emph{irreducible} iff the only coordinate subspaces it leaves invariant are $\{0\}$ and $\C^n$; equivalently, the graph with adjacency pattern of $A$ is strongly connected.}
-\end{frame}
-
-\begin{frame}\ft{Mixers}
-\begin{defn}[Mixer]\label{def:ch06c:mixer}
-A Hamiltonian $B \in \mathcal L(\mathcal H)$ is a \emph{mixer} for a COP with solution space $\mathcal S$ iff $B\mathcal S \subseteq \mathcal S$ and $B|_{\mathcal S}$ is component-wise non-negative and irreducible in the computational basis.
-\end{defn}
-\begin{itemize}\setlength\itemsep{0.2em}
-    \item The transverse field $B = \sum_n X^{(n)}$ is a mixer for unconstrained problems: its matrix is the adjacency matrix of the hypercube, which is connected and non-negative.
-    \item The conditions are exactly those of Perron--Frobenius, and they survive adding a diagonal matrix:
-\end{itemize}
-\begin{cor}\label{cor:ch06c:irred}
-If $A$ is diagonal and $B$ is irreducible, then $A + B$ is irreducible.
-\end{cor}
-\ona{Indeed, a coordinate subspace invariant under $A+B$ is invariant under $B$, since $A$ leaves every coordinate subspace invariant.}
-\end{frame}
-
-\begin{frame}\ft{Convergence of the QAA}
-\begin{thm}[Convergence of QAA, \citet{binkowski2023elementary}]\label{thm:ch06c:qaa}
-Consider a COP with solution space $\mathcal S$, optimal solution space $\mathcal S_{\max}$, and phase separator Hamiltonian $C$. If $B$ is a mixer and $\ket\iota \in \mathcal S$ is a highest-energy state of $B|_{\mathcal S}$, then
-\begin{equation}
-    \lim_{T\to\infty} U_T(1)\ket\iota \in \mathcal S_{\max},
-\end{equation}
-where $U_T$ is the quasi-adiabatic evolution along the linear interpolation between $B$ and $C$.
-\end{thm}
-\ona{Note what is \emph{not} assumed: the optimum need not be unique. \citet{farhi2014quantum} assumed uniqueness to rule out a level crossing at $t = 1$; the gapless adiabatic theorem makes this unnecessary.}
-\end{frame}
-
-\begin{frame}\ft{Proof of Theorem~\ref{thm:ch06c:qaa}}
-\onp{\scriptsize}
-\ona{Work in $\mathcal L(\mathcal S)$ with matrices in the computational basis, and let $\lambda_{\max}(t)$ be the largest eigenvalue of $H(t) \coloneqq (1-t)B|_{\mathcal S} + tC|_{\mathcal S}$.}
-\begin{enumerate}\setlength\itemsep{0.2em}
-    \item \emph{Non-degeneracy for $t<1$.} For $0 \le t_0 < 1$, $(1-t_0)B|_{\mathcal S}$ is irreducible and non-negative; $C$ is diagonal, and w.l.o.g.\ has non-negative spectrum (shift both $B$ and $C$ by $-\lambda_{\min}\one$, which changes the evolution by a global phase). By Corollary~\ref{cor:ch06c:irred}, $H(t_0)$ is non-negative and irreducible, so by Perron--Frobenius $\lambda_{\max}(t_0)$ is non-degenerate.
-    \item \emph{Analytic continuation.} $t \mapsto H(t)$ is analytic and symmetric, so by Kato's perturbation theory \citep{Kato1995} the eigenvalues can be sorted into analytic curves $\lambda_m(t)$ whose spectral projections $\mathbb P_m(t)$ are analytic away from the discrete set $L$ of crossings and have removable singularities there; the continuations $P_m$ are projections of constant rank with $H(t)P_m(t) = \lambda_m(t)P_m(t)$ for all $t$.
-    \item \emph{Identify the top curve.} Let $\lambda_1(0) = \lambda_{\max}(0)$. Since $\lambda_{\max}(t_0)$ is non-degenerate on $[0,1)$, $\lambda_1 \equiv \lambda_{\max}$ there, and by continuity also at $t = 1$. Its projection $P_1$ satisfies the hypotheses of Theorem~\ref{thm:ch06c:adiabatic}.
-    \item \emph{Conclude.} $P_1(0)\ket\iota = \ket\iota$, so $\lim_T (\one - P_1(1))U_T(1)\ket\iota = 0$, i.e.,
-    $\lim_T U_T(1)\ket\iota = P_1(1)\lim_T U_T(1)\ket\iota$, which lies in $\operatorname{im} P_1(1) \subseteq \mathcal S_{\max}$. \qed
-\end{enumerate}
-\onp{Perron--Frobenius $\Rightarrow$ top eigenvalue simple for $t<1$; Kato $\Rightarrow$ analytic eigen-curves through the crossing at $t=1$; gapless adiabatic theorem $\Rightarrow$ the state follows the top curve.}
-\end{frame}
-
-\begin{frame}\ft{Level crossings only at the end}
-\ona{The top eigenvalue curve $\lambda_{\max}$ is separated from all others for $0 \le t < 1$. If the COP has a unique optimum the separation extends to $t=1$; with multiple optima, $\lambda_{\max}$ meets at least one other curve exactly at $t = 1$, see Fig.~\ref{fig:ch06c:crossing}. The crossing happens once, at a predictable time, which is why a gapless adiabatic theorem suffices.}
-\begin{center}
-\begin{tikzpicture}[scale=1.3]
-  \draw[->] (0, 0) -- ++(3, 0) node[right] {$t$};
-  \draw (0, 0) -- ++(0,-0.05) node[below] {$0$};
-  \draw (2.8, 0) -- ++(0,-0.05) node[below] {$1$};
-  \draw[->] (0, 0) -- (0, 3) node[above] {$\{\lambda_{i}(t)\}_{i}$};
-  \draw[scale=2.8, domain=0:1, smooth, variable=\x, red] plot ({\x}, {0.8-0.2*sin(2.5*\x*\x r)});
-  \draw[scale=2.8, domain=0:1, smooth, variable=\y] plot ({\y*\y}, {0.3+0.2*\y*\y*\y});
-  \node at (1.5,2.1) {\footnotesize \color{red}$\lambda_{\max}$};
-\end{tikzpicture}
-\hspace{1cm}
-\begin{tikzpicture}[scale=1.3]
-  \draw[->] (0, 0) -- ++(3, 0) node[right] {$t$};
-  \draw (0, 0) -- ++(0,-0.05) node[below] {$0$};
-  \draw (2.8, 0) -- ++(0,-0.05) node[below] {$1$};
-  \draw[->] (0, 0) -- ++(0, 3) node[above] {$\{\lambda_{i}(t)\}_{i}$};
-  \draw[scale=2.8, domain=0:1, smooth, variable=\x, red] plot ({\x}, {0.8-0.2*sin(2.5*\x*\x r)});
-  \draw[scale=2.8, domain=0:1, smooth, variable=\y] plot ({\y}, {0.3+0.38*\y*\y*\y});
-  \node at (1.5,2.1) {\footnotesize \color{red}$\lambda_{\max}$};
+\ona{The rounding of Goemans and Williamson is better than depth one at every degree. It obtains between $85$ and $100$ per cent of the excess of the maximum cut over $1/2$, while depth one obtains less than half of it for $D\ge3$, and a share that decreases with the degree, from $47$ per cent at $D = 3$ to $35$ per cent at $D = 11$. The graphs are small and, for large $D$, dense, and their triangles lower the values of depth one below those of \eqref{eq:ch06:depthonebest} for graphs without triangles, which are drawn as circles. For large graphs and then large degrees, the excess of depth one is $0.3033/\sqrt D$ by \eqref{eq:ch06:depthonebest}, while that of the maximum cut of random $D$-regular graphs is $\Pi_*/\sqrt D$ to leading order, where $\Pi_* = 0.763166\ldots$ is the Parisi value \citep{basso2021quantum}; the share of depth one tends to $0.3033/\Pi_*\approx0.40$. The data are computed by \texttt{code/ch06\_figures.py}.}
+\ona{\gdef\doW{0.62\linewidth}\gdef\doH{0.46\linewidth}}\onp{\gdef\doW{0.56\linewidth}\gdef\doH{0.44\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=\doW,height=\doH,clip=false,axis lines=left,xmin=1.7,xmax=11.3,ymin=0.5,ymax=1.0,xtick={2,...,11},ytick={0.5,0.6,0.7,0.8,0.9,1},yticklabels={$0.5$,$0.6$,$0.7$,$0.8$,$0.9$,$1$},xlabel={degree $D$},ylabel={cut fraction},no markers,thick]
+  \addplot[draw=none,fill=orange!80!black,fill opacity=0.22] table[x=D,y=gw] {figures/ch06/depth_one_bands.dat};
+  \addplot[draw=none,fill=blue!70!black,fill opacity=0.22] table[x=D,y=qaoa] {figures/ch06/depth_one_bands.dat};
+  \addplot[black,thin] table[x=D,y=opt] {figures/ch06/depth_one_instances.dat};
+  \addplot[orange!80!black,mark=*,mark size=1.1pt] table[x=D,y=gw] {figures/ch06/depth_one_instances.dat};
+  \addplot[blue!70!black,mark=*,mark size=1.1pt] table[x=D,y=qaoa] {figures/ch06/depth_one_instances.dat};
+  \addplot[only marks,mark=*,mark size=1.6pt,mark options={fill=white,draw=gray!80!black,thin},restrict x to domain=2:11] table[x=D,y=best] {figures/ch06/depth_one.dat};
+  \node[note,anchor=west] (n1) at (axis cs:11.7,0.71) {maximum cut};
+  \draw[notearrow] (n1.west) to[bend right=10] (axis cs:11.1,0.669);
+  \node[note,anchor=west] (n2) at (axis cs:11.7,0.62) {Goemans--Williamson,\\one rounding};
+  \draw[notearrow] (n2.west) to[bend left=10] (axis cs:11.1,0.640);
+  \node[note,anchor=west] (n3) at (axis cs:11.7,0.53) {depth one,\\one measured string};
+  \draw[notearrow] (n3.west) to[bend right=10] (axis cs:11.1,0.556);
+  \node[note,anchor=south west] (n4) at (axis cs:2.1,0.505) {circles: graphs without\\triangles\ona{, \eqref{eq:ch06:depthonebest}}};
+  \draw[notearrow] (n4.north) to[bend right=15] (axis cs:3.08,0.682);
+  \node[note,anchor=west] (n5) at (axis cs:5.6,0.92) {bands: one standard deviation\\of the cut of a single run};
+  \draw[notearrow] (n5.south west) to[bend right=15] (axis cs:5.1,0.775);
+\end{axis}
 \end{tikzpicture}
 \end{center}
-\ona{\begin{figure}[htb]\caption{The eigenvalue curve $\lambda_{\max}$ stays separated from all other curves for $0 \le t < 1$. With a unique optimum the separation extends to $t=1$ (left); with multiple optima $\lambda_{\max}$ intersects another curve at $t=1$ (right). After \citet{binkowski2023elementary}.}\label{fig:ch06c:crossing}\end{figure}}
+\ona{\caption{Depth one against the degree. Mean (lines) and one standard deviation (bands) of the cut fraction returned by a single run of QAOA of depth one at the best angles of each instance, one measured string (blue), and by a single rounding of Goemans and Williamson, one random hyperplane (orange), over twenty random $D$-regular graphs with $22$ vertices for each $D$ and over the randomness of the methods. Black: the mean maximum cut fraction of the instances. Circles: the best expected cut fraction \eqref{eq:ch06:depthonebest} of depth one on graphs without triangles.}\label{fig:ch06:depthone}\end{figure}}
+\onp{\footnotesize Twenty random $D$-regular graphs with $22$ vertices for each $D$. Goemans--Williamson is better at every degree.}
 \end{frame}
 
-\section{Convergence of the QAOA}
+\begin{frame}\ft{Training QAOA is $\mathbf{NP}$-hard}
+\onp{\footnotesize}
+\ona{\Chap~\chref{C.VQE} formalised training, following \citet{bittel2021training}, and proved it $\mathbf{NP}$-hard. For QAOA the conclusions are as follows; $\Delta$ denotes the optimization error, in units of the spectral width of the cost Hamiltonian.}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item Training QAOA is $\mathbf{NP}$-hard already with a single layer, on a Hilbert space of polynomial dimension in which every energy can be computed classically, and with $d$ layers and Hamiltonians of bounded norm.
+    \item Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm guarantees $\Delta<(1-\alpha_{\max})/2$, where $\alpha_{\max}$ is the best ratio for MaxCut achievable in polynomial time; hence $\Delta\ge1/34$, and $\Delta\ge0.061$ under the Unique Games Conjecture.
+    \item The landscape contains persistent local minima, the local optima of MaxCut under single-vertex moves, and methods that may stop at a local minimum have $\Delta\ge1/4$.
+\end{itemize}
+\ona{These are statements about finding good angles.}
+\end{frame}
+
+\mode<all>{\pgfplotsset{mixbars/.style={x=\mxX cm,xmin=-0.7,xmax=15.7,ymin=0,axis x line=bottom,axis y line=left,xtick={0,...,15},xticklabels={},xtick style={draw=none},tick label style={font=\tiny},ylabel style={font=\scriptsize},title style={font=\scriptsize,yshift=-0.6ex},clip=false},
+  mixlabels/.style={xticklabels={0000,0001,0010,0011,0100,0101,0110,0111,1000,1001,1010,1011,1100,1101,1110,1111},xticklabel style={rotate=90,anchor=east,font=\tiny,inner sep=1pt}},
+  mixbar/.style={ybar,bar width=0.62,draw=none,fill=#1}}}
+\mode<all>{\gdef\mixAB{\begin{tikzpicture}
+\begin{axis}[mixbars,name=a0,y=\mxY cm,ymax=1.05,ytick={0,0.5,1},yticklabels={$0$,$0.5$,$1$},ylabel={probability},title={(a) transverse field, from $\ket{0000}$}]
+  \addplot[mixbar=blue!70!black] table[x=i,y=a0] {figures/ch06/mixer_action.dat};
+\end{axis}
+\begin{axis}[mixbars,name=a1,at={(a0.east)},anchor=west,xshift=\mxG cm,y=\mxY cm,ymax=1.05,ytick={0,0.5,1},yticklabels={},title={after the mixer}]
+  \addplot[mixbar=blue!70!black] table[x=i,y=a1] {figures/ch06/mixer_action.dat};
+  \node[note,anchor=west] (na) at (axis cs:4.6,0.66) {Hamming distance $1$, $2$, \dots:\\$\cos^{8-2d}\!\beta\,\sin^{2d}\!\beta$};
+  \draw[notearrow] (na.south west) to[bend right=15] (axis cs:4,0.13);
+\end{axis}
+\draw[notearrow] ([xshift=3pt]a0.east) -- node[note,above] {$e^{-i\beta H_M}$} ([xshift=-3pt]a1.west);
+\begin{axis}[mixbars,mixlabels,name=b0,at={(a0.south west)},anchor=north west,yshift=-0.75cm,y=\mxY cm,ymax=1.05,ytick={0,0.5,1},yticklabels={$0$,$0.5$,$1$},ylabel={probability},title={(b) ring $XY$ mixer, from $\ket{0011}$}]
+  \addplot[mixbar=orange!80!black] table[x=i,y=b0] {figures/ch06/mixer_action.dat};
+\end{axis}
+\begin{axis}[mixbars,mixlabels,name=b1,at={(b0.east)},anchor=west,xshift=\mxG cm,y=\mxY cm,ymax=1.05,ytick={0,0.5,1},yticklabels={},title={after the mixer}]
+  \addplot[mixbar=orange!80!black] table[x=i,y=b1] {figures/ch06/mixer_action.dat};
+  \node[note,anchor=west] (nb) at (axis cs:5.6,0.66) {only strings with two ones,\\first $0101$ and $1010$};
+  \draw[notearrow] (nb.south) to[bend left=15] (axis cs:5,0.14);
+\end{axis}
+\draw[notearrow] ([xshift=3pt]b0.east) -- node[note,above] {$e^{-i\beta H_M}$} ([xshift=-3pt]b1.west);
+\end{tikzpicture}}}
+\mode<all>{\gdef\mixC{\begin{tikzpicture}
+\begin{axis}[mixbars,mixlabels,name=c0,y=\mxYc cm,ymax=0.3,ytick={0,0.1,0.2,0.3},yticklabels={$0$,$0.1$,$0.2$,$0.3$},ylabel={probability},title={(c) $e^{-i\gamma H_C}\ket+^{\otimes4}$ on the $4$-cycle}]
+  \addplot[mixbar=blue!15] table[x=i,y expr={\thisrow{cut}==0 ? \thisrow{c0} : 0}] {figures/ch06/mixer_action.dat};
+  \addplot[mixbar=blue!45] table[x=i,y expr={\thisrow{cut}==2 ? \thisrow{c0} : 0}] {figures/ch06/mixer_action.dat};
+  \addplot[mixbar=blue!70!black] table[x=i,y expr={\thisrow{cut}==4 ? \thisrow{c0} : 0}] {figures/ch06/mixer_action.dat};
+  \addplot[only marks,mark=o,mark size=3.2pt,mark options={annot,thin}] table[x=i,y expr={\thisrow{c0}+0.055}] {figures/ch06/mixer_action.dat};
+  \addplot[annot,semithick,-{Stealth[length=2.2pt,width=2pt]},quiver={u={0.11/\mxX*cos(\thisrow{ph})},v={0.11/\mxYc*sin(\thisrow{ph})}}] table[x=i,y expr={\thisrow{c0}+0.055}] {figures/ch06/mixer_action.dat};
+  \node[note,anchor=south,align=center] at (axis cs:7.5,0.15) {phases $1$, $-i$, $-1$\\for the cuts $0$, $2$, $4$};
+\end{axis}
+\begin{axis}[mixbars,mixlabels,name=c1,at={(c0.east)},anchor=west,xshift=\mxG cm,y=\mxYc cm,ymax=0.3,ytick={0,0.1,0.2,0.3},yticklabels={},title={after the mixer}]
+  \addplot[mixbar=blue!15] table[x=i,y expr={\thisrow{cut}==0 ? \thisrow{c1} : 0}] {figures/ch06/mixer_action.dat};
+  \addplot[mixbar=blue!45] table[x=i,y expr={\thisrow{cut}==2 ? \thisrow{c1} : 0}] {figures/ch06/mixer_action.dat};
+  \addplot[mixbar=blue!70!black] table[x=i,y expr={\thisrow{cut}==4 ? \thisrow{c1} : 0}] {figures/ch06/mixer_action.dat};
+  \node[note,anchor=west] (nc) at (axis cs:-0.1,0.2) {maximum\\cuts, $0.27$\\each};
+  \draw[notearrow] (nc.east) to[bend right=20] (axis cs:4.6,0.255);
+\end{axis}
+\draw[notearrow] ([xshift=3pt]c0.east) -- node[note,above] {$e^{-i\beta H_M}$} ([xshift=-3pt]c1.west);
+\end{tikzpicture}}}
+\begin{frame}\ft{What the mixer does}
+\ona{Before turning to convergence, we look at what the two halves of a layer do to a state. The mixer $e^{-i\beta H_M}$ moves amplitude between bit strings along the edges of a graph, which joins two strings whenever $H_M$ has a non-zero entry for them. For the transverse field $H_M = \sum_jX_j$ the edges join the strings at Hamming distance one, which form the hypercube, and $e^{-i\beta H_M} = \prod_je^{-i\beta X_j}$ maps a basis state $\ket x$ to a product state, which gives each string at Hamming distance $d$ from $x$ the probability $\cos^{2(n-d)}\beta\,\sin^{2d}\beta$ (Figure~\ref{fig:ch06:mixer}a). Other mixers have other graphs. The \emph{ring $XY$ mixer} $\sum_{j=1}^n\frac12(X_jX_{j+1}+Y_jY_{j+1})$, with $n+1$ read as $1$, exchanges $\ket{01}$ and $\ket{10}$ on adjacent qubits; it preserves the number of ones, and its graph joins only strings with the same number of ones (Figure~\ref{fig:ch06:mixer}b). Mixers of this kind serve for problems with constraints, such as a fixed number of ones. The \emph{quantum alternating operator ansatz} of \citet{hadfield2019quantum}, which shares the acronym QAOA, keeps the state in the span of the feasible strings by a mixer that maps this span into itself; \Chap~\chref{C.Portfolio} describes it for the budget constraint of portfolio selection. The convergence theorem of the next section covers such mixers.}
+\ona{\gdef\mxX{0.27}\gdef\mxY{1.3}\gdef\mxYc{7}\gdef\mxG{1.5}}\onp{\gdef\mxX{0.3}\gdef\mxY{1.25}\gdef\mxG{1.7}}
+\ona{\begin{figure}[htb]\centering\mixAB}
+
+\ona{\medskip\mixC\caption{The mixer on four qubits, at $\beta = \pi/8$: the probabilities of the $16$ bit strings before (left) and after (right) the mixer $e^{-i\beta H_M}$. (a) The transverse field, from $\ket{0000}$. (b) The ring $XY$ mixer, from $\ket{0011}$; the strings with other numbers of ones keep probability $0$. (c) A layer of QAOA on the $4$-cycle: the state $e^{-i\gamma H_C}\ket+^{\otimes4}$ at $\gamma = -\pi/4$, with the phase of each amplitude drawn as the hand of a dial, and the state after the transverse-field mixer; dark, medium and light bars, the strings with cuts $4$, $2$ and $0$. The data are computed by \texttt{code/ch06\_figures.py}.}\label{fig:ch06:mixer}\end{figure}}
+\onp{\begin{center}\mixAB\end{center}
+\footnotesize $\beta = \pi/8$. The mixer moves probability along the edges of its graph on the bit strings: the transverse field to the strings at Hamming distance $1$, then $2$, and so on; the $XY$ mixer only among the strings with the same number of ones, as constraints require (the alternating operator ansatz, \Chap~\chref{C.Portfolio}).}
+\end{frame}
+
+\begin{frame}\ft{A layer of QAOA}
+\ona{In QAOA the mixer acts on the output of the phase separator. Figure~\ref{fig:ch06:mixer}c follows a layer of depth one on the $4$-cycle at the angles $\beta = \pi/8$ and $\gamma = -\pi/4$ of the worked example of \Chap~\chref{C.VQE}. The initial state $\ket+^{\otimes4}$ is an eigenvector of $H_M$, which the mixer alone would leave unchanged up to a phase. The phase separator $e^{-i\gamma H_C}$ is diagonal: it leaves every probability at $1/16$, and multiplies the amplitude of a string with cut $c$ by $e^{i\gamma c} = e^{-i\pi c/4}$, that is, by $1$, $-i$ or $-1$ for the cuts $0$, $2$ and $4$. The mixer then lets the amplitudes of neighbouring strings interfere, and turns the differences of phase into differences of probability. The two maximum cuts $0101$ and $1010$ receive probability $0.27$ each, against $1/16$ before; the strings with cut $2$ receive $0.44$ together, and those with cut $0$ receive $0.03$; the expected cut is $3$, as \eqref{eq:ch06:depthone} gives. Neither half of the layer achieves anything alone. The next section shows that, if the graph of the mixer is connected, there are angles with which QAOA comes arbitrarily close to an optimal solution as its depth grows.}
+\onp{\gdef\mxX{0.29}\gdef\mxYc{8}\gdef\mxG{1.6}\begin{center}\mixC\end{center}
+\footnotesize Depth one on the $4$-cycle at $\beta = \pi/8$, $\gamma = -\pi/4$; dark, medium and light bars: cuts $4$, $2$ and $0$.
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item The phase separator changes only the phases, by $e^{i\gamma c}$ for a string with cut $c$. Without them, the mixer would leave $\ket+^{\otimes4}$ unchanged.
+    \item The mixer turns the phases into probabilities: the maximum cuts receive $0.27$ each, against $1/16$, and the expected cut is $3$.
+\end{itemize}}
+\end{frame}
+
+\section{Convergence}\label{sec:ch06:convergence}
+
+\begin{frame}\ft{Expressivity and trainability}
+\ona{Two questions must be kept apart. The first concerns \emph{expressivity}: for every instance, are there a depth $p$ and angles at which $\ket{\psi_p(\boldsymbol\beta,\boldsymbol\gamma)}$ is arbitrarily close to an optimal solution? The second concerns \emph{trainability}: can such angles be found efficiently? \Chap~\chref{C.VQE} answered the second question in the negative, in the worst case. This section answers the first in the affirmative. \citet{farhi2014quantum} sketched the argument: QAOA contains a Trotterised version of the adiabatic evolution of \Chap~\chref{C.Annealing}, which reaches the ground state if it is slow enough. \citet{binkowski2023elementary} made the argument rigorous and extended it in three directions: the optimum need not be unique, the problem may have constraints, and the mixer may be a product of non-commuting factors. We follow their proof, in three steps.}
+\begin{enumerate}\setlength\itemsep{0.25em}
+    \item The adiabatic evolution along \eqref{eq:ch06:path}, with $H_0 = -H_M$ for a \emph{mixer} $H_M$ in a sense to be made precise, reaches the optimal subspace as $T\to\infty$. The tools are the Perron--Frobenius theorem and an adiabatic theorem that requires no gap.
+    \item The QAOA circuit, at the angles of the discretised schedule of \Chap~\chref{C.VQE}, approximates that evolution, with an error that decreases as $1/p$.
+    \item Hence, for every $\varepsilon>0$, some depth and some angles bring the state within $\varepsilon$ of the optimal subspace.
+\end{enumerate}
+\ona{The proof is constructive: it gives the angles as functions of the total time $T$ and of the depth. What it does not give is a value of $T$ that suffices, and this, as we discuss at the end of the section, is where the difficulty lies. Binkowski et al.\ state their results for maximisation; we state them in the notation of \Chaps~\chref{C.Annealing} and~\chref{C.VQE}, for minimisation and ground states, which amounts to replacing the objective by its negative.}
+\end{frame}
+
+\begin{frame}\ft{Phase separators and mixers}
+\onp{\footnotesize Feasible strings $S\subseteq\{0,1\}^n$, with $S = \{0,1\}^n$ without constraints, and optimal ones $S_{\rm opt}\subseteq S$, spanning $\mathcal S$ and $\mathcal S_{\rm opt}$. $G(A|_{\mathcal S})$: the graph on $S$ with an edge $xy$ whenever $x\ne y$ and $\braket{x|A|y}\ne0$.}
+\ona{To cover mixers such as the $XY$ mixers, the convergence theorem is stated on a set $S\subseteq\{0,1\}^n$ of \emph{feasible} bit strings, with $S = \{0,1\}^n$ for an unconstrained problem. Let $S_{\rm opt}\subseteq S$ be the set of optimal feasible bit strings, and let $\mathcal S$ and $\mathcal S_{\rm opt}$ be the subspaces they span. For an operator $A$ with $A\mathcal S\subseteq\mathcal S$ we write $A|_{\mathcal S}$ for its restriction, a matrix indexed by $S$ in the computational basis, and $G(A|_{\mathcal S})$ for the graph on $S$ that has an edge $xy$ whenever $x\ne y$ and $\braket{x|A|y}\ne0$.}
+\begin{defn}[\citet{binkowski2023elementary}]\label{defn:ch06:mixer}
+A Hamiltonian $H_C$ is a \emph{phase separator} if it is diagonal in the computational basis and the ground space of $H_C|_{\mathcal S}$ is $\mathcal S_{\rm opt}$. A Hamiltonian $H_M$ is a \emph{mixer} if $H_M\mathcal S\subseteq\mathcal S$, the off-diagonal entries of $H_M|_{\mathcal S}$ are real and non-negative, and the graph $G(H_M|_{\mathcal S})$ is connected.
+\end{defn}
+\ona{The cost Hamiltonian is a phase separator, but so is any diagonal Hamiltonian with the same optimal feasible strings. For a mixer, $H_0 = -H_M$ has non-positive off-diagonal entries on $\mathcal S$: it is \emph{stoquastic}, in the sense of \Chap~\chref{C.Annealing}. Connectedness of $G(A)$ is the same as \emph{irreducibility} of $A$: no coordinate subspace other than $\{0\}$ and the whole space is invariant under $A$. Binkowski et al.\ require all entries of $H_M|_{\mathcal S}$, diagonal ones included, to be non-negative; since adding a multiple of the identity to $H_M$ changes $e^{-i\beta H_M}$ only by a phase, the difference is immaterial, and the definition above allows non-constant diagonals, such as those of the warm-start mixers.}
+\onp{$H_0 = -H_M$ is then stoquastic (\Chap~\chref{C.Annealing}); connectedness of $G(A)$ is irreducibility of $A$.}
+\end{frame}
+
+\mode<all>{\gdef\mixtab#1#2#3#4{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}@{}}\toprule
+mixer $H_M$ & feasible set $S$ & graph $G(H_M|_{\mathcal S})$ & top eigenvector on $\mathcal S$ \\\midrule
+$\sum_jX_j$, transverse field & $\{0,1\}^n$ & the hypercube & $\ket+^{\otimes n}$ \\
+$\sum_{ij\in K_n}\frac12(X_iX_j+Y_iY_j)$, complete $XY$ & strings with $k$ ones & Johnson graph $J(n,k)$, connected & the Dicke state \\
+$\sum_{j}\frac12(X_jX_{j+1}+Y_jY_{j+1})$, ring $XY$ & strings with $k$ ones & connected & not uniform in general \\
+$\ket S\!\bra S$, Grover & any $S$ & the complete graph on $S$ & $\ket S$ \\
+$\sum_j(\sin\theta_jX_j + \cos\theta_jZ_j)$, warm start & $\{0,1\}^n$ & the hypercube if all $0<\theta_j<\pi$, disconnected otherwise & $\bigotimes_jR_Y(\theta_j)\ket0$ \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Examples of mixers}
+\onp{\footnotesize}
+\ona{Table~\ref{tab:ch06:mixers} lists the mixers of \citet{hadfield2019quantum} and of the warm starts, with the graphs they induce on the feasible strings; the \emph{Dicke state} is the uniform superposition of the strings with $k$ ones, and $\ket S$ that of all feasible strings. Each satisfies Definition~\ref{defn:ch06:mixer}. For the $XY$ mixers, $\frac12(X_iX_j + Y_iY_j)$ maps $\ket{01}$ to $\ket{10}$ with coefficient $+1$, and any string with $k$ ones can be turned into any other by exchanges of adjacent bits. For the warm-start mixer, written with the sign that makes the warm-start state its top eigenvector, the off-diagonal entry for qubit $j$ is $\sin\theta_j = 2\sqrt{c_j(1-c_j)}$, in the notation of \Chap~\chref{C.WSContinuous}; it vanishes when $c_j\in\{0,1\}$, and the qubit is then frozen.}
+\onp{\begin{center}\scriptsize\mixtab{0.27}{0.16}{0.26}{0.22}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Mixers and the graphs they induce on the feasible bit strings. The top eigenvector of $H_M|_{\mathcal S}$ is the initial state required by the convergence theorems below; \Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous} write the warm-start mixer with the opposite sign, so that this state is its ground state.}\label{tab:ch06:mixers}\footnotesize\mixtab{0.27}{0.16}{0.26}{0.22}\end{table}}
+\end{frame}
+
+\begin{frame}\ft{The graphs of the mixers}
+\ona{Figure~\ref{fig:ch06:mixergraphs} draws the graphs $G(H_M|_{\mathcal S})$ for small instances of the mixers of Table~\ref{tab:ch06:mixers}. Since the matrix of $H_M|_{\mathcal S}$ is the adjacency matrix of its graph, the top eigenvector of a regular graph is the uniform superposition, which is why $\ket+^{\otimes n}$ and the Dicke state are the initial states of the transverse field and of the complete $XY$ mixer. The ring $XY$ mixer has an irregular graph, and its top eigenvector is not uniform. The warm start with a frozen qubit has a disconnected graph, and is not a mixer.}
+\ona{\gdef\mgs{1}}\onp{\gdef\mgs{0.82}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[scale=\mgs,every node/.style={font=\tiny,transform shape},v/.style={circle,draw,thick,fill=white,inner sep=0.6pt,minimum size=0.5cm},e/.style={thick,blue!70!black},lab/.style={font=\scriptsize,align=center}]
+  % (a) the cube
+  \begin{scope}
+    \foreach \x/\y/\l in {0/0/000,1.5/0/100,0/1.5/010,1.5/1.5/110,0.6/0.5/001,2.1/0.5/101,0.6/2.0/011,2.1/2.0/111} \node[v] (c\l) at (\x,\y) {$\l$};
+    \foreach \a/\b in {000/100,000/010,100/110,010/110,001/101,001/011,101/111,011/111,000/001,100/101,010/011,110/111} \draw[e] (c\a) -- (c\b);
+    \node[lab] at (1.05,-0.65) {(a) $\sum_jX_j$, $n = 3$};
+  \end{scope}
+  % (b) the octahedron J(4,2)
+  \begin{scope}[xshift=4.3cm,yshift=1cm]
+    \foreach \l [count=\i] in {0011,0101,0110,1100,1010,1001} \node[v] (j\l) at ({90-60*\i}:1.15) {$\l$};
+    \foreach \a/\b in {0011/0101,0011/0110,0011/1010,0011/1001,0101/0110,0101/1100,0101/1001,0110/1100,0110/1010,1100/1010,1100/1001,1010/1001} \draw[e] (j\a) -- (j\b);
+    \node[lab] at (0,-1.65) {(b) complete $XY$, $n = 4$, $k = 2$};
+  \end{scope}
+  % (c) the ring XY mixer: K_{2,4}
+  \begin{scope}[xshift=7.2cm]
+    \node[v] (r0101) at (0,1.6) {$0101$}; \node[v] (r1010) at (0,0.4) {$1010$};
+    \foreach \l [count=\i] in {0011,0110,1100,1001} \node[v] (r\l) at (1.9,{2.4-0.6*\i}) {$\l$};
+    \foreach \a in {0101,1010} \foreach \b in {0011,0110,1100,1001} \draw[e] (r\a) -- (r\b);
+    \node[lab] at (0.95,-0.65) {(c) ring $XY$, $n = 4$, $k = 2$};
+  \end{scope}
+  % (d) Grover on five feasible strings
+  \begin{scope}[xshift=1.1cm,yshift=-3.1cm]
+    \foreach \i in {1,...,5} \node[v] (g\i) at ({90+72*\i}:1.0) {$x_\i$};
+    \foreach \i in {1,...,5} \foreach \j in {1,...,5} {\ifnum\i<\j \draw[e] (g\i) -- (g\j);\fi}
+    \node[lab] at (0,-1.5) {(d) Grover, five feasible strings};
+  \end{scope}
+  % (e) a frozen qubit
+  \begin{scope}[xshift=4.3cm,yshift=-3.6cm]
+    \node[v] (w00) at (0,1.2) {$00$}; \node[v] (w01) at (1.4,1.2) {$01$};
+    \node[v] (w10) at (0,0) {$10$}; \node[v] (w11) at (1.4,0) {$11$};
+    \draw[e] (w00) -- (w01); \draw[e] (w10) -- (w11);
+    \node[lab] at (0.7,-1.0) {(e) warm start, $\theta_1 = 0$, $n = 2$};
+  \end{scope}
+  \node[note,anchor=north] at (4.3,-1.0) {regular, as are (a)\\and (d): the top\\eigenvector is uniform};
+  \node[note,anchor=north] at (8.15,-1.0) {degrees $4$ and $2$: the top\\eigenvector weights $0101$\\and $1010$ by $\sqrt2$ more};
+  \node[note,anchor=west] (m3) at (6.3,-3.0) {qubit $1$ is frozen: two components,\\and the condition of the theorem fails};
+  \draw[notearrow] (m3.west) to[bend left=10] (5.95,-3.0);
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The graphs $G(H_M|_{\mathcal S})$ of the mixers of Table~\ref{tab:ch06:mixers} on small instances: (a) the transverse field on $3$ qubits, the cube; (b) the complete $XY$ mixer on the strings of $4$ bits with two ones, the octahedron, in which each string is joined to all others except its complement; (c) the ring $XY$ mixer on the same strings, the complete bipartite graph $K_{2,4}$; (d) the Grover mixer, a complete graph; (e) the warm-start mixer with $\theta_1 = 0$ on two qubits.}\label{fig:ch06:mixergraphs}\end{figure}}
+\onp{\footnotesize Regular graphs have uniform top eigenvectors; a frozen qubit disconnects the graph.}
+\end{frame}
+
+\begin{frame}\ft{The Perron--Frobenius theorem}
+\onp{\footnotesize}
+\ona{The first tool is the Perron--Frobenius theorem. We need it only for symmetric matrices, for which the variational principle of \Chap~\chref{C.VQE} gives a short proof.}
+\begin{lem}[Perron--Frobenius]\label{lem:ch06:pf}
+Let $A$ be a real symmetric matrix with non-negative off-diagonal entries whose graph $G(A)$ is connected. Then the largest eigenvalue of $A$ is simple, and it has an eigenvector with positive entries.
+\end{lem}
+\ona{\emph{Proof.} Let $\lambda$ be the largest eigenvalue and $v$ a unit eigenvector. By the variational principle, $\lambda = \max_{\|u\| = 1}u^\top Au$, and a unit vector attains the maximum if and only if it is an eigenvector for $\lambda$. The vector $w$ with entries $w_i = |v_i|$ satisfies}
+\begin{equation*}
+    w^\top Aw = \sum_iA_{ii}v_i^2 + \sum_{i\ne j}A_{ij}|v_i||v_j| \;\ge\; v^\top Av = \lambda,
+\end{equation*}
+\ona{since $A_{ij}\ge0$ for $i\ne j$. Hence $w$ is also an eigenvector for $\lambda$. If $w_i = 0$, then $0 = (Aw)_i = \sum_{j\ne i}A_{ij}w_j$, and so $w_j = 0$ for every neighbour $j$ of $i$ in $G(A)$; since $G(A)$ is connected and $w\ne0$, no entry of $w$ vanishes. Thus every eigenvector for $\lambda$ has no zero entry. If the eigenspace had dimension two or more, a suitable combination of two independent eigenvectors would have a vanishing first entry, which is impossible. \qed}
+
+\onp{Proof: $|v|$ is also a maximiser of the Rayleigh quotient, hence an eigenvector; connectedness forbids zero entries; a two-dimensional eigenspace would contain a vector with a zero entry.}
+\ona{Both hypotheses are needed. A block-diagonal matrix with two equal blocks has a degenerate largest eigenvalue, and the matrix $\begin{psmallmatrix}0&-1\\-1&0\end{psmallmatrix}$ has the top eigenvector $(1,-1)/\sqrt2$, whose entries have both signs.}
+\end{frame}
+
+\begin{frame}\ft{The ground level is simple until the end}
+\onp{\footnotesize}
+\begin{propn}\label{propn:ch06:simple}
+Let $H_C$ be a phase separator and $H_M$ a mixer, and let $H(s) = -(1-s)H_M + sH_C$. For $0\le s<1$, the ground energy $\lambda_0(s)$ of $H(s)|_{\mathcal S}$ is simple, and the ground state has positive amplitudes on all feasible strings.
+\end{propn}
+\ona{\emph{Proof.} For $s<1$, the matrix $-H(s)|_{\mathcal S} = (1-s)H_M|_{\mathcal S} - sH_C|_{\mathcal S}$ has the same off-diagonal entries as $(1-s)H_M|_{\mathcal S}$, since $H_C$ is diagonal; they are non-negative, and its graph is $G(H_M|_{\mathcal S})$, which is connected. By Lemma~\ref{lem:ch06:pf}, the largest eigenvalue of $-H(s)|_{\mathcal S}$, which is $-\lambda_0(s)$, is simple, with a positive eigenvector. \qed}
+
+\ona{At $s = 1$ the Hamiltonian $H_C|_{\mathcal S}$ is diagonal, and its ground space $\mathcal S_{\rm opt}$ is degenerate whenever the optimum is not unique. For MaxCut this is always so, since the complement of a maximum cut is also a maximum cut. The ground level is therefore simple on $[0,1)$ and may become degenerate at $s = 1$, and only there (Fig.~\ref{fig:ch06:crossing}). In particular, the initial state, the ground state of $H_0|_{\mathcal S}$, is the positive top eigenvector of $H_M|_{\mathcal S}$, as listed in Table~\ref{tab:ch06:mixers}.}
+\onp{At $s = 1$ the ground level may be degenerate: for MaxCut it always is, since complements of maximum cuts are maximum cuts.}
+\end{frame}
+
+\mode<all>{\gdef\crossA#1{\begin{axis}[#1,width=\crW,height=\crH,clip=false,axis lines=left,xmin=0,xmax=1,ymin=-10.4,ymax=-5.5,xtick={0,0.5,1},xlabel={$s$},ylabel={energy},no markers,thick,title={\scriptsize (a) the four lowest levels}]
+  \addplot[blue!70!black] table[x=s,y=l3] {figures/ch06/crossing_spectrum.dat};
+  \addplot[blue!70!black] table[x=s,y=l2] {figures/ch06/crossing_spectrum.dat};
+  \addplot[orange!80!black] table[x=s,y=l1] {figures/ch06/crossing_spectrum.dat};
+  \addplot[red!70!black,very thick] table[x=s,y=l0] {figures/ch06/crossing_spectrum.dat};
+  \node[note,anchor=west] (a1) at (axis cs:0.03,-9.1) {ground level,\\simple for $s<1$};
+  \draw[notearrow] (a1.north) to[bend left=15] (axis cs:0.25,-7.62);
+  \node[note,anchor=west] (a3) at (axis cs:0.3,-9.95) {degenerate at $s = 1$};
+  \draw[notearrow] (a3.east) -- (axis cs:0.985,-10);
+\end{axis}}}
+\mode<all>{\gdef\crossB#1{\begin{axis}[#1,width=\crW,height=\crH,clip=false,axis lines=left,xmin=0,xmax=1,ymode=log,ymin=1e-7,ymax=5,xtick={0,0.5,1},xlabel={$s$},ylabel={gap},no markers,thick,title={\scriptsize (b) the gap above the ground level}]
+  \addplot[orange!80!black,restrict x to domain=0:0.93] table[x=s,y expr=\thisrow{l1}-\thisrow{l0}] {figures/ch06/crossing_spectrum.dat};
+  \addplot[green!40!black,dashed] table[x=s,y expr=\thisrow{l1}-\thisrow{l0}] {figures/ch04/maxcut_spectrum.dat};
+  \node[note,anchor=west] (b1) at (axis cs:0.03,2e-5) {all states: positive\\for $s<1$, but closing\\fast; the first excited\\level is odd};
+  \draw[notearrow] (b1.north east) to[bend right=20] (axis cs:0.8,1.2e-3);
+  \node[note,anchor=west] (b2) at (axis cs:0.03,1.5e-2) {even states (\Chap~\chref{C.Annealing}):\\at least $0.66$};
+  \draw[notearrow] (b2.north east) to[bend right=15] (axis cs:0.64,0.55);
+\end{axis}}}
+\begin{frame}\ft{The spectrum along the path}
+\ona{Figure~\ref{fig:ch06:crossing} shows the four lowest eigenvalues of $H(s)$ for the MaxCut instance of \Chap~\chref{C.Annealing}, a $3$-regular graph on $8$ vertices with maximum cut $10$, attained by the strings $01110010$ and $10001101$. On the full space of $8$ qubits the gap above the ground level is positive for $s<1$, as Proposition~\ref{propn:ch06:simple} asserts, but it closes rapidly as $s\to1$: it is $0.46$ at $s = 0.5$, about $10^{-3}$ at $s = 0.8$ and $2\cdot10^{-6}$ at $s = 0.9$. The first excited state, however, is odd under the flip $X^{\otimes n}$ of all spins, whereas $H(s)$ commutes with that flip and the initial state $\ket+^{\otimes n}$ is even; the evolution never reaches it. Restricted to even states, as in \Chap~\chref{C.Annealing}, the gap never falls below $0.66$. The data are computed by \texttt{code/ch06\_figures.py}.}
+\ona{\gdef\crW{0.46\linewidth}\gdef\crH{0.4\linewidth}}\onp{\gdef\crW{6.3cm}\gdef\crH{5.6cm}}
+\ona{\begin{figure}[htb]\centering\begin{tikzpicture}\crossA{name=lv}\crossB{at={(lv.east)},anchor=west,xshift=2.6cm}\end{tikzpicture}
+\caption{The path $H(s) = -(1-s)\sum_jX_j + sH_C$ for MaxCut on the $3$-regular graph of \Chap~\chref{C.Annealing}. (a) The four lowest eigenvalues on the full space of $8$ qubits; the two lowest meet at $s = 1$, where both maximum cuts have energy $-10$. (b) The gap between them on a logarithmic scale (orange), which is positive for $s<1$ but decreases rapidly, and the gap among states invariant under the flip of all spins (dashed), which is the one the evolution from $\ket+^{\otimes n}$ sees.}\label{fig:ch06:crossing}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\crossA{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item The path $H(s) = -(1-s)\sum_jX_j + sH_C$ for MaxCut on the $3$-regular graph with $8$ vertices of \Chap~\chref{C.Annealing}, whose maximum cut $10$ is attained by two complementary strings.
+    \item At $s = 0$ the ground state is $\ket+^{\otimes8}$, with energy $-8$; the next level is $-6$.
+    \item For $s<1$ the ground level (red) is simple, as the proposition asserts.
+    \item At $s = 1$ it meets the first excited level (orange): both maximum cuts have energy $-10$. For MaxCut this always happens, since the complement of a cut is a cut.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{The gap along the path}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\crossB{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item The gap between the two lowest levels, on a logarithmic scale (orange): $2$ at $s = 0$, $0.46$ at $s = 0.5$, $10^{-3}$ at $s = 0.8$, $2\cdot10^{-6}$ at $s = 0.9$. It is positive for $s<1$, but closes fast.
+    \item The first excited state is odd under the flip $X^{\otimes8}$ of all spins. $H(s)$ commutes with the flip and $\ket+^{\otimes8}$ is even, so the evolution never reaches the odd states.
+    \item Among the even states (dashed, as in \Chap~\chref{C.Annealing}) the gap is at least $0.66$, near $s = 0.67$: this is the gap that the evolution sees.
+    \item In general the ground level is degenerate at $s = 1$, and an adiabatic theorem without a gap condition is needed.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{Two adiabatic theorems}
+\onp{\footnotesize}
+\ona{The second tool is the adiabatic theorem. In the form of \Chap~\chref{C.Annealing}, it requires a gap: if $\Delta_{\min}>0$, a total time $T$ of the order of $1/\Delta_{\min}^2$ suffices, and the ground state is followed. If the optimum is unique, Proposition~\ref{propn:ch06:simple} gives $\Delta(s)>0$ on the closed interval $[0,1]$, hence $\Delta_{\min}>0$, and this form suffices. If the optimum is not unique, $\Delta(1) = 0$, and a theorem without a gap condition is needed. Such a theorem was first proved by \citet{avron1999adiabatic}; we use the version of \citet{Teufel2001}.}
+\begin{thm}[Adiabatic theorem without a gap condition, \citet{Teufel2001}]\label{thm:ch06:gapless}
+Let $s\mapsto H(s)$ be a twice continuously differentiable family of Hermitian matrices on $[0,1]$, and let $U_T(s)$ be the solution of $i\frac d{dt}U = H(t/T)\,U$, $U = \one$ at $t = 0$, evaluated at $t = sT$. Let $s\mapsto P(s)$ be a twice continuously differentiable family of orthogonal projections such that $H(s)P(s) = \lambda(s)P(s)$ for an eigenvalue $\lambda(s)$ of $H(s)$, and such that $P(s)$ is the spectral projection of $\lambda(s)$ for almost every $s$. Then
+\begin{equation*}
+    \lim_{T\to\infty}\,\sup_{0\le s\le1}\big\|(\one - P(s))\,U_T(s)\,P(0)\big\| = 0.
+\end{equation*}
+\end{thm}
+\ona{The projections $P(s)$ must be continued smoothly through the points at which the eigenvalue meets other eigenvalues; at those points $P(s)$ is a proper subprojection of the spectral projection. The theorem gives no rate.}
+\end{frame}
+
+\mode<all>{\gdef\rellichplot{\begin{tikzpicture}
+\begin{axis}[width=\rlW,height=\rlH,axis x line=middle,axis y line=none,xmin=-1.15,xmax=1.15,ymin=-1.2,ymax=1.2,xtick=\empty,ytick=\empty,xlabel={$s$},xlabel style={anchor=west},clip=false,no markers,samples=3]
+  \addplot[line width=4pt,gray!40,domain=-1:1] {-abs(x)};
+  \addplot[blue!70!black,thick,domain=-1:1] {x};
+  \addplot[orange!80!black,thick,domain=-1:1] {-x};
+  \node[note,anchor=west] at (axis cs:1.02,1) {$\lambda_1 = s$, $\ket0$};
+  \node[note,anchor=west] at (axis cs:1.02,-1) {$\lambda_2 = -s$, $\ket1$};
+  \node[note,anchor=north] (r1) at (axis cs:0,-1.02) {corner of $-|s|$};
+  \draw[notearrow] (r1.north) -- (axis cs:0,-0.05);
+\end{axis}
+\end{tikzpicture}}}
+\begin{frame}\ft{The theorem of Rellich}
+\onp{\scriptsize}
+\ona{The gapless adiabatic theorem asks for projections that are continued smoothly through the points at which eigenvalues meet. For an analytic family of Hermitian matrices, such as the path \eqref{eq:ch06:path}, they are provided by a theorem of \citet{rellich1937storungstheorie}, which we state in the form of \citet[Theorem~II.6.1]{Kato1995}.}
+\begin{thm}[\citet{rellich1937storungstheorie}]\label{thm:ch06:rellich}
+Let $s\mapsto H(s)$ be a family of Hermitian $N\times N$ matrices that depends analytically on $s$ in an open interval $J\subseteq\R$. Then there are analytic functions $\lambda_1,\dots,\lambda_m:J\to\R$, no two of them identical, and analytic families $P_1(s),\dots,P_m(s)$ of orthogonal projections, each of constant rank, such that $H(s) = \sum_k\lambda_k(s)P_k(s)$, $P_k(s)P_l(s) = 0$ for $k\ne l$ and $\sum_kP_k(s) = \one$ for every $s\in J$. Two of the functions $\lambda_k$ coincide only at isolated points of $J$, and away from these points $P_k(s)$ is the spectral projection of $H(s)$ for the eigenvalue $\lambda_k(s)$.
+\end{thm}
+\ona{The branches $\lambda_k$ are in general not the ordered eigenvalues. Listed in increasing order, the eigenvalues are continuous functions of $s$, but they have corners where two branches cross, and the corresponding eigenvectors may jump there (Figure~\ref{fig:ch06:rellich}). Analyticity cannot be weakened to smoothness. The family
+\begin{equation*}
+    H(s) = e^{-1/s^2}\begin{pmatrix}\cos(2/s) & \sin(2/s)\\ \sin(2/s) & -\cos(2/s)\end{pmatrix},\qquad H(0) = 0,
+\end{equation*}
+is infinitely differentiable. For $s\ne0$ its eigenvalues $\pm e^{-1/s^2}$ are simple, so that its eigenprojections are unique, and the eigenvector for $e^{-1/s^2}$ is $(\cos(1/s),\sin(1/s))$; the eigenprojections have no limit as $s\to0$. In the proof below, the theorem continues the branch of the ground level up to $s = 1$, where the optimum is in general degenerate.}
+\ona{\gdef\rlW{0.5\linewidth}\gdef\rlH{0.32\linewidth}}\onp{\gdef\rlW{4.4cm}\gdef\rlH{2.7cm}}
+\ona{\begin{figure}[htb]\centering\rellichplot\caption{The branches $\lambda_1(s) = s$ and $\lambda_2(s) = -s$ of $H(s) = \mathrm{diag}(s,-s)$, with the constant eigenvectors $\ket0$ and $\ket1$, are analytic. The lowest eigenvalue $-|s|$ (grey) is not differentiable at $s = 0$, and its eigenvector jumps there from $\ket0$ to $\ket1$.}\label{fig:ch06:rellich}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.58\textwidth}\begin{itemize}\setlength\itemsep{0.2em}
+    \item Ordering the eigenvalues loses analyticity: for $\mathrm{diag}(s,-s)$ the branches $\pm s$ are analytic, but the lowest eigenvalue $-|s|$, grey, has a corner, where its eigenvector jumps from $\ket0$ to $\ket1$.
+    \item Smoothness is not enough: $e^{-1/s^2}\left(\begin{smallmatrix}\cos(2/s) & \sin(2/s)\\ \sin(2/s) & -\cos(2/s)\end{smallmatrix}\right)$ is infinitely differentiable, but its eigenprojections have no limit at $s = 0$.
+    \item In the proof, the ground branch is continued through $s = 1$, where the optimum is degenerate.
+\end{itemize}\end{column}
+\begin{column}{0.4\textwidth}\rellichplot\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{Convergence of adiabatic optimization}
+\onp{\scriptsize}
+\begin{thm}[\citet{binkowski2023elementary}]\label{thm:ch06:qaa}
+Let $H_C$ be a phase separator and $H_M$ a mixer, let $\ket{\psi_0}$ be the ground state of $H_0|_{\mathcal S}$, $H_0 = -H_M$, and let $\ket{\psi(T)}$ be the state at time $T$ of the evolution along \eqref{eq:ch06:path} from $\ket{\psi_0}$. Then $\lim_{T\to\infty}\dist\big(\ket{\psi(T)},\mathcal S_{\rm opt}\big) = 0$.
+\end{thm}
+\ona{\emph{Proof.} All operators preserve $\mathcal S$, and we work in $\mathcal S$ throughout.}
+\begin{enumerate}\setlength\itemsep{0.1em}
+    \item By \ona{Proposition~\ref{propn:ch06:simple}}\onp{the proposition}, $\lambda_0(s)$ is simple for $0\le s<1$.
+    \item The family $s\mapsto H(s)$ is affine, hence analytic, and Hermitian for real $s$. By \ona{Theorem~\ref{thm:ch06:rellich}}\onp{Rellich's theorem}, its eigenvalues can be arranged into analytic branches $\lambda_k(s)$ on $\R$, with analytic families of orthogonal projections $P_k(s)$ of constant rank such that $H(s)P_k(s) = \lambda_k(s)P_k(s)$, and $P_k(s)$ is the spectral projection of $\lambda_k(s)$ except at the isolated points at which $\lambda_k$ meets another branch.
+    \item Let $\lambda_k$ be the branch with $\lambda_k(0) = \lambda_0(0)$. The set of $s\in[0,1)$ at which $\lambda_k(s) = \lambda_0(s)$ is closed, by continuity, and open, since $\lambda_0$ is simple there; hence it is $[0,1)$, and by continuity $\lambda_k(1) = \lambda_0(1)$. The projection $P_k$ has rank one, as at $s = 0$, so $P_k(1) = \ket u\!\bra u$ with $H_C\ket u = \lambda_0(1)\ket u$, that is, $\ket u\in\mathcal S_{\rm opt}$.
+    \item \ona{Theorem~\ref{thm:ch06:gapless}}\onp{The gapless adiabatic theorem} applies to $P_k$, which is the spectral projection of $\lambda_k$ on $[0,1)$. Since $P_k(0)\ket{\psi_0} = \ket{\psi_0}$, it gives $\|(\one - P_k(1))\ket{\psi(T)}\|\to0$, and $\dist(\ket{\psi(T)},\mathcal S_{\rm opt})\le\|(\one - P_k(1))\ket{\psi(T)}\|$, since $\ket u\in\mathcal S_{\rm opt}$. \qed
+\end{enumerate}
+\ona{If the optimum is unique, steps 2 and 3 are unnecessary, and the adiabatic theorem of \Chap~\chref{C.Annealing} gives a time $T$ of the order of $1/\Delta_{\min}^2$. In general the theorem says nothing about the time.}
+\end{frame}
+
+\begin{frame}\ft{Irreducibility is necessary}
+\onp{\footnotesize}
+\ona{The connectedness of $G(H_M|_{\mathcal S})$ cannot be dropped. Suppose that $H_M|_{\mathcal S}$ leaves invariant the span $\mathcal J$ of the strings in a set $J$, with $\emptyset\ne J\subsetneq S$. Since $H_M$ is Hermitian, it also leaves invariant the span $\mathcal J^\perp$ of the strings in $S\setminus J$, and so does every diagonal $H_C$. Every circuit \eqref{eq:ch06:qaoa}, and every adiabatic evolution, therefore preserves the weight $w = \|\Pi_{\mathcal J}\ket{\psi_0}\|^2$ of the initial state in $\mathcal J$.}
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item If $w<1$, choose an objective with a unique optimum $x^*\in J$. Then $|\braket{x^*|\psi}|^2\le w$ for every reachable state $\ket\psi$, which stays at distance at least $\sqrt{1-w}$ from $\mathcal S_{\rm opt}$.
+    \item If $w = 1$, choose the unique optimum in $S\setminus J$; it is never reached at all.
+\end{itemize}
+\ona{\citet{binkowski2023elementary} make this observation. The rounded warm start of \Chap~\chref{C.WSRounded} without regularisation is an example: a qubit with $c_j\in\{0,1\}$ is frozen, and if the optimum disagrees with the warm start on that qubit, it is never found. The non-negativity of the off-diagonal entries, by contrast, is used only to apply Lemma~\ref{lem:ch06:pf}; Binkowski et al.\ remark that generalisations of the Perron--Frobenius theorem to cone-preserving maps lead back to essentially the same conditions.}
+\onp{An invariant coordinate subspace is preserved by every layer; an objective whose optimum lies on the wrong side is never solved.}
+\end{frame}
 
 \begin{frame}\ft{Mixing families}
-\ona{Applications decompose the mixer into local terms, and the alternating operator ansatz exponentiates them separately. The right notion is:}
-\begin{defn}[Mixing family]\label{def:ch06c:family}
-A family $\{B_i\}_{i\in I} \subset \mathcal L(\mathcal H)$ is a \emph{mixing family} for a COP with solution space $\mathcal S$ iff each $B_i\mathcal S \subseteq \mathcal S$, each $B_i|_{\mathcal S}$ is component-wise non-negative, and any coordinate subspace of $\mathcal S$ invariant under \emph{every} $B_i$ is trivial.
+\onp{\scriptsize}
+\ona{In practice a mixer is a sum of local terms, $H_M = \sum_{i\in I}H_i$, and the circuit exponentiates the terms separately. The appropriate notion is the following.}
+\begin{defn}[\citet{binkowski2023elementary}]\label{defn:ch06:family}
+A family $\{H_i\}_{i\in I}$ of Hamiltonians is a \emph{mixing family} if each $H_i$ preserves $\mathcal S$, has real non-negative off-diagonal entries on $\mathcal S$, and the union of the graphs $G(H_i|_{\mathcal S})$ is connected.
 \end{defn}
-\begin{propn}\label{prop:ch06c:family}
-$\{B_i\}_{i\in I}$ is a mixing family iff $B_I \coloneqq \sum_{i\in I} B_i$ is a mixer.
+\begin{propn}\label{propn:ch06:family}
+$\{H_i\}_{i\in I}$ is a mixing family if and only if each $H_i$ preserves $\mathcal S$ with non-negative off-diagonal entries there and $\sum_{i\in I}H_i$ is a mixer.
 \end{propn}
-\ona{View each $B_i|_{\mathcal S}$ as the adjacency matrix of a graph $G_i$ on the feasible basis states. Non-negativity means no cancellations in the sum, so the graph of $B_I$ is the union of the $G_i$; triviality of common invariant coordinate subspaces means this union is connected, i.e., $B_I$ is irreducible. See Fig.~\ref{fig:ch06c:family}.}
-\end{frame}
+\ona{\emph{Proof.} Since the off-diagonal entries are non-negative, none cancel in the sum, and $G\big(\sum_iH_i|_{\mathcal S}\big) = \bigcup_iG(H_i|_{\mathcal S})$. \qed}
 
-\begin{frame}\ft{Mixing families: illustration}
-\begin{center}
-\begin{tikzpicture}[scale=0.75, every node/.style={scale=0.85}]
-    \node (z11) at (0,0) {$\ket{\boldsymbol z_{1}}$};
-    \node (z21) at (2.5,0) {$\ket{\boldsymbol z_{2}}$};
-    \node (z31) at (0,-2.5) {$\ket{\boldsymbol z_{3}}$};
-    \node (z41) at (2.5,-2.5) {$\ket{\boldsymbol z_{4}}$};
-    \draw (z11.east) -- (z21.west);
-    \draw (z31.east) -- (z41.west);
-    \node at (1.25,-3.3) {$G_{1}$};
-    \node at (4,-1.25) {\Large $\cup$};
-    \node (z12) at (5.5,0) {$\ket{\boldsymbol z_{1}}$};
-    \node (z22) at (8,0) {$\ket{\boldsymbol z_{2}}$};
-    \node (z32) at (5.5,-2.5) {$\ket{\boldsymbol z_{3}}$};
-    \node (z42) at (8,-2.5) {$\ket{\boldsymbol z_{4}}$};
-    \node at (6.75,-3.3) {$G_{2}$};
-    \draw (z12.south) -- (z32.north);
-    \draw (z32.east) -- (z42.west);
-    \node at (9.5,-1.25) {\Large $=$};
-    \node (z13) at (11,0) {$\ket{\boldsymbol z_{1}}$};
-    \node (z23) at (13.5,0) {$\ket{\boldsymbol z_{2}}$};
-    \node (z33) at (11,-2.5) {$\ket{\boldsymbol z_{3}}$};
-    \node (z43) at (13.5,-2.5) {$\ket{\boldsymbol z_{4}}$};
-    \draw (z13.east) -- (z23.west);
-    \draw (z13.south) -- (z33.north);
-    \draw (z33.east) -- (z43.west);
-    \node at (12.25,-3.3) {$G_{I}$};
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[every node/.style={font=\scriptsize},v/.style={circle,draw,thick,fill=white,inner sep=1.2pt},e1/.style={very thick,blue!70!black},e2/.style={very thick,orange!80!black}]
+  \foreach \dx/\nm/\lab in {0/A/{$G(H_1)$},3.3/B/{$G(H_2)$},6.6/C/{$G(H_1)\cup G(H_2)$}} {
+    \node[v] (a\nm) at (\dx,1.4) {$x_1$}; \node[v] (b\nm) at (\dx+1.6,1.4) {$x_2$};
+    \node[v] (c\nm) at (\dx,0) {$x_3$}; \node[v] (d\nm) at (\dx+1.6,0) {$x_4$};
+    \node at (\dx+0.8,-0.55) {\lab};
+  }
+  \draw[e1] (aA) -- (bA); \draw[e1] (cA) -- (dA);
+  \draw[e2] (aB) -- (cB); \draw[e2] (cB) -- (dB);
+  \draw[e1] (aC) -- (bC); \draw[e1] (cC) -- (dC); \draw[e2] (aC) -- (cC); \draw[e2] (cC) -- (dC);
+  \node at (2.45,0.7) {\large $\cup$}; \node at (5.75,0.7) {\large $=$};
+  \node[note,anchor=south] (n1) at (0.8,2.0) {two components:\\$H_1$ alone is no mixer};
+  \draw[notearrow] (n1.south) -- (0.8,1.52);
+  \node[note,anchor=south] (n2) at (4.1,2.0) {$x_2$ isolated:\\nor is $H_2$};
+  \draw[notearrow] (n2.south) to[bend left=15] (4.85,1.55);
+  \node[note,anchor=south] (n3) at (7.4,2.0) {connected: $\{H_1,H_2\}$\\is a mixing family};
+  \draw[notearrow] (n3.south) -- (7.4,1.52);
 \end{tikzpicture}
 \end{center}
-\ona{\begin{figure}[htb]\caption{Proof of Proposition~\ref{prop:ch06c:family}. The feasible subspace is spanned by $\ket{\boldsymbol z_1},\dots,\ket{\boldsymbol z_4}$. $B_1$ leaves $\spn\{\ket{\boldsymbol z_1},\ket{\boldsymbol z_2}\}$ and $\spn\{\ket{\boldsymbol z_3},\ket{\boldsymbol z_4}\}$ invariant; $B_2$ leaves $\spn\{\ket{\boldsymbol z_1},\ket{\boldsymbol z_3},\ket{\boldsymbol z_4}\}$ and $\spn\{\ket{\boldsymbol z_2}\}$ invariant; they share no proper invariant coordinate subspace, hence $B_1 + B_2$ is a mixer. After \citet{binkowski2023elementary}.}\label{fig:ch06c:family}\end{figure}}
-\onp{No common proper invariant coordinate subspace $\Leftrightarrow$ the union graph is connected $\Leftrightarrow$ $B_1 + B_2$ is a mixer.}
+\ona{\caption{Proposition~\ref{propn:ch06:family} on four feasible strings, after \citet{binkowski2023elementary}. Neither $H_1$ nor $H_2$ is a mixer, but the union of their graphs is connected, and so $H_1 + H_2$ is a mixer.}\label{fig:ch06:family}\end{figure}}
 \end{frame}
 
 \begin{frame}\ft{Simultaneous and sequential mixers}
-\begin{defn}\label{def:ch06c:mixers}
-Let $\mathsf H = \{H_i\}_{i\in I}$ be a mixing family. The \emph{simultaneous mixer} and, for a permutation $\sigma$ of $I$, the \emph{sequential mixer} are
-\begin{equation}
-    U_M^{\rm sim}(\mathsf H,\beta) \coloneqq e^{-i\beta\sum_{i\in I}H_i}, \qquad
-    U_M^{\rm seq}(\mathsf H,\beta) \coloneqq \prod_{i\in I} e^{-i\beta H_{\sigma(i)}}.
-\end{equation}
+\onp{\footnotesize}
+\begin{defn}[\citet{binkowski2023elementary}]\label{defn:ch06:mixers}
+For a mixing family $\{H_i\}_{i\in I}$ with $I = \{1,\dots,m\}$, the \emph{simultaneous mixer} and the \emph{sequential mixer} are
+\begin{equation*}
+    U_M^{\rm sim}(\beta) = e^{-i\beta\sum_{i}H_i},\qquad U_M^{\rm seq}(\beta) = e^{-i\beta H_1}e^{-i\beta H_2}\cdots e^{-i\beta H_m}.
+\end{equation*}
 \end{defn}
-\ona{Both fulfil the original demands of feasibility preservation and full mixing. The sequential mixer is what one implements: e.g., the $XY$ mixer for Hamming-weight constraints as a product of two-qubit exponentials, or the transverse field as a product of single-qubit $X$ rotations.}
-\begin{lem}[Products of nearby unitaries]\label{lem:ch06c:product}
-If $\|V_j - W_j\| < \varepsilon$ for unitaries $V_j, W_j$, $j = 1,\dots,m$, then $\big\|\prod_j V_j - \prod_j W_j\big\| < (1+\varepsilon)^m - 1$.
+\ona{For the transverse field the two coincide, since the $X_j$ commute. For the ring $XY$ mixer they differ: its terms do not commute, and one implements a sequential mixer, ordered for instance by the parity of the edges. Any ordering of the factors may be used. The difference between the two is controlled by a product formula with several terms, which follows from the first-order Trotter bound of \Chap~\chref{C.VQE}.}
+\begin{lem}\label{lem:ch06:trotter}
+For Hermitian $A_1,\dots,A_m$, $\big\|e^{-i(A_1+\cdots+A_m)} - e^{-iA_1}\cdots e^{-iA_m}\big\|\le\frac12\sum_{k<l}\|[A_k,A_l]\|$.
 \end{lem}
-\ona{Proof by induction: write $V_j = W_j + \varepsilon R_j$ with $\|R_j\| \le 1$; the product with $m+1$ factors differs from the one with $m$ factors by at most $\varepsilon \cdot \|\prod_{j\le m} V_j\| \le \varepsilon(1+\varepsilon)^m$.}
+\ona{\emph{Proof.} By induction on $m$. Write $R = A_2+\cdots+A_m$ and $W = e^{-iA_2}\cdots e^{-iA_m}$. By the first-order Trotter bound and the unitarity of $e^{-iA_1}$,}
+\ona{\begin{equation*}
+    \big\|e^{-i(A_1+R)} - e^{-iA_1}W\big\| \;\le\; \tfrac12\|[A_1,R]\| + \big\|e^{-iR} - W\big\|,
+\end{equation*}}
+\ona{where the commutator $\|[A_1,R]\|$ is at most $\sum_{l>1}\|[A_1,A_l]\|$, and the induction hypothesis bounds the last term by $\frac12\sum_{2\le k<l}\|[A_k,A_l]\|$. \qed}
 \end{frame}
 
-\begin{frame}\ft{Convergence of the QAOA}
-\begin{thm}[Convergence of QAOA, \citet{binkowski2023elementary}]\label{thm:ch06c:qaoa}
-Consider a COP with solution space $\mathcal S$, optimal solution space $\mathcal S_{\max}$, phase separator Hamiltonian $C$, and mixing family $\{B_i\}_{i\in I}$; let $U_P$ and $U_M$ be the corresponding phase separator and (simultaneous or sequential) mixer, and $\ket\iota \in \mathcal S$ a highest-energy state of $B_I|_{\mathcal S}$. Then for every $\varepsilon > 0$ there are finitely many parameters $\vec\beta,\vec\gamma$ such that
-\begin{equation}
-    \dist\big(\ket{\vec\beta,\vec\gamma},\ \mathcal S_{\max}\big) < \varepsilon, \qquad
-    \ket{\vec\beta,\vec\gamma} \coloneqq \Big(\prod_q U_M(\beta_q)U_P(\gamma_q)\Big)\ket\iota.
-\end{equation}
+\begin{frame}\ft{Convergence of QAOA}
+\onp{\footnotesize}
+\begin{thm}[\citet{binkowski2023elementary}]\label{thm:ch06:qaoa}
+Let $H_C$ be a phase separator and $\{H_i\}_{i\in I}$ a mixing family, $H_M = \sum_iH_i$, let $U_M$ be the simultaneous or a sequential mixer, and let $\ket{\psi_0}$ be the top eigenvector of $H_M|_{\mathcal S}$. Then for every $\varepsilon>0$ there are a depth $p$ and angles $\boldsymbol\beta,\boldsymbol\gamma$ such that
+\begin{equation*}
+    \dist\big(U_M(\beta_p)e^{-i\gamma_pH_C}\cdots U_M(\beta_1)e^{-i\gamma_1H_C}\ket{\psi_0},\ \mathcal S_{\rm opt}\big) < \varepsilon.
+\end{equation*}
 \end{thm}
-\ona{This contains the original QAOA (unconstrained, $B = \sum X^{(n)}$, $\ket\iota = \ket{+}^{\otimes N}$) and the warm-started QAOA of \Chap~\chref{C.WSRounded} whose mixer has the warm initial state as ground state, but \emph{not} the rounded warm start with the modified mixer, where the initial state is not an eigenstate of the mixer.}
+\ona{The theorem contains QAOA itself ($S = \{0,1\}^n$, $H_M = \sum_jX_j$, $\ket{\psi_0} = \ket+^{\otimes n}$), the alternating operator ansatz with the mixers of Table~\ref{tab:ch06:mixers}, provided that it starts from the top eigenvector of its mixer, and the warm start from a relaxation with all $c_j\in(0,1)$ of \Chap~\chref{C.WSContinuous}. It does not contain the rounded warm start with a modified mixer of \Chap~\chref{C.WSRounded}, whose initial state is not an eigenvector of the mixer.}
+\onp{Contains QAOA, the alternating operator ansatz from the top eigenvector of its mixer, and the continuous warm start; not the rounded warm start with a modified mixer.}
 \end{frame}
 
-\begin{frame}\ft{Proof of Theorem~\ref{thm:ch06c:qaoa}}
-\ona{Three steps: discretise the adiabatic evolution, split each step by a Lie product formula, and invoke Theorem~\ref{thm:ch06c:qaa}.}
-\begin{enumerate}\setlength\itemsep{0.2em}
-    \item By Proposition~\ref{prop:ch06c:family} $B_I$ is a mixer, so Theorem~\ref{thm:ch06c:qaa} gives $T$ with $\|(\one - P_1(1))U_T(1)\ket\iota\| < \varepsilon/2$. Let $\alpha \coloneqq \|\one - P_1(1)\| > 0$ (assume $\dim\mathcal S > 1$).
-    \item \emph{Discretise:} there is $m$ with $\big\|\prod_{j=1}^m W_j - U_T(1)\big\| < \varepsilon/(4\alpha)$, where $W_j \coloneqq \exp\!\big(-i\,H_{\rm lin}(j\tfrac{T}{m})\,j\tfrac{T}{m}\big)$.
-    \item \emph{Split:} by the (multivariate) Lie product formula, there is $n$ such that for all $j$,
-    \begin{equation*}
-        \Big\|\Big(\prod_{i\in I} e^{-i\frac{1-jT/m}{n}\,\frac{jT}{m}B_i}\ e^{-i\frac{(jT/m)^2}{n}C}\Big)^{n} - W_j\Big\| < \sqrt[m]{\tfrac{\varepsilon}{4\alpha}+1} - 1,
-    \end{equation*}
-    and similarly with $e^{-i(\cdots)B_I}$ for the simultaneous mixer. Each factor is $U_M(\beta)U_P(\gamma)$ for explicit angles $\beta = \frac{(1-jT/m)}{n}\frac{jT}{m}$, $\gamma = \frac{(jT/m)^2}{n}$; there are $q = nm$ layers.
-    \item By Lemma~\ref{lem:ch06c:product}, $\|V(\vec\beta,\vec\gamma) - \prod_j W_j\| < \varepsilon/(4\alpha)$, hence $\|V(\vec\beta,\vec\gamma) - U_T(1)\| < \varepsilon/(2\alpha)$, and
-    $\|(\one - P_1(1))\ket{\vec\beta,\vec\gamma}\| \le \alpha\cdot\frac{\varepsilon}{2\alpha} + \frac\varepsilon2 = \varepsilon$. Since $\operatorname{im}P_1(1) \subseteq \mathcal S_{\max}$, done. \qed
+\begin{frame}\ft{The three steps of the proof}
+\ona{Figure~\ref{fig:ch06:steps} develops the picture of the discretisation in \Chap~\chref{C.VQE} into the three steps of the proof. The first row is the adiabatic evolution, which by Theorem~\ref{thm:ch06:qaa} ends within $\varepsilon/2$ of $\mathcal S_{\rm opt}$ for $T$ large enough, and its staircase. The second row replaces each step of the staircase by a pulse of the phase separator and a pulse of the mixer. The third splits each pulse of the mixer into pulses of its terms, as a sequential mixer does. Each replacement costs at most the error written beside it, and with enough layers the three costs together are less than $\varepsilon/2$.}
+\ona{\begin{figure}[htb]}\begin{center}
+\ona{\gdef\stx{1.05cm}}\onp{\gdef\stx{0.92cm}}
+\begin{tikzpicture}[x=\stx,y=1cm,every node/.style={font=\scriptsize}]
+  \draw[-{Latex}] (0,0) -- (6.4,0) node[right] {$t$};
+  \draw[-{Latex}] (0,0) -- (0,2.4) node[above] {$s$};
+  \draw (0.07,2.0) -- (-0.07,2.0) node[left] {$1$};
+  \draw (6,0.07) -- (6,-0.07) node[below] {$T$};
+  \draw[thick,gray] (0,0) -- (6,2.0);
+  \foreach \k in {1,...,6} {\draw[very thick,blue!70!black] ({\k-1},{2.0*(\k-0.5)/6}) -- (\k,{2.0*(\k-0.5)/6});}
+  \begin{scope}[yshift=-1.3cm]
+    \foreach \k in {1,...,6} {
+      \pgfmathsetmacro{\sk}{(\k-0.5)/6}
+      \fill[orange!70] ({\k-1},0) rectangle ({\k-1+\sk},0.5);
+      \fill[blue!30] ({\k-1+\sk},0) rectangle (\k,0.5);
+      \draw ({\k-1},0) rectangle (\k,0.5);
+    }
+    \node[anchor=east] at (-0.1,0.25) {pulses};
+  \end{scope}
+  \begin{scope}[yshift=-2.4cm]
+    \foreach \k in {1,...,6} {
+      \pgfmathsetmacro{\sk}{(\k-0.5)/6}
+      \pgfmathsetmacro{\w}{(1-\sk)/3}
+      \fill[orange!70] ({\k-1},0) rectangle ({\k-1+\sk},0.5);
+      \fill[blue!15] ({\k-1+\sk},0) rectangle ({\k-1+\sk+\w},0.5);
+      \fill[blue!35] ({\k-1+\sk+\w},0) rectangle ({\k-1+\sk+2*\w},0.5);
+      \fill[blue!55] ({\k-1+\sk+2*\w},0) rectangle (\k,0.5);
+      \draw ({\k-1},0) rectangle (\k,0.5);
+      \node at ({\k-0.5},-0.22) {$k = \k$};
+    }
+    \node[anchor=east] at (-0.1,0.25) {terms};
+  \end{scope}
+  \node[note,anchor=west] (p1) at (6.7,2.3) {step 1: the evolution along $s = t/T$,\\within $\varepsilon/2$ of $\mathcal S_{\rm opt}$ for large $T$};
+  \draw[notearrow] (p1.west) to[bend right=15] (4.3,1.45);
+  \node[note,anchor=west] (p2) at (6.7,1.05) {step 2, the staircase: an error of at\\most $T\|H_M + H_C\|/2L$};
+  \draw[notearrow] (p2.west) to[bend left=10] (5.6,1.85);
+  \node[note,anchor=west] (p3) at (6.7,-1.05) {step 2, the alternation: $H_C$ for $\gamma_k$, then\\$-H_M$ for $\beta_k$; at most $T^2\|[H_M,H_C]\|/8L$};
+  \draw[notearrow] (p3.west) -- (6.03,-1.05);
+  \node[note,anchor=west] (p4) at (6.7,-2.15) {step 3, a sequential mixer: $-H_1,\dots,-H_m$\\in turn; at most $T^2\sum_{i<i'}\|[H_i,H_{i'}]\|/2L$};
+  \draw[notearrow] (p4.west) -- (6.03,-2.15);
+  \node[note,anchor=north] at (3.0,-2.85) {QAOA of depth $L = 6$ at the angles $(-\boldsymbol\beta,\boldsymbol\gamma)$ of the schedule:\\the errors add, and decrease as $1/L$};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The three steps of the proof of Theorem~\ref{thm:ch06:qaoa} for $L = 6$, developing the picture of the discretisation in \Chap~\chref{C.VQE}. Top: the linear schedule (grey) and its staircase at the midpoints (blue). Middle: each step as a pulse of $H_C$ for $\gamma_k = s_k\Delta t$ (orange) followed by a pulse of $-H_M$ for $\beta_k = (1-s_k)\Delta t$ (blue), the simultaneous mixer. Bottom: the pulse of the mixer split into its terms $-H_1$, $-H_2$, $-H_3$ (shades of blue), the sequential mixer; each term acts for the time $\beta_k$, and the drawing is not to scale in time.}\label{fig:ch06:steps}\end{figure}}
+\onp{\footnotesize Adiabatic evolution, staircase, alternation, splitting of the mixer: each step costs $\mathcal O(1/L)$.}
+\end{frame}
+
+\begin{frame}\ft{Proof of the convergence of QAOA}
+\onp{\scriptsize}
+\ona{\emph{Proof.} Let $\varepsilon>0$, $H_0 = -H_M$ and $H_1 = H_C$. All operators preserve $\mathcal S$.}
+\begin{enumerate}\setlength\itemsep{0.15em}
+    \item \emph{The adiabatic evolution.} By \ona{Proposition~\ref{propn:ch06:family}}\onp{the proposition on mixing families}, $H_M$ is a mixer, and $\ket{\psi_0}$ is the ground state of $H_0|_{\mathcal S}$. By \ona{Theorem~\ref{thm:ch06:qaa}}\onp{the convergence of adiabatic optimization} there is a time $T$ with $\dist(\ket{\psi(T)},\mathcal S_{\rm opt})<\varepsilon/2$.
+    \item \emph{The discretisation.} With $L$ layers, $\Delta t = T/L$, $s_k = (k-\frac12)/L$, $\gamma_k = s_k\Delta t$ and $\beta_k = (1-s_k)\Delta t$, the bound on the error of the discretisation in \Chap~\chref{C.VQE}, with $H_1 - H_0 = H_M + H_C$ and $\|[H_0,H_1]\| = \|[H_M,H_C]\|$, gives
+    \begin{equation}\label{eq:ch06:disc}
+        \Big\|\ket{\psi(T)} - e^{-i\beta_LH_0}e^{-i\gamma_LH_1}\cdots e^{-i\beta_1H_0}e^{-i\gamma_1H_1}\ket{\psi_0}\Big\| \;\le\; \frac{T\,\|H_M + H_C\|}{2L} + \frac{T^2\,\|[H_M,H_C]\|}{8L}.
+    \end{equation}
+    Since $e^{-i\beta_kH_0} = U_M^{\rm sim}(-\beta_k)$, this is the circuit of the theorem, with the simultaneous mixer, at the angles $(-\boldsymbol\beta,\boldsymbol\gamma)$.
+    \item \emph{The splitting of the mixer.} The sequential mixer $U_M^{\rm seq}(-\beta_k)$ differs from $U_M^{\rm sim}(-\beta_k)$ by at most $\frac12\beta_k^2\sum_{i<i'}\|[H_i,H_{i'}]\|$, by \ona{Lemma~\ref{lem:ch06:trotter}}\onp{the lemma}. Since errors of products of unitaries add, and $\beta_k\le\Delta t$, the $L$ layers add at most $T^2\sum_{i<i'}\|[H_i,H_{i'}]\|/(2L)$.
+    \item \emph{The conclusion.} Choose $L$ so large that the right-hand side of \eqref{eq:ch06:disc}, plus the term of step 3 for a sequential mixer, is less than $\varepsilon/2$. Since the distance to a subspace changes by at most the norm of the change of the vector, the state of depth $p = L$ lies within $\varepsilon$ of $\mathcal S_{\rm opt}$. \qed
 \end{enumerate}
+\ona{Binkowski et al.\ take the same three steps, but obtain steps 2 and 3 from the Lie product formula $e^{A+B} = \lim_{m\to\infty}(e^{A/m}e^{B/m})^m$ and its version for several factors \citep[Problem~IX.8.5]{bhatia1997matrix}, which give the existence of the depth without a bound. The bounds of \Chap~\chref{C.VQE} make the depth explicit, given $T$.}
 \end{frame}
 
-\section{Discussion}
+\mode<all>{\gdef\proofA#1{\begin{axis}[#1,width=\pnW,height=\pnH,clip=false,axis lines=left,xmode=log,ymode=log,xmin=1,xmax=256,ymin=0.02,ymax=1.3,xtick={1,4,16,64,256},xticklabels={$1$,$4$,$16$,$64$,$256$},xlabel={depth $L$},ylabel={$\dist(\ket{\psi_L},\mathcal S_{\rm opt})$},no markers,thick,title={\scriptsize (a) MaxCut, transverse field}]
+  \addplot[blue!30] table[x=L,y=T5] {figures/ch06/proof_maxcut.dat};
+  \addplot[blue!50] table[x=L,y=T10] {figures/ch06/proof_maxcut.dat};
+  \addplot[blue!75] table[x=L,y=T20] {figures/ch06/proof_maxcut.dat};
+  \addplot[blue!100!black] table[x=L,y=T40] {figures/ch06/proof_maxcut.dat};
+  \draw[densely dashed,gray] (axis cs:1,0.891) -- (axis cs:256,0.891);
+  \draw[densely dashed,gray] (axis cs:1,0.650) -- (axis cs:256,0.650);
+  \draw[densely dashed,gray] (axis cs:1,0.244) -- (axis cs:256,0.244);
+  \draw[densely dashed,gray] (axis cs:1,0.0543) -- (axis cs:256,0.0543);
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.891) {$T = 5$};
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.650) {$T = 10$};
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.244) {$T = 20$};
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.0543) {$T = 40$};
+  \ona{\node[note,anchor=west] (q1) at (axis cs:1.2,0.08) {dashed: the continuous\\evolution, step 1};
+  \draw[notearrow] (q1.north east) to[bend right=15] (axis cs:30,0.239);
+  \node[note,anchor=west] (q2) at (axis cs:1.2,0.03) {the schedule at depth $L$:\\steps 2 and 3};
+  \draw[notearrow] (q2.east) to[bend right=15] (axis cs:70,0.066);}
+\end{axis}}}
+\mode<all>{\gdef\proofB#1{\begin{axis}[#1,width=\pnW,height=\pnH,clip=false,axis lines=left,xmode=log,ymode=log,xmin=1,xmax=256,ymin=0.02,ymax=1.3,xtick={1,4,16,64,256},xticklabels={$1$,$4$,$16$,$64$,$256$},xlabel={depth $L$},no markers,thick,title={\scriptsize (b) bisection, ring $XY$ mixer}]
+  \addplot[blue!40] table[x=L,y=sim5] {figures/ch06/proof_bisection.dat};
+  \addplot[orange!60,densely dotted] table[x=L,y=seq5] {figures/ch06/proof_bisection.dat};
+  \addplot[blue!100!black] table[x=L,y=sim20] {figures/ch06/proof_bisection.dat};
+  \addplot[orange!90!black] table[x=L,y=seq20] {figures/ch06/proof_bisection.dat};
+  \draw[densely dashed,gray] (axis cs:1,0.328) -- (axis cs:256,0.328);
+  \draw[densely dashed,gray] (axis cs:1,0.0327) -- (axis cs:256,0.0327);
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.328) {$T = 5$};
+  \node[font=\tiny,anchor=west] at (axis cs:270,0.0327) {$T = 20$};
+  \node[note,anchor=south east] (q3) at (axis cs:250,0.0205) {simultaneous mixer, $T = 20$};
+  \draw[notearrow] (q3.north west) to[bend left=20] (axis cs:40,0.0325);
+  \node[note,anchor=south west] (q4) at (axis cs:40,0.55) {sequential mixer:\\the error of step 3};
+  \draw[notearrow] (q4.south) to[bend left=10] (axis cs:128,0.1);
+\end{axis}}}
+\begin{frame}\ft{The proof in numbers: MaxCut}
+\ona{Figure~\ref{fig:ch06:proofnum} follows the proof on two small instances, at the angles of the schedule. For MaxCut on the graph of \Chap~\chref{C.Annealing}, with the transverse field, the distance of the continuous evolution from $\mathcal S_{\rm opt}$ decreases with $T$, from $0.89$ at $T = 5$ to $0.054$ at $T = 40$ (step 1), and the distance of QAOA at the angles of the schedule approaches it as the depth grows (steps 2 and 3); the longer the evolution, the more layers are needed: the distance comes within ten per cent of its limit from depth $2$, $8$, $32$ and $128$ for $T = 5$, $10$, $20$ and $40$, so that the depth needed grows as $T^2$. For the maximum bisection of the triangular prism, with the feasible strings of three ones and the ring $XY$ mixer started from its top eigenvector, the sequential mixer approaches the limit more slowly than the simultaneous one, by the error of step 3: at $T = 20$ the simultaneous mixer comes within ten per cent of the limit $0.033$ from depth $24$, while the sequential one is still at $0.057$ at depth $256$. In both cases the decrease is faster than the $1/L$ of the bound. The data are computed by \texttt{code/ch06\_figures.py}.}
+\ona{\gdef\pnW{0.43\linewidth}\gdef\pnH{0.4\linewidth}}\onp{\gdef\pnW{5.3cm}\gdef\pnH{5.4cm}}
+\ona{\begin{figure}[htb]\centering\begin{tikzpicture}\proofA{name=pa}\proofB{at={(pa.east)},anchor=west,xshift=1.7cm}\end{tikzpicture}
+\caption{The distance from the optimal subspace of QAOA of depth $L$ at the angles of the midpoint schedule, on logarithmic scales; dashed, the distance of the continuous evolution for the same $T$. (a) MaxCut on the $3$-regular graph with $8$ vertices of \Chap~\chref{C.Annealing}, transverse field, $T = 5$, $10$, $20$, $40$ (light to dark). (b) Maximum bisection of the triangular prism on the $20$ strings with three ones, ring $XY$ mixer from its top eigenvector, simultaneous (blue) and sequential (orange, even edges and then odd edges) mixer, $T = 5$ (light) and $T = 20$ (dark).}\label{fig:ch06:proofnum}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\proofA{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item MaxCut on the $3$-regular graph with $8$ vertices of \Chap~\chref{C.Annealing}, with the transverse field, from $\ket+^{\otimes8}$.
+    \item Dashed: the continuous evolution for $T = 5$, $10$, $20$, $40$. Its distance from $\mathcal S_{\rm opt}$ falls from $0.89$ to $0.054$ (step 1).
+    \item Solid, light to dark: QAOA of depth $L$ at the angles of the midpoint schedule for the same $T$. It approaches the dashed limit as $L$ grows (steps 2 and 3), faster than the $1/L$ of the bound.
+    \item It comes within $10\%$ of the limit from $L = 2$, $8$, $32$, $128$: the depth needed grows as $T^2$.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
 
-\begin{frame}\ft{What the proof gives, and what it does not}
+\begin{frame}\ft{The proof in numbers: bisection}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\proofB{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item Maximum bisection of the triangular prism: the $20$ strings with three ones, the ring $XY$ mixer, from its top eigenvector, which is not uniform.
+    \item Simultaneous mixer (blue) and sequential mixer, even edges and then odd edges (orange); $T = 5$ light, $T = 20$ dark.
+    \item Dashed: the continuous evolution, at distance $0.33$ and $0.033$ from $\mathcal S_{\rm opt}$ (step 1).
+    \item At $T = 20$ the simultaneous mixer is within $10\%$ of the limit from $L = 24$; the sequential one is still at $0.057$ at $L = 256$. The difference is the error of step 3, which splitting the mixer adds.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{The scope of the convergence theorem}
+\onp{\footnotesize}
+\ona{The theorem settles the question of expressivity, and it does so constructively. If the angles of the proof could be computed, the convergence of QAOA would follow; the question is whether they can.}
 \begin{itemize}\setlength\itemsep{0.3em}
-    \item \textbf{Fewer assumptions.} Multiple optima are allowed; non-trivial feasibility structures $\mathcal S \subsetneq \mathcal H$ are covered; sequential mixers are covered.
-    \item \textbf{Sharp definitions.} Irreducibility of $B|_{\mathcal S}$ is \emph{necessary} in the sense that with a non-trivial invariant coordinate subspace there is an objective for which neither QAA nor QAOA can approximate an optimum. Component-wise non-negativity is sufficient but not necessary; more general Perron--Frobenius theorems for cone-preserving maps lead essentially back to the same conditions.
-    \item \textbf{The same notions recur} when one encodes classical feasibility symmetries into QAOA, which suggests they capture the principle correctly.
-    \item \textbf{No rate.} The proof is existential: the angles come from a Trotterised adiabatic schedule with $q = nm$ layers, and nothing is said about how large $q$ must be. Rates would require gap estimates, which vanish at $t\to1$ with multiple optima; results on the rate in gapless adiabatic theorems are a promising avenue.
+    \item Given $T$, the angles are explicit, $\gamma_k = s_k\Delta t$ and $\beta_k = (1-s_k)\Delta t$ with $\Delta t = T/p$, and so is the depth: $p = \mathcal O\big((T\|H_M + H_C\| + T^2\|[H_M,H_C]\|)/\varepsilon\big)$ for the simultaneous mixer. For MaxCut, $\|H_C\|\le|E|$, $\|H_M\| = n$ and $\|[H_M,H_C]\|\le2|E|$.
+    \item A value of $T$ that suffices is not known. With a unique optimum, $T$ of the order of $1/\Delta_{\min}^2$ suffices, and the depth is polynomial if the gap is inverse-polynomial; but the gap is not known in advance (\Chap~\chref{C.Annealing}), and on hard instances it is exponentially small. Without a unique optimum, the theorem gives no rate at all.
+    \item With the angles of the proof, QAOA is a discretisation of adiabatic optimization, and it inherits both the guarantee and the unknown running time of the latter. Whatever advantage the freedom in the angles offers must be sought at lower depths.
+    \item The conditions are sharp in one respect: irreducibility cannot be dropped. The initial state must be the extremal eigenvector of the mixer, which excludes some warm starts.
 \end{itemize}
-\ona{The existential nature of the guarantee is exactly why the practical questions of \Chaps~\chref{C.IterationComplexity}--\chref{C.WSRounded} matter: at fixed small depth, everything depends on how the angles are chosen and where one starts.}
 \end{frame}
 
+\begin{frame}\ft{The angles at low depth}
+\onp{\footnotesize}
+\ona{At low depth the angles of the proof are poor. In Figure~\ref{fig:ch06:proofnum}(a), on eight qubits, none of the four schedules raises the probability of an optimal cut, $1 - \dist(\ket{\psi_L},\mathcal S_{\rm opt})^2$, above $0.25$ up to depth six; the best of them reaches $0.96$ at depth $32$ and $0.994$ at depth $48$.}
+\onp{In the MaxCut example, the four schedules give an optimal cut with probability at most $0.25$ up to depth six, and $0.994$ at depth $48$.}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item At a fixed low depth, better angles must be found by search, which is training QAOA, $\mathbf{NP}$-hard in the worst case (\Chap~\chref{C.VQE}). The theorem is consistent with that result, since the depth it gives grows with $T$.
+    \item The angles of the proof remain useful as a starting point for the search, as the discretised schedule was for VQE in \Chap~\chref{C.VQE}. Schedules of this kind, with $T$ or the slopes left free, are among the most successful rules for setting the angles\ona{ (Section~\ref{sec:ch06:angles})}.
+    \item The rest of the \chap{} concerns the methods proposed for finding the angles: the optimizers that search for them\ona{ (Section~\ref{sec:ch06:optim})}, the rules that set them\ona{ (Section~\ref{sec:ch06:angles})}, and the variants of the circuit and of the loop that change what must be found\ona{ (Section~\ref{sec:ch06:variants})}. None comes with a guarantee of the kind that the theorem gives.
+\end{itemize}
+\end{frame}
+
+\section{Optimising the angles}\label{sec:ch06:optim}
+
+\begin{frame}\ft{The problem the optimizer faces}
+\onp{\footnotesize}
+\ona{Since the angles of the proof are of use only at a depth that grows with the unknown time $T$, in practice the depth is fixed and small, and the angles are found by search. The optimizer minimises $F(\boldsymbol\theta)$ over $\boldsymbol\theta = (\boldsymbol\beta,\boldsymbol\gamma)\in\R^d$, $d = 2p$. The function is smooth, indeed a trigonometric polynomial in each angle, and periodic if the spectra of $H_C$ and $H_M$ are integral. It is, however, available only through estimates, and estimates are expensive. In the worked example of \Chap~\chref{C.VQE}, one energy required $M = 1000$ copies for a standard error of $0.03$, and one gradient $16$ circuits, two for each gate that depends on an angle; the parameter-shift rule behind this is the subject of \Chap~\chref{C.PSR}. A Hessian has $d(d+1)/2$ entries, each of which requires several circuits. With a latency of seconds for each circuit submitted (\Chap~\chref{C.PerIteration}), the number of circuits, rather than the number of iterations, is the cost to be minimised.}
+\onp{At a fixed low depth the angles are found by search.}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item \emph{Derivative-free} methods use only values of $F$.
+    \item \emph{Gradient} and \emph{quasi-Newton} methods use gradients, the latter building a model of the curvature from successive gradients.
+    \item \emph{Second-order} methods use, in addition, the Hessian or a metric.
+\end{itemize}
+\ona{Their iteration complexity under noisy and biased estimates is the subject of \Chap~\chref{C.IterationComplexity}; here we give a short overview. Standard references are \citet{nocedal2006numerical} and, for derivative-free methods, \citet{conn2009introduction}.}
+\end{frame}
+
+\begin{frame}\ft{Derivative-free and trust-region methods}
+\onp{\footnotesize}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \emph{Trust-region methods} minimise a model of $F$ within a ball of radius $\delta_k$ around the iterate, accept the step if the decrease of $F$ is a fair fraction of the decrease of the model, and enlarge or shrink $\delta_k$ accordingly. \ona{\emph{COBYLA} \citep{powell1994direct} builds linear models of the objective and of the constraints by interpolation at the $d+1$ vertices of a simplex, and lets the radius decrease from an initial value to a final one; an iteration costs one evaluation. It is the method used throughout the comparison of \citet{guo2026setting}, with an initial radius of $0.2$. Methods of this kind converge to stationary points if the models are accurate enough on the trust region \citep{conn2009introduction}.}\onp{COBYLA \citep{powell1994direct} uses linear interpolation models and one evaluation per iteration; it is used throughout \citet{guo2026setting}.}
+    \item \ona{The \emph{stochastic trust-region method} STORM \citep{chen2018stochastic} works with estimates: it requires models, built from estimated values or gradients, that are accurate to within a multiple of $\delta_k$ with a fixed probability, and estimates of $F$ accurate to within a multiple of $\delta_k^2$. The number of measured copies therefore grows as the radius shrinks, as $1/\delta_k^2$ for gradients and $1/\delta_k^4$ for values. The expected number of iterations to reach $\|\nabla F\|\le\epsilon$ is $\mathcal O(\epsilon^{-2})$, as for the deterministic method \citep{blanchet2019convergence}.}\onp{STORM \citep{chen2018stochastic}: models and values accurate to within multiples of $\delta_k$ and $\delta_k^2$, with probability; copies grow as $\delta_k$ shrinks; $\mathcal O(\epsilon^{-2})$ expected iterations \citep{blanchet2019convergence}.}
+    \item \emph{SPSA} \citep{spall1992multivariate} estimates the whole gradient from two evaluations, $\hat g_i = (F(\boldsymbol\theta + c\boldsymbol\Delta) - F(\boldsymbol\theta - c\boldsymbol\Delta))/(2c\Delta_i)$, with a random perturbation $\boldsymbol\Delta\in\{\pm1\}^d$\ona{, and takes a step of stochastic gradient descent; with suitably decreasing gains it converges almost surely. Its cost per iteration does not grow with $d$, which suits noisy estimates; it is analysed in \Chap~\chref{C.IterationComplexity}}\onp{; see \Chap~\chref{C.IterationComplexity}}.
+    \item \emph{Surrogate} methods fit a model to all evaluations so far\ona{, a Gaussian process in Bayesian optimisation, and choose the next point by optimising an acquisition function; the trust-region Bayesian method of \citet{Cheng2024} is designed for QAOA with finite numbers of shots}\onp{, as in trust-region Bayesian optimisation for QAOA \citep{Cheng2024}}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\ft{Quasi-Newton methods}
+\onp{\footnotesize}
+\ona{A quasi-Newton method takes steps $\boldsymbol\theta_{k+1} = \boldsymbol\theta_k - \alpha_kB_k^{-1}\nabla F(\boldsymbol\theta_k)$ with an approximation $B_k$ of the Hessian, updated from the change of the gradient. With $s_k = \boldsymbol\theta_{k+1} - \boldsymbol\theta_k$ and $y_k = \nabla F(\boldsymbol\theta_{k+1}) - \nabla F(\boldsymbol\theta_k)$, the new approximation is required to satisfy the \emph{secant equation} $B_{k+1}s_k = y_k$, which a quadratic function satisfies exactly. The Broyden--Fletcher--Goldfarb--Shanno (BFGS) update of the inverse $H_k = B_k^{-1}$ is \citep[Chapter~6]{nocedal2006numerical}}
+\begin{equation}\label{eq:ch06:bfgs}
+    H_{k+1} = \big(\one - \rho_k s_ky_k^\top\big)\,H_k\,\big(\one - \rho_k y_ks_k^\top\big) + \rho_k s_ks_k^\top,\qquad \rho_k = \frac1{y_k^\top s_k}.
+\end{equation}
+\begin{itemize}\setlength\itemsep{0.2em}
+    \item If $y_k^\top s_k>0$, which a line search satisfying the Wolfe conditions ensures, $H_{k+1}$ is positive definite and the step is a descent direction.
+    \item Near a minimiser with positive definite Hessian, BFGS converges superlinearly, at the cost of one gradient for each iteration, plus the evaluations of the line search.
+    \item The limited-memory variant L-BFGS keeps only the last $m$ pairs $(s_k,y_k)$, with storage and work $\mathcal O(md)$.
+    \item With estimated gradients, $y_k$ is a difference of two noisy vectors. When the steps are short compared with the noise, it carries little information about the curvature, and the model can be corrupted; quasi-Newton methods therefore require accurate gradients, or differencing over longer steps.
+\end{itemize}
+\ona{In the comparison of \citet{guo2026setting}, BFGS is used within the transition-state method of \citet{Sack2023}, where it is started from saddle points of the landscape at the next depth.}
+\end{frame}
+
+\begin{frame}\ft{Second-order methods}
+\onp{\footnotesize}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \emph{Newton's method} solves $\nabla^2F(\boldsymbol\theta_k)\,s_k = -\nabla F(\boldsymbol\theta_k)$. Near a minimiser with positive definite Hessian it converges quadratically \citep[Chapter~3]{nocedal2006numerical}. Far from one, the Hessian may be indefinite, as near the saddle points of the worked example of \Chap~\chref{C.VQE}, and the Newton step may lead uphill.
+    \item \emph{Trust-region} and \emph{cubic regularisation} methods safeguard the Newton step. Cubic regularisation minimises the second-order model plus $\frac M6\|s\|^3$; it finds a point with $\|\nabla F\|\le\epsilon$ and $\lambda_{\min}(\nabla^2F)\ge-\sqrt{M\epsilon}$ in $\mathcal O(\epsilon^{-3/2})$ iterations, and so escapes strict saddle points \citep{nesterov2006cubic}. Such a point need not be near a local minimiser, as the degenerate saddle points of \Chap~\chref{C.VQE} show.
+    \item The \emph{natural gradient} \citep{amari1998natural} preconditions the gradient by a metric on the parameters rather than by the Hessian. The \emph{quantum natural gradient} \citep{Stokes2020quantumnatural} uses the Fubini--Study metric of the states, $g_{ij} = \mathrm{Re}\big(\braket{\partial_i\psi|\partial_j\psi} - \braket{\partial_i\psi|\psi}\!\braket{\psi|\partial_j\psi}\big)$, and steps $\boldsymbol\theta_{k+1} = \boldsymbol\theta_k - \alpha g^{-1}\nabla F$; a block-diagonal approximation, one block for each layer, can be estimated from measurements of the generators.
+\end{itemize}
+\ona{All three require of the order of $d^2$ quantities in addition to the gradient, and each must be estimated from measurements; for QAOA with few layers this is affordable, but the estimates must be more accurate than those of the gradient, since errors in the Hessian or the metric are amplified when they are inverted.}
+\end{frame}
+
+\mode<all>{\gdef\opttab#1#2#3#4#5{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}>{\raggedright\arraybackslash}p{#5\linewidth}@{}}\toprule
+method & information & evaluations per iteration, $d$ parameters & local convergence & guarantee \\\midrule
+COBYLA, model-based trust region & values & $1$, after $d+1$ & to stationary points & if the models are accurate \\
+STORM, stochastic trust region & estimated values and gradients & a gradient and two values, with copies growing as $\delta_k$ shrinks & to stationary points & $\mathcal O(\epsilon^{-2})$ expected iterations \\
+SPSA & values & $2$ & almost sure, under decreasing gains & \Chap~\chref{C.IterationComplexity} \\
+gradient descent & gradient & $2$ circuits for each gate & linear, if strongly convex & \Chap~\chref{C.IterationComplexity} \\
+BFGS, L-BFGS & gradients & a gradient and a line search & superlinear & needs accurate gradients \\
+Newton & gradient, Hessian & of the order of $d^2$ & quadratic & may go uphill \\
+cubic regularisation & gradient, Hessian & of the order of $d^2$ & approximate second-order points & $\mathcal O(\epsilon^{-3/2})$ iterations \\
+quantum natural gradient & gradient, metric & of the order of $d^2$, or block-diagonal & invariant under reparametrisation & -- \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{The optimizers compared}
+\ona{Table~\ref{tab:ch06:optimizers} summarises the methods. No single one dominates: derivative-free methods are cheap per iteration and robust, but slow in many dimensions; quasi-Newton and second-order methods converge fast near a minimiser, but require accurate derivatives, each of which costs many circuits. At the depths used in practice, a few tens of angles, the cost is dominated by the number of circuits and their latency, which is why the rules of the next section, which set the angles with little or no search, are preferred in practice.}
+\onp{\begin{center}\tiny\opttab{0.16}{0.12}{0.21}{0.21}{0.2}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Classical optimizers for the angles of QAOA, for $d$ angles. ``Evaluations'' counts estimates of $F$; a gradient by shifted circuits requires two circuits for each gate that depends on an angle (\Chap~\chref{C.PSR}).}\label{tab:ch06:optimizers}\footnotesize\opttab{0.17}{0.12}{0.22}{0.21}{0.2}\end{table}}
+\end{frame}
+
+\begin{frame}\ft{The optimizers on the worked example}
+\ona{Figure~\ref{fig:ch06:optimizers} runs four of the methods on the worked example of \Chap~\chref{C.VQE}, depth-one QAOA for MaxCut on the 4-cycle, from the same starting point $(0.1,-0.1)$ and with the same budget of $6\times10^5$ measured copies. COBYLA, SPSA and BFGS use $1000$ copies for each circuit, and BFGS obtains its gradients from $16$ shifted circuits; STORM chooses its numbers of copies as its theory requires. The code is \texttt{code/ch06\_optimisers.py}. The runs illustrate the remarks above. COBYLA moves quickly with steps of the size of its initial radius, keeps the point with the best estimate, and stops after $3.9\times10^4$ copies, once its radius has shrunk. SPSA, at two circuits for each step, is the cheapest per step and ends closest to the minimum. BFGS spends $16\,000$ copies on each gradient, and its line search fails after seven iterations, the estimated values being too noisy for the curvature model. STORM accepts six of its thirteen steps; as its radius shrinks from $0.2$ to $0.03$, the number of copies for each value grows from $625$ to $65\,536$. On this landscape every local minimum is global, and the methods differ in cost rather than in outcome; on the landscapes of \Chap~\chref{C.VQE}, with persistent local minima, any of them may stop at the wrong one.}
+\ona{\gdef\opW{0.43\linewidth}\gdef\opH{0.42\linewidth}}\onp{\gdef\opW{0.41\linewidth}\gdef\opH{0.37\linewidth}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}
+\begin{axis}[name=oa,width=\opW,height=\opH,view={0}{90},xmin=0,xmax=0.785,ymin=-1.571,ymax=0,xtick={0,0.393,0.785},xticklabels={$0$,$\frac\pi8$,$\frac\pi4$},ytick={-1.571,-0.785,0},yticklabels={$-\frac\pi2$,$-\frac\pi4$,$0$},xlabel={$\beta$},ylabel={$\gamma$},colormap={pale}{rgb255(0cm)=(205,205,230); rgb255(1cm)=(250,250,250)},point meta min=-3,point meta max=-2,enlargelimits=false,axis on top,title={\scriptsize (a) the paths}]
+  \addplot3[surf,shader=interp,domain=0:0.785,y domain=-1.571:0,samples=41] {-2+sin(deg(4*x))*sin(deg(2*y))};
+  \addplot3[orange!90!black,thin] table[x=beta,y=gamma,z expr=0] {figures/ch06/opt_spsa.dat};
+  \addplot3[green!50!black,thick,mark=*,mark size=1.2pt] table[x=beta,y=gamma,z expr=0] {figures/ch06/opt_cobyla.dat};
+  \addplot3[red!80!black,thick,mark=square*,mark size=1.2pt] table[x=beta,y=gamma,z expr=0] {figures/ch06/opt_bfgs.dat};
+  \addplot3[blue!70!black,thick,mark=triangle*,mark size=1.5pt] table[x=beta,y=gamma,z expr=0] {figures/ch06/opt_storm.dat};
+  \fill[black] (axis cs:0.3927,-0.7854,0) circle (2pt);
+  \fill[black] (axis cs:0.1,-0.1,0) circle (1.5pt);
+\end{axis}
+\begin{axis}[at={(oa.east)},anchor=west,xshift=1.6cm,width=\opW,height=\opH,clip mode=individual,axis lines=left,xmode=log,ymode=log,xmin=1000,xmax=6e5,ymin=1e-5,ymax=1.5,xlabel={measured copies},ylabel={$F - F_{\min}$},no markers,thick,title={\scriptsize (b) the energy against the cost}]
+  \addplot[orange!90!black,const plot] table[x=xplot,y=excess] {figures/ch06/opt_spsa.dat};
+  \addplot[green!50!black,const plot] table[x=xplot,y=excess] {figures/ch06/opt_cobyla.dat};
+  \addplot[red!80!black,const plot] table[x=xplot,y=excess] {figures/ch06/opt_bfgs.dat};
+  \addplot[blue!70!black,const plot] table[x=xplot,y=excess] {figures/ch06/opt_storm.dat};
+  \draw[green!50!black,thick] (axis cs:39000,0.006) -- (axis cs:6e5,0.006);
+  \node[note,anchor=south west,text=green!50!black] (o1) at (axis cs:1100,2e-5) {COBYLA stops\\at $3.9\times10^4$};
+  \draw[notearrow] (o1.north east) to[bend right=20] (axis cs:3.8e4,0.0055);
+  \node[note,anchor=west,text=orange!90!black] (o2) at (axis cs:8e5,5e-4) {SPSA};
+  \draw[notearrow] (o2.west) -- (axis cs:6.1e5,5e-4);
+  \node[note,anchor=west,text=green!50!black] (o5) at (axis cs:8e5,0.0025) {COBYLA};
+  \draw[notearrow] (o5.west) to[bend left=10] (axis cs:6.1e5,0.0058);
+  \node[note,anchor=west,text=blue!70!black] (o4) at (axis cs:8e5,0.0075) {STORM};
+  \draw[notearrow] (o4.west) to[bend right=10] (axis cs:4.3e5,0.0071);
+  \node[note,anchor=west,text=red!80!black] (o3) at (axis cs:8e5,0.025) {BFGS};
+  \draw[notearrow] (o3.west) to[bend right=10] (axis cs:4.2e5,0.0094);
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\ona{\caption{Four optimizers on depth-one QAOA for MaxCut on the 4-cycle, $F = -2 + \sin4\beta\sin2\gamma$, from $(0.1,-0.1)$, with $6\times10^5$ measured copies each: COBYLA (green), SPSA (orange), BFGS with parameter-shift gradients (red) and STORM (blue). (a) The paths of the current points on the landscape, with the minimum at $(\pi/8,-\pi/4)$. (b) The exact energy above the minimum at the current point against the copies used, on logarithmic scales; the starting value is drawn at $10^3$ copies.}\label{fig:ch06:optimizers}\end{figure}}
+\onp{\footnotesize SPSA is cheapest per step; COBYLA stops early; BFGS pays $16\,000$ copies for a gradient; STORM pays more copies as its radius shrinks.}
+\end{frame}
+
+\section{Setting the angles}\label{sec:ch06:angles}
+
+\begin{frame}\ft{Rules for setting the angles}
+\onp{\footnotesize}
+\ona{The optimizers of the previous section search for the angles of each instance afresh, from an arbitrary starting point. The methods of this section set them by a rule instead, and in most cases then pass them to an optimizer as a starting point. \citet{guo2026setting} classify the methods by their main idea, of which there are four.}
+\begin{itemize}\setlength\itemsep{0.25em}
+    \item \emph{Physics-inspired schedules}, which contain the angles of the convergence proof, with the total time or the slopes left free.
+    \item \emph{Transfer} of angles optimised for other instances of the same class.
+    \item \emph{Iteration over the depth}, in which the angles at depth $p$ give a starting point at depth $p+1$.
+    \item \emph{Machine learning}, in which a model trained on a database of optimised instances predicts the angles.
+\end{itemize}
+\ona{A method may combine several ideas. Figure~\ref{fig:ch06:taxonomy} arranges the methods by these classes, Tables~\ref{tab:ch06:angles1} and~\ref{tab:ch06:angles2} list them, and Tables~\ref{tab:ch06:bench} and~\ref{tab:ch06:hardware} give the comparison of six of them by \citet{guo2026setting}, numerically and on hardware. None of the rules is guaranteed to give good angles at a fixed depth; the comparisons show how well they do on the classes of instances tested.}
+\onp{The taxonomy and the comparison are those of \citet{guo2026setting}. None of the rules has a guarantee at fixed depth.}
+\end{frame}
+
+\begin{frame}\ft{A taxonomy of angle-setting methods}
+\ona{Figure~\ref{fig:ch06:taxonomy} arranges the methods of Tables~\ref{tab:ch06:angles1} and~\ref{tab:ch06:angles2} by the four ideas of the taxonomy of \citet{guo2026setting}; methods that combine two ideas sit between the corresponding classes. The methods compared numerically and on hardware by \citet{guo2026setting} are set in bold.}
+\ona{\gdef\txs{1}}\onp{\gdef\txs{0.86}}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[scale=\txs,every node/.style={font=\tiny,transform shape},cls/.style={draw,thick,rounded corners=6pt,minimum width=4.5cm,minimum height=2.3cm},m/.style={align=center,inner sep=1pt},both/.style={draw,rounded corners=2pt,fill=white,align=center,inner sep=1.5pt,font=\tiny}]
+  \node[cls,fill=orange!8] (P) at (0,3.15) {};
+  \node[cls,fill=green!7] (T) at (6.6,3.15) {};
+  \node[cls,fill=blue!6] (I) at (0,0) {};
+  \node[cls,fill=red!6] (M) at (6.6,0) {};
+  \node[font=\scriptsize,anchor=north] at (P.north) {physics-inspired schedules};
+  \node[font=\scriptsize,anchor=north] at (T.north) {transfer between instances};
+  \node[font=\scriptsize,anchor=north] at (I.north) {iterative in the depth};
+  \node[font=\scriptsize,anchor=north] at (M.north) {machine learning};
+  \node[m] at (0,2.9) {\textbf{TQA}\quad \textbf{linear ramp}\\gap-informed ramps\quad smooth angles\\FALQON\quad bang-anneal-bang};
+  \node[m] at (6.6,2.9) {concentration and \textbf{transfer}\\\textbf{fixed angles}\quad weighted transfer\\layer-selective\quad infinite-size limit\\Proxy-QAOA\quad DARBO\quad radial basis};
+  \node[m] at (0,-0.25) {layerwise\quad \textbf{Interp.}\quad \textbf{Fourier}\\iterative interpolation\\\textbf{transition states}};
+  \node[m] at (6.6,-0.25) {QAOA-GPT\quad RL-RQAOA\\diffusion\quad neural networks};
+  \node[both] (b1) at (3.3,3.15) {counter-diabatic\\angles};
+  \draw[gray] (b1) -- (P.east |- b1); \draw[gray] (b1) -- (T.west |- b1); \draw[gray] (b1) -- (I.north east);
+  \node[both] (b2) at (3.3,0) {JuliQAOA\\SSR-MCTS\\iterative CNN\\$p>1$ from $p=1$};
+  \draw[gray] (b2) -- (I.east |- b2); \draw[gray] (b2) -- (M.west |- b2);
+  \node[both] (b3) at (6.6,1.58) {fuzzy clustering\quad QAOA-PCA\quad clustering\\RL and KDE\quad QLSTM\quad graph attention};
+  \draw[gray] (b3) -- (T.south); \draw[gray] (b3) -- (M.north);
+  \node[note,anchor=south] (t1) at (0,4.55) {the schedules contain the angles of the convergence proof};
+  \draw[notearrow] (t1.south) -- (0,4.32);
+  \node[note,anchor=north] (t3) at (6.6,-1.35) {most need a database of optimised instances};
+  \draw[notearrow] (t3.north) -- (6.6,-1.17);
+  \node[note,anchor=north] (t2) at (0,-1.35) {bold: compared numerically and on hardware};
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The methods for setting the angles of QAOA in the four classes of \citet{guo2026setting}. Boxes between two classes hold methods that combine both ideas; the counter-diabatic angles combine three. Bold: the methods compared in Tables~\ref{tab:ch06:bench} and~\ref{tab:ch06:hardware}.}\label{fig:ch06:taxonomy}\end{figure}}
+\onp{\footnotesize Four ideas, often combined; the physics-inspired schedules contain the angles of the proof.}
+\end{frame}
+
+\mode<all>{\gdef\angtabone#1#2#3{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}@{}}\toprule
+method & idea & references \\\midrule
+\multicolumn{3}{@{}l}{\emph{physics-inspired schedules}} \\
+TQA & discretised annealing, $\gamma_k = s_k\Delta t$, $\beta_k = (1-s_k)\Delta t$, one parameter $\Delta t$ & \citet{sack2021quantum,Willsch2022} \\
+linear ramp & two independent slopes for $\boldsymbol\beta$ and $\boldsymbol\gamma$ & \citet{Montanezbarrera2024} \\
+spectral-gap-informed ramps & ramps adapted to the gap, extrapolated in size & \citet{Mcdowall2026} \\
+smooth angles & optimised low-depth schedules extrapolated to high depth & \citet{boulebnane2025} \\
+counter-diabatic angles & gauge potentials matched to the Trotter terms & \citet{WurtzLove2022CDQAOA} \\
+FALQON & angles from a feedback law, monotone in the depth, no optimiser & \citet{Magann2022FALQON} \\
+bang-anneal-bang & optimal-control schedules & \citet{bapat2018bang,Brady2021BangAnnealBang} \\
+\multicolumn{3}{@{}l}{\emph{iterative in the depth}} \\
+layerwise & optimise the last layer only & \citet{Campos2021} \\
+Interp., Fourier & interpolate the angles of depth $p$ to start depth $p+1$; or optimise sine and cosine coefficients & \citet{Zhou2020} \\
+iterative interpolation & Chebyshev or Legendre bases, low modes first & \citet{apte2025} \\
+transition states & start from the $2p+1$ saddle points built from the optimum at depth $p$ & \citet{Sack2023,Medina2024} \\
+JuliQAOA & basin hopping, repeating the last angle & \citet{Golden_2023} \\
+SSR-MCTS & Monte Carlo tree search over a discretised space & \citet{Agirre2025} \\\bottomrule
+\end{tabular}}}}
+\mode<all>{\gdef\angtabtwo#1#2#3{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}@{}}\toprule
+method & idea & references \\\midrule
+\multicolumn{3}{@{}l}{\emph{transfer between instances}} \\
+concentration and transfer & optimal angles depend little on the instance; reuse them & \citet{brandao2018,Akshay2021,Shaydulin2019,Galda2021,Montanezbarrera2024Transfer} \\
+infinite-size limit & angles computed for $n\to\infty$ & \citet{boulebnane2021predicting,farhi2022qaoaSK} \\
+fixed angles & tabulated angles, optimal on the tree of a regular graph & \citet{PhysRevA.103.042612,Wurtz2021} \\
+weighted transfer & rescale $\gamma$ from unweighted to weighted instances & \citet{Shaydulin2023,Sureshbabu2024} \\
+fuzzy clustering & cluster instances, reuse angles of the cluster & \citet{Acampora2023} \\
+QAOA-PCA & optimise few principal components of known optimal angles & \citet{Parry2025} \\
+layer-selective transfer & re-optimise only some layers & \citet{venturelli2024transfer} \\
+surrogates & classical proxies; trust-region Bayesian optimisation; radial basis functions & \citet{Sud2024,Cheng2024,Oleary2025} \\
+\multicolumn{3}{@{}l}{\emph{machine learning}} \\
+supervised & networks, graph attention, clustering, diffusion models, recurrent networks, a generative transformer & \citet{Amosy2024-xm,xu2025qaoa,Moussa2022,meng2024parameter,Chen2025,Tyagin2025} \\
+iterative & predict depth $p>1$ from depth one, or depth $p+1$ from depth $p$ & \citet{Alam2020,Xie2023} \\
+reinforcement learning & learn the update of the angles & \citet{Khairy2020,Patel2024} \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Setting the angles: schedules and iteration}
+\ona{Table~\ref{tab:ch06:angles1} lists the physics-inspired schedules and the methods iterative in the depth. The schedules are the angles of the proof of Theorem~\ref{thm:ch06:qaoa}, with the total time or the slopes left free, and they differ in how the free parameters are chosen; the iterative methods use the angles found at one depth to start the search at the next.}
+\onp{\begin{center}\tiny\angtabone{0.19}{0.47}{0.27}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Methods for setting the angles of QAOA, I: physics-inspired schedules and methods iterative in the depth, after the taxonomy of \citet{guo2026setting}.}\label{tab:ch06:angles1}\footnotesize\angtabone{0.19}{0.47}{0.27}\end{table}}
+\end{frame}
+
+\begin{frame}\ft{Setting the angles: transfer and learning}
+\ona{Transfer rests on the observation that optimal angles depend little on the instance within a class of instances, which the light-cone argument of \Chap~\chref{C.VQE} explains for regular graphs of large girth: all edges see the same tree. Most machine-learning methods require a database of optimised instances.}
+\onp{\begin{center}\tiny\angtabtwo{0.19}{0.4}{0.34}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Methods for setting the angles of QAOA, II: transfer between instances and machine learning, after \citet{guo2026setting} and \citet{abbas2024challenges}.}\label{tab:ch06:angles2}\footnotesize\angtabtwo{0.19}{0.4}{0.34}\end{table}}
+\end{frame}
+
+\mode<all>{\gdef\benchtab{{\setlength\tabcolsep{3.5pt}\begin{tabular}{@{}l*{8}{r}@{}}\toprule
+ & \multicolumn{4}{c}{statevector, $10$--$21$ nodes} & \multicolumn{4}{c}{Pauli propagation, $39$--$144$ nodes} \\\cmidrule(lr){2-5}\cmidrule(l){6-9}
+method & ER & HH & LB & RR & ER & HH & LB & RR \\\midrule
+fixed angles$^\dagger$ & $92.0$ & -- & $96.3$ & $98.0$ & -- & $91.5$ & $86.7$ & $92.9$ \\
+fixed angles$^\star$ & $97.4$ & -- & $97.5$ & $98.7$ & -- & $94.2$ & $90.7$ & $93.5$ \\
+linear ramp$^\dagger$ & $91.3$ & $84.8$ & $90.5$ & $92.8$ & $93.9$ & $85.2$ & $87.7$ & $88.1$ \\
+linear ramp$^\star$ & $96.7$ & $95.3$ & $95.5$ & $97.8$ & $95.6$ & $93.5$ & $90.6$ & $92.7$ \\
+TQA$^\dagger$ & $88.2$ & $80.0$ & $80.8$ & $89.0$ & $83.5$ & $81.5$ & $75.0$ & $85.9$ \\
+TQA$^\star$ & $95.3$ & $92.8$ & $93.2$ & $96.7$ & $91.3$ & $91.8$ & $85.6$ & $91.6$ \\
+Interp.$^\star$ & $96.5$ & $94.7$ & $95.4$ & $92.1$ & $94.4$ & $95.0$ & $89.6$ & $90.4$ \\
+Fourier$^\star$ & $78.1$ & $74.2$ & $76.8$ & $80.7$ & $91.5$ & $91.3$ & $86.0$ & $90.7$ \\
+transition states$^\star$ & $95.0$ & $92.8$ & $92.5$ & $93.8$ & $90.4$ & $89.6$ & $87.2$ & $88.6$ \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{A comparison of angle-setting methods}
+\ona{\citet{guo2026setting} compare six methods, each without tuning ($^\dagger$), with only its few schedule parameters optimised, and with every angle re-optimised by COBYLA from the schedule ($^\star$), on MaxCut, maximum independent set and a problem with a quartic objective, at depths up to ten. Energies of instances too large for a statevector are estimated by matrix-product states or by Pauli propagation. Table~\ref{tab:ch06:bench} shows the approximation ratios for MaxCut at depth ten.}
+\onp{\begin{center}\tiny\benchtab\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Mean approximation ratio, in per cent, of QAOA of depth ten for MaxCut, after \citet[Table~2]{guo2026setting}. Graphs: Erd\H{o}s--R\'enyi (ER), heavy-hex (HH), line-based (LB) and random regular (RR). $^\dagger$: angles without tuning; $^\star$: all angles re-optimised. --: no fixed angles available. Left: exact statevector energies; right: energies estimated by Pauli propagation.}\label{tab:ch06:bench}\footnotesize\benchtab\end{table}}
+\ona{Re-optimisation improves every method, by several per cent for the schedules without tuning. Fixed angles and the linear ramp are among the best wherever they apply, and the Fourier parameterisation is the worst on small instances under the default settings of the optimizer; with a finer grid and a smaller initial radius it improves greatly, at about thirty times the cost. On maximum independent set the ranking differs, with Fourier and TQA among the best, so that rankings depend on the class of problems.}
+\end{frame}
+
+\mode<all>{\gdef\hwtab{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}lrrrr@{}}\toprule
+ & \multicolumn{2}{c}{depth $5$} & \multicolumn{2}{c}{depth $10$} \\\cmidrule(lr){2-3}\cmidrule(l){4-5}
+method, evaluator & estimated & hardware & estimated & hardware \\\midrule
+Interp.$^\star$, Pauli propagation & $91.0$ & $83.4$ & $94.9$ & $83.5$ \\
+fixed angles$^\star$, Pauli propagation & $90.8$ & $83.4$ & $94.1$ & $83.3$ \\
+linear ramp$^\star$, Pauli propagation & $90.3$ & $82.9$ & $93.7$ & $83.2$ \\
+parameter transfer, Pauli propagation & $89.8$ & $82.4$ & $93.6$ & $82.4$ \\
+TQA$^\star$, Pauli propagation & $88.0$ & $81.8$ & $91.5$ & $82.7$ \\
+Fourier$^\star$, Pauli propagation & $86.6$ & $79.2$ & $88.3$ & $77.8$ \\
+Interp.$^\star$, MPS & $83.7$ & $81.6$ & $86.7$ & $81.5$ \\
+Fourier$^\star$, MPS & $80.4$ & $76.7$ & $82.3$ & $74.9$ \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Angles on hardware}
+\ona{Angles found with an approximate evaluator must be checked on the device. \citet{guo2026setting} ran the angles of each method on ten heavy-hex graphs with $144$ nodes on a 156-qubit IBM processor, with $4096$ shots. Table~\ref{tab:ch06:hardware} compares the median approximation ratios estimated classically with those measured. Noise costs ten per cent or more, and the differences between the best methods are within the noise; Pauli propagation predicts the hardware ranking far better than matrix-product states, whose correlation with the hardware ratios is $0.61$ at depth ten against $0.89$.}
+\onp{\begin{center}\scriptsize\hwtab\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Median approximation ratio, in per cent, on ten heavy-hex graphs with $144$ nodes, estimated classically and measured on hardware, after \citet[Table~4]{guo2026setting}. MPS: matrix-product states.}\label{tab:ch06:hardware}\footnotesize\hwtab\end{table}}
+\ona{Their accounting of the cost is equally instructive. Training on the device would require about $145$ hours of sampling, but, at $6$~s of latency for each circuit submitted, about three years of overhead. Methods that look angles up, fixed angles and parameter transfer, are therefore the most economical, and re-optimisation adds one or two per cent at a large cost.}
+\end{frame}
+
+\mode<all>{\gdef\interpA#1{\begin{axis}[#1,width=\ipW,height=\ipH,clip=false,axis lines=left,xmin=0,xmax=1,ymin=0,ymax=1.3,xtick={0,0.5,1},ytick={0,0.5,1},yticklabels={$0$,$0.5$,$1$},xlabel={layer, $(i-1)/(p-1)$},ylabel={angle},thick,mark=*,mark size=0.7pt,title={\scriptsize (a) the angles, $p = 2$ to $10$ light to dark}]
+  \addplot[orange!30] table[x=x2,y=b2] {figures/ch06/interp_angles.dat};
+  \addplot[orange!45] table[x=x4,y=b4] {figures/ch06/interp_angles.dat};
+  \addplot[orange!60] table[x=x6,y=b6] {figures/ch06/interp_angles.dat};
+  \addplot[orange!80] table[x=x8,y=b8] {figures/ch06/interp_angles.dat};
+  \addplot[orange!80!black] table[x=x10,y=b10] {figures/ch06/interp_angles.dat};
+  \addplot[blue!25] table[x=x2,y=g2] {figures/ch06/interp_angles.dat};
+  \addplot[blue!40] table[x=x4,y=g4] {figures/ch06/interp_angles.dat};
+  \addplot[blue!55] table[x=x6,y=g6] {figures/ch06/interp_angles.dat};
+  \addplot[blue!75] table[x=x8,y=g8] {figures/ch06/interp_angles.dat};
+  \addplot[blue!70!black] table[x=x10,y=g10] {figures/ch06/interp_angles.dat};
+  \node[note,anchor=west] (i1) at (axis cs:0.05,1.12) {$-\gamma_i$, rising};
+  \draw[notearrow] (i1.east) to[bend left=15] (axis cs:0.5,0.69);
+  \node[note,anchor=west] (i2) at (axis cs:0.05,0.12) {$\beta_i$, falling};
+  \draw[notearrow] (i2.east) to[bend right=15] (axis cs:0.6,0.33);
+\end{axis}}}
+\mode<all>{\gdef\interpB#1{\begin{axis}[#1,width=\ipW,height=\ipH,clip=false,axis lines=left,xmin=0.5,xmax=10.5,ymode=log,ymin=5e-5,ymax=0.5,xtick={1,...,10},xlabel={depth $p$},ylabel={$1-{}$approximation ratio},thick,title={\scriptsize (b) the heuristic against random starts}]
+  \addplot[orange!80!black,dashed] table[x=p,y=rmed] {figures/ch06/interp_ratio.dat};
+  \addplot[orange!80!black,densely dotted] table[x=p,y=rbest] {figures/ch06/interp_ratio.dat};
+  \addplot[blue!70!black,mark=*,mark size=1.1pt] table[x=p,y=interp] {figures/ch06/interp_ratio.dat};
+  \node[note,anchor=west] at (axis cs:10.6,5.6e-3) {median of $20$\\random starts};
+  \node[note,anchor=west] at (axis cs:10.6,4.3e-4) {best of $20$};
+  \node[note,anchor=west] at (axis cs:10.6,1.2e-4) {interpolation};
+  \node[note,anchor=west] (i3) at (axis cs:1,3e-4) {best of $20$ better\\only at $p = 5$};
+  \draw[notearrow] (i3.north east) to[bend right=20] (axis cs:5,2.2e-2);
+\end{axis}}}
+\begin{frame}\ft{The interpolation heuristic}
+\onp{\footnotesize Interp.\ \citep{Zhou2020}, the best on hardware: optimise depth by depth, and start depth $p+1$ from}
+\ona{The method with the highest measured ratios in Table~\ref{tab:ch06:hardware}, and with the highest estimated ratio on the heavy-hex graphs in Table~\ref{tab:ch06:bench}, is the interpolation heuristic, Interp., of \citet{Zhou2020}, although its lead on hardware over fixed angles, $0.0$ and $0.2$ per cent at depths five and ten, is within the noise. The heuristic rests on an observation about the optimal angles of QAOA for MaxCut. At the optimum that is reached from small angles, $\beta_i$ decreases and $|\gamma_i|$ increases smoothly with the layer $i$, as in the schedule $\gamma_k = s_k\Delta t$, $\beta_k = (1-s_k)\Delta t$ of the convergence proof, and the curve for depth $p+1$ is close to that for depth $p$ when the layers are placed at equally spaced points of $[0,1]$. The heuristic therefore optimises the angles depth by depth. Having found the angles $\boldsymbol\beta^{(p)}$ and $\boldsymbol\gamma^{(p)}$ at depth $p$, it starts the optimisation at depth $p+1$ from}
+\begin{equation}\label{eq:ch06:interp}
+    \gamma^{(p+1)}_i = \frac{i-1}{p}\,\gamma^{(p)}_{i-1} + \frac{p-i+1}{p}\,\gamma^{(p)}_i,\qquad i = 1,\dots,p+1,
+\end{equation}
+\ona{and likewise for $\boldsymbol\beta$, where $\gamma^{(p)}_0$ and $\gamma^{(p)}_{p+1}$, whose weights are zero, may be taken to be $0$. In other words, the $p$ angles are placed at the points $0, \frac1{p-1}, \dots, 1$ and joined by straight lines, and the resulting curve is read off at the $p+1$ points $0, \frac1p, \dots, 1$; the first and the last angle are kept. The structure is that of a discretised annealing schedule, as \citet{Zhou2020} observed, and they report that on random $3$-regular graphs the heuristic finds quasi-optimal angles in time polynomial in $p$, whereas random initialisation needs a number of restarts exponential in $p$.}
+
+\ona{Figure~\ref{fig:ch06:interp} shows the heuristic on the MaxCut instance of \Chap~\chref{C.Annealing}, with BFGS at every depth, and with depth one started from the best point of a grid on $0\le\beta\le\pi/4$, $-\pi/2\le\gamma\le0$. The angles found at depths $2$ to $10$ change slowly with the depth, the first layers most. The approximation ratio rises from $0.776$ at depth one to $0.949$ at depth four and $0.9999$ at depth ten. Local optimisation from twenty random starts reaches a median of $0.902$ at depth four and $0.994$ at depth ten. The best of the twenty starts matches the heuristic at depths three and four, is better at depth five, $0.976$ against $0.973$, and is worse from depth six on. The heuristic has no guarantee. Each depth is a local optimisation, and the iteration depends on its start: from an equivalent optimum of depth one on another branch, related to the first by the symmetries of $F_1$, it falls to $0.80$ at depth seven. Its cost is that of $p$ optimisations, which \citet{guo2026setting} carry out with a classical evaluator, Pauli propagation or matrix-product states, rather than on the device. The data are computed by \texttt{code/ch06\_figures.py}.}
+\ona{\gdef\ipW{0.43\linewidth}\gdef\ipH{0.4\linewidth}}\onp{\gdef\ipW{5.4cm}\gdef\ipH{4.4cm}}
+\ona{\begin{figure}[htb]\centering\begin{tikzpicture}\interpA{name=ia}\interpB{at={(ia.east)},anchor=west,xshift=1.6cm}\end{tikzpicture}
+\caption{The interpolation heuristic of \citet{Zhou2020} on the MaxCut instance of \Chap~\chref{C.Annealing}. (a) The angles $\beta_i$ (orange) and $-\gamma_i$ (blue) found at depths $p = 2$, $4$, $6$, $8$, $10$ (light to dark), with the layer $i$ placed at $(i-1)/(p-1)$. (b) One minus the approximation ratio, on a logarithmic scale, of the heuristic (blue) and of local optimisation by BFGS from twenty random starts, the median (dashed) and the best (dotted).}\label{fig:ch06:interp}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item Likewise for $\boldsymbol\beta$: the curve through the $p$ angles, read off at $p+1$ points; the first and the last angle are kept.
+    \item The optimal angles look like a discretised annealing schedule: $\beta_i$ falls and $-\gamma_i$ rises, smoothly, and the curve changes little from one depth to the next.
+    \item \citet{Zhou2020}: quasi-optimal angles in time polynomial in $p$, where random starts need exponentially many restarts.
+\end{itemize}\end{column}
+\begin{column}{0.48\textwidth}\begin{tikzpicture}\interpA{}\end{tikzpicture}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{The interpolation heuristic against random starts}
+\onp{\gdef\ipW{5cm}\begin{columns}[c]\begin{column}{0.54\textwidth}\begin{tikzpicture}\interpB{}\end{tikzpicture}\end{column}
+\begin{column}{0.44\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item MaxCut on the graph of \Chap~\chref{C.Annealing}, BFGS at every depth.
+    \item The heuristic (blue): ratio $0.776$ at $p = 1$, $0.949$ at $p = 4$, $0.9999$ at $p = 10$.
+    \item Twenty random starts: the median (dashed) is $0.902$ at $p = 4$ and $0.994$ at $p = 10$; the best (dotted) is better than the heuristic only at $p = 5$.
+    \item No guarantee: from an equivalent optimum of depth one on another branch, the iteration falls to $0.80$ at $p = 7$.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{What the comparisons show}
+\onp{\footnotesize}
+\ona{The comparisons of this section support the following conclusions.}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item On the instances tested, at depth ten, good angles are easy to find: schedules derived from annealing, and angles transferred from other instances, come within a few per cent of the re-optimised angles. This is consistent with the convergence theorem, whose angles are a schedule, and with the light-cone argument for transfer.
+    \item These are empirical findings, for the classes of instances and the depths tested. The rankings change between classes of problems, and no method comes with a guarantee; the hardness of training in \Chap~\chref{C.VQE} is a worst-case statement, which they do not contradict.
+    \item On hardware, noise dominates the differences between the methods, and the cost of training on the device is dominated by latency (\Chap~\chref{C.PerIteration}).
+    \item At fixed depth, QAOA is a local algorithm and is limited on large instances by the obstacles of \Chap~\chref{C.VQE}. The variants of the next section that break locality or symmetry, recursive QAOA among them, were proposed for that reason.
+\end{itemize}
+\end{frame}
+
+\section{Variants of the circuit and of the loop}\label{sec:ch06:variants}
+
+\mode<all>{\gdef\circtab#1#2#3#4{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}>{\raggedright\arraybackslash}p{#4\linewidth}@{}}\toprule
+variant & what changes & references & convergence theorem \\\midrule
+alternating operator ansatz, $XY$ mixers & mixer preserves the number of ones; Dicke initial state & \citet{hadfield2019quantum,wang2019xy,cook2020vertexcover,baertschi2022shortdepth} & yes, from the top eigenvector of the mixer \\
+alternating operator ansatz, Grover mixer & mixer $e^{-i\beta\ket S\bra S}$, initial state $\ket S$ & \citet{baertschi2020grover,golden2023numerical} & yes \\
+warm start from a relaxation & initial product state and rotated mixer & \citet{egger2021warm,tate2023warm} & yes, if all $c_j\in(0,1)$ \\
+warm start from a cut & initial state from a rounded solution, modified mixer & \citet{egger2021warm} & no: the initial state is not an eigenvector of the mixer \\
+adaptive bias fields & single-qubit $Z$ terms added to the mixer & \citet{Yu2022} & yes, if the initial state is the top eigenvector of the biased mixer \\
+counter-diabatic QAOA & additional generators from approximate gauge potentials & \citet{WurtzLove2022CDQAOA,Chandarana2022} & yes: contains QAOA \\
+ADAPT-QAOA & mixer of each layer chosen from a pool by the gradient & \citet{zhu2022adaptive} & for choices that reproduce QAOA \\
+QAMPA & hardware-efficient layers with the entangling gates of QAOA & \citet{larose2022mixer,maciejewski2023design} & not applicable \\
+quantum Zeno dynamics & repeated projection onto the feasible subspace & \citet{herman23} & not applicable \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Variants of the circuit}
+\ona{The variants of this section change the circuit, or the way in which it is used, rather than the rule for the angles. Some are needed to handle constraints; most aim at better states at a fixed low depth, which is the regime in which the angles of the proof are of little use. We follow the survey of \citet{abbas2024challenges}. Table~\ref{tab:ch06:circuit} lists the variants that change the circuit. A variant whose ansatz contains that of QAOA as a special case, with some angles set to zero, inherits its expressivity, and therefore its convergence; whether the additional freedom helps to find good angles is another matter.}
+\onp{\begin{center}\tiny\circtab{0.19}{0.26}{0.26}{0.2}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Variants of QAOA that change the circuit, after \citet{abbas2024challenges} and \citet{guo2026setting}. The last column states whether the convergence theorem of Section~\ref{sec:ch06:convergence} applies.}\label{tab:ch06:circuit}\footnotesize\circtab{0.19}{0.26}{0.26}{0.2}\end{table}}
+\end{frame}
+
+\mode<all>{\gdef\looptab#1#2#3{{\setlength\tabcolsep{4pt}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{#1\linewidth}>{\raggedright\arraybackslash}p{#2\linewidth}>{\raggedright\arraybackslash}p{#3\linewidth}@{}}\toprule
+variant & idea & references \\\midrule
+CVaR objective & minimise the mean energy of the best fraction $\alpha$ of the samples; $\alpha = 1$ is the expectation & \citet{Barkoutsos2020,barron2023cvar_bounds} \\
+Gibbs objective & minimise $-\log\mathbb E\,e^{-\eta E}$, which also favours good samples & \citet{Li_2020_Gibbs_objective} \\
+recursive QAOA & estimate $\braket{Z_iZ_j}$, eliminate the variable with the strongest correlation, recurse & \citet{Bravyi2020,BravyiKlieschKoenigTang2022,brady2023iterative,finvzgar2023quantum} \\
+RL-RQAOA & a reinforcement-learning agent chooses angles and eliminations & \citet{Patel2024} \\
+greedy QAOA & fix several variables in each round, by classical evaluation & \citet{Dupont_2023QuantumCombOpt} \\
+noise-directed adaptive remapping & gauge-transform $H_C$ so that the attractor of the noise becomes a good state & \citet{maciejewski2024improving} \\
+restarts & restart the search when it reaches a barren region & \citet{mastropietro2023flemingviot} \\
+qubit reuse & mid-circuit measurement and reset, more variables than qubits & \citet{moses2023race} \\
+mean-field approximation & a classical mean-field version of the circuit, to set angles & \citet{Misra_Spieldenner_2023} \\
+quantum relaxations & several variables per qubit, ground state rounded to a solution & \citet{fuller2021approximate,teramoto2023quantumrelaxation} \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Variants of the objective and of the loop}
+\ona{Table~\ref{tab:ch06:loop} lists the variants that keep the circuit but change what is minimised, or how the circuit is used. The recursive scheme escapes the obstacles of \Chap~\chref{C.VQE}: each elimination breaks the flip symmetry and changes the graph, so that the light cone of the remaining circuit sees more of the instance \citep{Bravyi2020}. Quantum relaxations are not QAOA, but are used for the same problems.}
+\onp{\begin{center}\tiny\looptab{0.21}{0.42}{0.3}\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Variants of QAOA that change the objective or the outer loop, after \citet{abbas2024challenges} and \citet{guo2026setting}.}\label{tab:ch06:loop}\footnotesize\looptab{0.21}{0.42}{0.3}\end{table}}
+\end{frame}
+
+\mode<all>{\gdef\exptab{{\setlength\tabcolsep{3.5pt}\begin{tabular}{@{}llrrrrl@{}}\toprule
+problem & algorithm & qubits & depth & mean & best & reference \\\midrule
+SK model & QAOA & $17$ & $1$--$3$ & $0.61$ & -- & \citet{Harrigan2021} \\
+MaxCut, $3$-regular & QAOA & $22$ & $1$--$3$ & $0.67$ & -- & \citet{Harrigan2021} \\
+MaxCut, $3$-regular & QAOA & $20$--$40$ & $2$ & $0.58$--$0.64$ & $0.78$--$1$ & \citet{sack2024large} \\
+MaxCut, $3$-regular & QAOA & $20$--$32$ & $\le10$ & $0.88$--$0.94$ & $1$ & \citet{shaydulin2023qaoa} \\
+MaxCut, $3$-regular & QAOA, qubit reuse & $32$ & $2$ & -- & $1$ & \citet{moses2023race} \\
+QUBO, job shop & filtering VQE & $23$ & $1$--$2$ & $0.88$ & -- & \citet{amaro2022case} \\
+SK model & QAOA; QAMPA & $50$ & $2$ & $0.54$; $0.55$ & $0.84$; $0.83$ & \citet{maciejewski2023design} \\
+SK model & greedy QAOA & $72$ & $1$ & -- & $0.92$ & \citet{Dupont_2023QuantumCombOpt} \\
+SK model & NDAR-QAOA & $82$ & $1$ & $0.87$ & $0.97$ & \citet{maciejewski2024improving} \\
+QUBO and PUBO, heavy-hex & QAOA & $127$ & $1$--$5$ & $0.65$--$0.73$ & $0.84$--$0.89$ & \citet{Pelofske23QAOA,pelofske2023scaling} \\
+QUBO and PUBO, heavy-hex & QAOA & $414$ & $1$ & $0.56$--$0.57$ & $0.68$--$0.69$ & \citet{pelofske2023scaling} \\\bottomrule
+\end{tabular}}}}
+\begin{frame}\ft{Experiments on hardware}
+\ona{Table~\ref{tab:ch06:experiments} summarises the runs of QAOA and related algorithms on gate-based devices with more than fifteen variables collected by \citet{abbas2024challenges}. The approximation ratio is normalised by the range of the objective, $(C_{\max} - \braket C)/(C_{\max} - C_{\min})$, for the mean and for the best sample. The runs are small or shallow, and the quality of the best sample owes much to the number of samples.}
+\onp{\begin{center}\tiny\exptab\end{center}}
+\ona{\begin{table}[htb]\centering\caption{Runs of QAOA and related algorithms on gate-based hardware with more than fifteen variables, after \citet[Table~4 of the supplement]{abbas2024challenges}. Mean and best: approximation ratios, normalised by the range of the objective, of the mean and of the best sample; ranges summarise several instance sizes or depths.}\label{tab:ch06:experiments}\footnotesize\exptab\end{table}}
+\end{frame}
+
+\begin{frame}\ft{Conclusions}
+\onp{\footnotesize}
+\ona{We return, in conclusion, to the observation with which the \chap{} began.}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item If the angles are known, QAOA converges. With a phase separator, a mixer, and the top eigenvector of the mixer as the initial state, the angles of a discretised adiabatic schedule bring the state arbitrarily close to the optimal solutions as the total time and the depth grow.
+    \item The angles are not known. The schedule requires a total time that depends on a gap which is not known in advance and is exponentially small on hard instances. At the depths of current devices the angles must be found by search, and training QAOA is $\mathbf{NP}$-hard in the worst case.
+    \item Many methods have been proposed for finding them: optimizers, schedules with free parameters, transfer between instances, iteration over the depth, machine learning, and variants of the circuit and of the loop. On the instances tested, schedules and transferred angles come within a few per cent of re-optimised angles, but none of the methods comes with a guarantee at fixed depth.
+    \item The following \chaps{} take up the questions that remain: how gradients are computed (\Chap~\chref{C.PSR}), how many iterations are needed with noisy and biased estimates (\Chap~\chref{C.IterationComplexity}), what each iteration costs (\Chap~\chref{C.PerIteration}), and where to start (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}).
+\end{itemize}
+\end{frame}
+
+\ona{\section*{Exercises}}
+
+\begin{frame}\ft{Exercises}
+\onp{\footnotesize}
+\begin{exe}[Depth one]\label{exe:ch06:depthone}
+For a $D$-regular graph without triangles, derive \eqref{eq:ch06:depthone}. (Conjugate $Z_iZ_j$ first by $e^{-i\beta H_M}$ and then by $e^{-i\gamma H_C}$, as in the worked example of \Chap~\chref{C.VQE}; only the edges at $i$ and $j$ contribute.) Then show that the minimum over $\beta$ and $\gamma$ gives \eqref{eq:ch06:depthonebest}, and evaluate it for $D = 2$, $3$ and $10$.
+\end{exe}
+\begin{exe}[$XY$ mixers]
+For $n = 4$ and $k = 2$, write the complete and the ring $XY$ mixers as $6\times6$ matrices on the strings with two ones. Show that both are mixers in the sense of \ona{Definition~\ref{defn:ch06:mixer}}\onp{the definition}, that the Dicke state is the top eigenvector of the first, and that it is not an eigenvector of the second. Find the top eigenvector of the second from its graph $K_{2,4}$.
+\end{exe}
+\end{frame}
+
+\begin{frame}\ft{Exercises, continued}
+\onp{\footnotesize}
+\begin{exe}[Necessity of irreducibility]
+Consider QAOA on $n = 2$ qubits with the warm-start mixer $\sum_j(\sin\theta_jX_j + \cos\theta_jZ_j)$, $\theta_1 = 0$ and $\theta_2 = \pi/2$. Find the invariant coordinate subspaces, and an objective for which no depth and no angles reach the optimum.
+\end{exe}
+\begin{exe}[The depth of the proof]
+For MaxCut on $n$ vertices with a unique maximum cut up to complement, and the transverse-field mixer, combine the adiabatic theorem of \Chap~\chref{C.Annealing}, restricted to even states, with \eqref{eq:ch06:disc} to bound the depth at which QAOA comes within $\varepsilon$ of an optimal state, in terms of $n$, $|E|$, $\varepsilon$ and the gap among even states.
+\end{exe}
+\begin{exe}[BFGS]
+Show that the update \eqref{eq:ch06:bfgs} satisfies $H_{k+1}y_k = s_k$, and that $H_{k+1}$ is positive definite if $H_k$ is and $y_k^\top s_k>0$.
+\end{exe}
+\end{frame}
 
 \begin{frame}[allowframebreaks]\ft{References}
 \biblio
