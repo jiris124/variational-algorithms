@@ -10,7 +10,7 @@
 \chapter{Variational Quantum Algorithms}\label{C.VQE}
 \ona{\sloppy}
 
-\ona{This \chap{} is concerned with variational quantum algorithms. We introduce them through the first of them to be proposed, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, drawing on the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After describing the variational loop and its use for molecules, we show how a suitable ansatz arises from the discretisation of an adiabatic evolution; we bound the error of the discretisation and compare, for small hydrogen molecules, the discretised schedule with VQE started from it. We then introduce a second variational algorithm, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as far as is needed here, leaving its proper treatment to \Chap~\chref{C.QAOA}, and follow a single run of it in detail, from the circuit to the measured copies and the gradients obtained from shifted circuits. The greater part of the \chap{} is devoted to the question of how hard it is to \emph{train} such an algorithm. Here we follow \citet{bittel2021training}, who formulate the training as a family of computational problems, with a measure of error that distinguishes what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part of the computation is trivial, namely for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA and for free fermions, and that in the worst case no polynomial-time algorithm can guarantee a non-trivial error. We set out their formulation first and then give the proofs, all but one of them in full. Parts of the \chap{} are adapted from our course on quantum computing \citep{aspman2024quantum}.}
+\ona{This \chap{} is concerned with variational quantum algorithms. We introduce them through the first of them to be proposed, the variational quantum eigensolver (VQE) of \citet{peruzzo2014variational}, drawing on the theory of \citet{mcclean2016theory} and the review of \citet{cerezo2021variational}. After describing the variational loop and its use for molecules, we show how a suitable ansatz arises from the discretisation of an adiabatic evolution; we bound the error of the discretisation and compare, for small hydrogen molecules, the discretised schedule with VQE started from it. We then introduce a second variational algorithm, the quantum approximate optimization algorithm (QAOA) for combinatorial optimization, as far as is needed here, leaving its proper treatment to \Chap~\chref{C.QAOA}, and follow a single run of it in detail, from the circuit to the measured copies and the gradients obtained from shifted circuits. The greater part of the \chap{} is devoted to the question of how hard it is to \emph{train} such an algorithm. Here we follow \citet{bittel2021training}, who formulate the training as a family of computational problems, with a measure of error that distinguishes what the circuit cannot represent from what the optimizer fails to find. They show that the training is $\mathbf{NP}$-hard even when the quantum part of the computation is trivial, namely for circuits without entanglement, on logarithmically many qubits, with a single parameter, for QAOA and for free fermions, and that in the worst case no polynomial-time algorithm can guarantee a non-trivial error. We set out their formulation first and then give the proofs, all but one of them in full. Following \citet{koh2026training}, we then show that asking only for a local minimum does not help: it is strongly $\mathbf{NP}$-hard even to find a point near some local minimum, again for circuits whose energies can be computed classically. Parts of the \chap{} are adapted from our course on quantum computing \citep{aspman2024quantum}.}
 
 \section{The variational principle}
 
@@ -1513,8 +1513,255 @@ local methods on step 6 & & & $\Delta<\frac14$, unconditionally \\\bottomrule
     \item The results do not imply that good parameters are hard to find for typical instances, and \Chap~\chref{C.PerIteration} finds that often they are not.
     \item Nor do they imply that local minima are useless: a warm start which inherits a classical guarantee retains it, whatever the optimizer (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}).
 \end{itemize}
-\ona{Variational methods are in good company. The optimization in the Hartree--Fock method is $\mathbf{NP}$-hard \citep{schuch2009computational}, as are global variations in the density matrix renormalisation group \citep{eisert2006computational}, and both are in daily use. Later work has extended these results for VQAs. Approximating the depth that an ansatz requires to reach a target energy is $\mathbf{QCMA}$-hard \citep{bittelQCMA}; in an idealised digitised setting the training problem is even undecidable \citep{korpas2025undecidable}; and for a constant number of angles there are tractable regimes \citep{sakos2026global}.}
-\onp{\footnotesize Also $\mathbf{NP}$-hard, and in daily use, are Hartree--Fock \citep{schuch2009computational} and DMRG \citep{eisert2006computational}. Later results: approximating the depth is $\mathbf{QCMA}$-hard \citep{bittelQCMA}, training is undecidable in an idealised setting \citep{korpas2025undecidable}, and there are tractable regimes for a constant number of angles \citep{sakos2026global}.}
+\ona{Variational methods are in good company. The optimization in the Hartree--Fock method is $\mathbf{NP}$-hard \citep{schuch2009computational}, as are global variations in the density matrix renormalisation group \citep{eisert2006computational}, and both are in daily use. Later work has extended these results for VQAs. Approximating the depth that an ansatz requires to reach a target energy is $\mathbf{QCMA}$-hard \citep{bittelQCMA}; in an idealised digitised setting the training problem is even undecidable \citep{korpas2025undecidable}; even a point near a local minimum is hard to find \citep{koh2026training}, as the next section shows; and for a constant number of angles there are tractable regimes \citep{sakos2026global}.}
+\onp{\footnotesize Also $\mathbf{NP}$-hard, and in daily use, are Hartree--Fock \citep{schuch2009computational} and DMRG \citep{eisert2006computational}. Later results: approximating the depth is $\mathbf{QCMA}$-hard \citep{bittelQCMA}, training is undecidable in an idealised setting \citep{korpas2025undecidable}, even a point near a local minimum is hard to find \citep{koh2026training}, and there are tractable regimes for a constant number of angles \citep{sakos2026global}.}
+\end{frame}
+
+\section{Hardness of finding a local minimum}\label{sec:ch05:local}
+
+\begin{frame}\ft{Local minima as the target}
+\onp{\footnotesize}
+\ona{The results of the previous section concern the global minimum. Gradient descent, Newton's method, BFGS and the natural gradient aim at less, a \emph{local} minimum, and the persistent local minima of continuous MaxCut are where they may stop. Asking only for a local minimum might, in principle, make training tractable. The hardness of global minimisation does not settle the question, since a landscape may have local minima that are easy to find even when its global minimum is hard to find. \citet{koh2026training} show that it is not so: it is hard to find a local minimum, and even to find a point near one. Their circuits are of the kind used in step 2, single-qubit rotations measured in a diagonal observable, and their energies can be computed classically.}
+\onp{The theorems so far concern the \emph{global} minimum. Local methods aim at less, a \emph{local} minimum, and the hardness of the global problem does not imply that this is hard.}
+\begin{defn}
+Let $\Theta = [0,2\pi]^L$ and $F:\Theta\to\R$. A point $\boldsymbol\phi^\star\in\Theta$ is a \emph{local minimiser} of $F$ over $\Theta$ if there is a neighbourhood $U$ of $\boldsymbol\phi^\star$ such that $F(\boldsymbol\phi^\star)\le F(\boldsymbol\phi)$ for every $\boldsymbol\phi\in U\cap\Theta$.
+\end{defn}
+\begin{defn}[\citet{garey1978strong}]
+A problem whose instances contain numbers is \emph{strongly} $\mathbf{NP}$-hard if it remains $\mathbf{NP}$-hard when restricted to instances whose numbers are rationals with numerators and denominators bounded in magnitude by a polynomial in the size of the instance.
+\end{defn}
+\ona{Unless $\mathbf P = \mathbf{NP}$, a strongly $\mathbf{NP}$-hard problem has no \emph{pseudo-polynomial} algorithm, that is, none whose running time is polynomial in the size of the instance and in the magnitudes of its numbers \citep{garey1978strong}. Strong hardness thus shows that the difficulty does not derive from large or finely tuned coefficients.}
+\onp{Strong hardness: the difficulty does not derive from large or finely tuned coefficients.}
+\end{frame}
+
+\begin{frame}\ft{Training VQA locally}
+\onp{\footnotesize}
+\begin{probl}[Training VQA locally]\label{p:ch05:local}
+\begin{description}\setlength\itemsep{0.1em}
+    \item[Instance] Generators $H_1,\dots,H_L$ and an observable $O$ on $N$ qubits, each a combination of polynomially many Pauli strings with rational coefficients, and $p\in[1,\infty]$.
+    \item[Task] Find $\boldsymbol\phi\in[0,2\pi]^L$ with $\|\boldsymbol\phi-\boldsymbol\phi^\star\|_p<\pi/2$ for some local minimiser $\boldsymbol\phi^\star$ of $\braket{O(\boldsymbol\phi)}$ over $[0,2\pi]^L$.
+\end{description}
+\end{probl}
+\begin{thm}[\citet{koh2026training}]\label{thm:ch05:koh}
+For every $p\in[1,\infty]$, training VQA locally\ona{ (Problem~\ref{p:ch05:local})} is strongly $\mathbf{NP}$-hard. This holds already for $2d$ qubits and $d$ layers, the $i$-th of which applies the rotation $R_X(\phi_i)$ to two of the qubits, and for an observable that is a combination of $\mathcal O(d^2)$ commuting Pauli strings, each acting on at most two qubits, so that the energy can be computed classically in polynomial time.
+\end{thm}
+\ona{Three features of the statement deserve comment. First, unlike training VQA (Problem~\ref{p:ch05:oracle}), the problem asks for no precision: a point within a fixed distance, $\pi/2$, of \emph{some} local minimiser suffices, and the algorithm may choose which. Second, the energies are exact and computed classically, so that the hardness does not depend on the noise of estimates from measurements. Third, the theorem is again a statement about the worst case.}
+\onp{\begin{itemize}\setlength\itemsep{0.1em}
+    \item No precision is asked for: within $\frac\pi2$ of \emph{some} local minimiser, of the algorithm's choosing.
+    \item The energies are exact and classical: the hardness does not come from shot noise.
+\end{itemize}}
+\end{frame}
+
+\begin{frame}\ft{Hermitian trigonometric polynomials}
+\onp{\footnotesize}
+\ona{The proof passes through a class of functions that contains the energies of many circuits.}
+\begin{defn}
+A \emph{Hermitian trigonometric polynomial} in $d$ variables is a function $f(\boldsymbol\phi) = \sum_{\boldsymbol\omega\in\Omega}c_{\boldsymbol\omega}e^{i\boldsymbol\omega^\top\boldsymbol\phi}$ of $\boldsymbol\phi\in\R^d$, where $\Omega\subset\mathbb Z^d$ is finite, $\Omega = -\Omega$ and $c_{-\boldsymbol\omega} = \overline{c_{\boldsymbol\omega}}$, so that $f$ is real. Its \emph{total Fourier degree} is the largest $\|\boldsymbol\omega\|_1$ with $c_{\boldsymbol\omega}\ne0$.
+\end{defn}
+\ona{If $P$ is a Pauli string, then $e^{-i\phi P/2} = \cos\frac\phi2\,\one-i\sin\frac\phi2\,P$, and the energy of a circuit of such rotations is a Hermitian trigonometric polynomial, of degree at most $m$ in a parameter that enters $m$ of the rotations. The energy $F(\beta,\gamma) = -2+\sin4\beta\sin2\gamma$ of the worked example of Section~\ref{sec:ch05:worked} is an example.}
+\onp{The energy of a circuit of rotations $e^{-i\phi P/2}$, $P$ a Pauli string, is such a polynomial, of degree at most $m$ in a parameter that enters $m$ rotations.}
+\begin{propn}[\citet{koh2026training}]\label{propn:ch05:trig}
+For every $p\in[1,\infty]$, it is strongly $\mathbf{NP}$-hard, given a Hermitian trigonometric polynomial $f$ of total Fourier degree at most $2$ by its frequencies and rational coefficients, to find a point of $[0,2\pi]^d$ within $\ell_p$-distance less than $\pi/2$ of a local minimiser of $f$ over $[0,2\pi]^d$.
+\end{propn}
+\ona{Theorem~\ref{thm:ch05:koh} follows from Proposition~\ref{propn:ch05:trig} by a circuit whose energy is exactly the polynomial, much as Proposition~\ref{propn:ch05:oracle} followed from Lemma~\ref{lem:ch05:cmc}. The proof of the proposition has two steps (Fig.~\ref{fig:ch05:kohchain}): a reduction from the stable set problem to the local minimisation of a quadratic function over the cube $[0,1]^d$, and a change of variables that turns the quadratic function into a trigonometric polynomial.}
+\end{frame}
+
+\begin{frame}\ft{The structure of the proof}
+\ona{\begin{figure}[htb]}\begin{center}
+\begin{tikzpicture}[every node/.style={font=\scriptsize},box/.style={draw,rounded corners,fill=blue!6,minimum width=2.4cm,minimum height=0.9cm,align=center},lab/.style={font=\tiny,align=center,inner sep=1pt}]
+  \node[box,fill=gray!12] (ss) at (-0.5,0) {stable set:\\is $\alpha(G)\ge k$?};
+  \node[box] (q) at (4.3,0) {$q(\boldsymbol x) = \boldsymbol x^\top M\boldsymbol x$\\over $[0,1]^d$};
+  \node[box] (f) at (8.6,0) {$f = q\circ T$\\over $[0,2\pi]^d$};
+  \node[box] (v) at (8.6,-2.2) {$2d$ qubits, with\\$\braket{O(\boldsymbol\phi)} = f(\boldsymbol\phi)$};
+  \draw[-{Latex},thick] (ss) -- node[lab,below=3pt] {$M = \kappa(A+I)-J$,\\$\kappa = k-\frac12$} (q);
+  \draw[-{Latex},thick] (q) -- node[lab,below=3pt] {$T(\phi) = \sin^2\frac\phi2$,\\an open map} (f);
+  \draw[-{Latex},thick] (f) -- node[lab,right=3pt] {$R_X(\phi_i)$ on\\qubits $i$, $d+i$} (v);
+  \node[note,anchor=south,align=center] at ([yshift=3pt]q.north) {local minimisers:\\only $\boldsymbol0$ if $\alpha(G)<k$,\\else each has some $x_i = 1$};
+  \node[note,anchor=south,align=center] at ([yshift=3pt]f.north) {local minimisers:\\only $\{0,2\pi\}^d$ if $\alpha(G)<k$,\\else each has some $\phi_i = \pi$};
+  \node[note,anchor=east,align=right] (nv) at ([xshift=-0.5cm]v.west) {a point within $\frac\pi2$ of a local\\minimiser tells the two cases apart};
+  \draw[notearrow] (nv.east) -- (v.west);
+\end{tikzpicture}
+\end{center}
+\ona{\caption{The proof of Theorem~\ref{thm:ch05:koh}, after \citet{koh2026training}. The stable set problem is reduced to the local minimisation of a quadratic function over the cube, whose local minimisers are of one of two kinds according to the answer; an open change of variables carries them to the angles, and a circuit of single-qubit rotations has the resulting polynomial as its energy.}\label{fig:ch05:kohchain}\end{figure}}
+\onp{\footnotesize Each step preserves local minimisers; the last preserves the polynomial exactly.}
+\end{frame}
+
+\begin{frame}\ft{Open maps preserve local minimisers}
+\onp{\footnotesize}
+\ona{The proof changes variables three times, each time by a map that is continuous and open. A map is \emph{open} if it maps open sets to open sets; here the sets are open relative to the domain and to the image, which are cubes, orthants or the whole space.}
+\begin{lem}[\citet{koh2026training}]\label{lem:ch05:open}
+Let $\tau:\Theta\to X$ be a continuous open surjection and $g:X\to\R$. For every $\boldsymbol\phi\in\Theta$, the point $\tau(\boldsymbol\phi)$ is a local minimiser of $g$ over $X$ if and only if $\boldsymbol\phi$ is a local minimiser of $g\circ\tau$ over $\Theta$.
+\end{lem}
+\ona{\emph{Proof.} Let $\boldsymbol x = \tau(\boldsymbol\phi)$. If $g(\boldsymbol x)\le g(\boldsymbol x')$ for every $\boldsymbol x'$ in a neighbourhood $U$ of $\boldsymbol x$, then, $\tau$ being continuous, $\tau^{-1}(U)$ is a neighbourhood of $\boldsymbol\phi$, on which $g(\tau(\boldsymbol\phi'))\ge g(\boldsymbol x) = g(\tau(\boldsymbol\phi))$. Conversely, if $g(\tau(\boldsymbol\phi))\le g(\tau(\boldsymbol\phi'))$ for every $\boldsymbol\phi'$ in an open neighbourhood $V$ of $\boldsymbol\phi$, then, $\tau$ being open, $\tau(V)$ is a neighbourhood of $\boldsymbol x$, and every $\boldsymbol x'\in\tau(V)$ is $\tau(\boldsymbol\phi')$ for some $\boldsymbol\phi'\in V$, so that $g(\boldsymbol x') = g(\tau(\boldsymbol\phi'))\ge g(\boldsymbol x)$. \qed}
+\onp{Proof: $\tau^{-1}$ of a neighbourhood is a neighbourhood, as $\tau$ is continuous; $\tau$ of an open neighbourhood is a neighbourhood, as $\tau$ is open.}
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item $\phi\mapsto\cos\phi$, from $[0,2\pi]$ onto $[-1,1]$, is continuous and open: it maps $[0,\epsilon)$ onto $(\cos\epsilon,1]$ and $(\pi-\epsilon,\pi+\epsilon)$ onto $[-1,-\cos\epsilon)$, which are open in $[-1,1]$. So is $y\mapsto y^2$, from $\R$ onto $[0,\infty)$, and so are both maps applied to each coordinate.
+    \item Continuity alone does not suffice. The map $\tau(\phi) = \phi^3-3\phi$ of $[-2,3]$ onto $[-2,18]$ is not open, since it maps $(-2,0)$ onto $(-2,2]$. It has a local maximum $\tau(-1) = 2$, so that for $g(x) = -x$ the composition $g\circ\tau$ has a local minimiser at $-1$, whereas $g$ has none at $2$.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\ft{Stable sets and the theorem of Motzkin and Straus}
+\onp{\footnotesize}
+\ona{Throughout this section $G$ is a graph on $d$ vertices with adjacency matrix $A$, $I$ is the identity and $J$ the all-ones matrix of order $d$, and $\Delta = \{\boldsymbol x\in\R^d_{\ge0} : \sum_ix_i = 1\}$ is the simplex. A set of vertices is \emph{stable} if no two of them are adjacent, and the largest size of a stable set is the \emph{stability number} $\alpha(G)$.}
+\onp{$G$ is a graph on $d$ vertices with adjacency matrix $A$; $J$ is the all-ones matrix, and $\Delta$ the simplex. A set of vertices is \emph{stable} if no two are adjacent; $\alpha(G)$ is the largest size of a stable set.}
+\begin{probl}[Stable set]
+Given a graph $G$ and an integer $k$ with $1\le k\le d$, decide whether $\alpha(G)\ge k$.
+\end{probl}
+\ona{A stable set of $G$ is a clique of its complement, and the problem is therefore $\mathbf{NP}$-complete \citep{karp1972reducibility}; since it contains no number other than $k\le d$, it is strongly so. It is related to a quadratic function on the simplex by the theorem of \citet{motzkin1965maxima}, which we state in the form for stable sets.}
+\begin{thm}[\citet{motzkin1965maxima}]\label{thm:ch05:ms}
+$\min_{\boldsymbol x\in\Delta}\boldsymbol x^\top(A+I)\,\boldsymbol x = 1/\alpha(G)$.
+\end{thm}
+\ona{\emph{Proof.} If $S$ is a stable set of size $\alpha(G)$, the point $\boldsymbol x = \boldsymbol1_S/\alpha(G)$ gives $\boldsymbol x^\top(A+I)\boldsymbol x = \sum_{i\in S}x_i^2 = 1/\alpha(G)$. Conversely, let $\boldsymbol x\in\Delta$. If two vertices $i$ and $j$ in the support of $\boldsymbol x$ are adjacent, then $(\boldsymbol e_i-\boldsymbol e_j)^\top(A+I)(\boldsymbol e_i-\boldsymbol e_j) = 1-2+1 = 0$, so that the function is affine along $\boldsymbol x+t(\boldsymbol e_i-\boldsymbol e_j)$; moving $t$ to the end of the segment in $\Delta$ that is no worse sets $x_i$ or $x_j$ to zero without increasing the value. After fewer than $d$ such moves the support $S$ of $\boldsymbol x$ is stable, and then, by the inequality of Cauchy and Schwarz, $\boldsymbol x^\top(A+I)\boldsymbol x = \sum_{i\in S}x_i^2\ge\big(\sum_{i\in S}x_i\big)^2/|S|\ge1/\alpha(G)$. \qed}
+\ona{The argument is the rounding of Lemma~\ref{lem:ch05:cmc} once more: along a segment the function is affine, and one of the endpoints is no worse.}
+\onp{Proof: along $\boldsymbol x+t(\boldsymbol e_i-\boldsymbol e_j)$ with $i$, $j$ adjacent the function is affine, and an endpoint is no worse, as in the rounding of continuous MaxCut. This shrinks the support to a stable set $S$, on which $\sum_{i\in S}x_i^2\ge1/|S|$.}
+\end{frame}
+
+\begin{frame}\ft{A dichotomy of local minimisers}
+\onp{\footnotesize}
+\ona{A symmetric matrix $M$ is \emph{copositive} if $\boldsymbol x^\top M\boldsymbol x\ge0$ for every $\boldsymbol x\ge0$, and \emph{strictly copositive} if $\boldsymbol x^\top M\boldsymbol x>0$ for every non-zero $\boldsymbol x\ge0$. Every non-zero $\boldsymbol x\ge0$ is a positive multiple of a point of $\Delta$, on which $\boldsymbol x^\top(\kappa(A+I)-J)\boldsymbol x = \kappa\,\boldsymbol x^\top(A+I)\boldsymbol x-1$, and Theorem~\ref{thm:ch05:ms} therefore gives the following.}
+\onp{$M$ is \emph{copositive} if $\boldsymbol x^\top M\boldsymbol x\ge0$ for all $\boldsymbol x\ge0$, and \emph{strictly copositive} if $\boldsymbol x^\top M\boldsymbol x>0$ for all non-zero $\boldsymbol x\ge0$.}
+\begin{cor}\label{cor:ch05:copos}
+For $\kappa>0$, the matrix $\kappa(A+I)-J$ is copositive if and only if $\alpha(G)\le\kappa$, and strictly copositive if and only if $\alpha(G)<\kappa$.
+\end{cor}
+\begin{lem}[\citet{koh2026training}, after \citet{ahmadi2022complexity}]\label{lem:ch05:dichotomy}
+Let $k$ be an integer with $1\le k\le d$, $\kappa = k-\frac12$, $M = \kappa(A+I)-J$ and $q(\boldsymbol x) = \boldsymbol x^\top M\boldsymbol x$.
+\begin{enumerate}\setlength\itemsep{0.05em}
+    \item[(i)] If $\alpha(G)<k$, then $\boldsymbol0$ is the only local minimiser of $q$ over $[0,1]^d$.
+    \item[(ii)] If $\alpha(G)\ge k$, then every local minimiser of $q$ over $[0,1]^d$ has a coordinate equal to $1$.
+\end{enumerate}
+\end{lem}
+\ona{The entries of $M$ are $k-\frac32$ on the diagonal and for adjacent vertices, and $-1$ elsewhere. The constant $\frac12$ makes $\kappa$ a non-integer, which the proof of (ii) requires.}
+\ona{\emph{Proof of (i).} Now $\alpha(G)\le k-1<\kappa$, and $M$ is strictly copositive by Corollary~\ref{cor:ch05:copos}; hence $q(\boldsymbol x)>0 = q(\boldsymbol0)$ for $\boldsymbol x\ne\boldsymbol0$, and $\boldsymbol0$ is a minimiser. A non-zero $\boldsymbol x$ is not a local minimiser, since $q((1-\lambda)\boldsymbol x) = (1-\lambda)^2q(\boldsymbol x)<q(\boldsymbol x)$ for every $\lambda\in(0,1)$. \qed}
+\onp{Proof of (i): $M$ is strictly copositive, and $q((1-\lambda)\boldsymbol x) = (1-\lambda)^2q(\boldsymbol x)<q(\boldsymbol x)$ for every $\boldsymbol x\ne\boldsymbol0$ and $\lambda\in(0,1)$.}
+\end{frame}
+
+\begin{frame}\ft{The second case of the dichotomy}
+\onp{\scriptsize}
+\ona{\emph{Proof of (ii).} Now $\alpha(G)\ge k>\kappa$. Near a point all of whose coordinates are less than $1$, the cube $[0,1]^d$ coincides with the orthant $\R^d_{\ge0}$, and it therefore suffices to show that $q$ has no local minimiser over the orthant. Let $\circ$ denote the entrywise product. The map $\boldsymbol y\mapsto\boldsymbol y\circ\boldsymbol y$ is a continuous open surjection of $\R^d$ onto the orthant, and by Lemma~\ref{lem:ch05:open} it suffices to show that the quartic form}
+\onp{Near a point with all $x_i<1$, the cube coincides with the orthant $\R^d_{\ge0}$. With $\boldsymbol y\mapsto\boldsymbol y\circ\boldsymbol y$, an open map onto the orthant, it suffices that}
+\begin{equation}\label{eq:ch05:quartic}
+    p(\boldsymbol y) \;=\; q(\boldsymbol y\circ\boldsymbol y) \;=\; \sum_{i,j}M_{ij}\,y_i^2y_j^2
+\end{equation}
+has no local minimiser on $\R^d$.
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item The origin is not one. For a stable set $S$ with $|S| = k$, $q(\boldsymbol1_S) = \kappa k-k^2 = -k/2$, and $p(t\boldsymbol1_S) = t^4q(\boldsymbol1_S)<0$ for every $t\ne0$.
+    \item No $\boldsymbol y\ne\boldsymbol0$ is one. With $\boldsymbol x = \boldsymbol y\circ\boldsymbol y$, we have $\nabla p(\boldsymbol y) = 4\,\boldsymbol y\circ M\boldsymbol x$ and $\nabla^2p(\boldsymbol y) = 8\,M\circ\boldsymbol y\boldsymbol y^\top+4\,\mathrm{Diag}(M\boldsymbol x)$. At a local minimiser the gradient vanishes, so that $(M\boldsymbol x)_i = 0$ on the support $S$ of $\boldsymbol y$, and the Hessian is positive semidefinite. Its principal submatrix on $S$ is $8\,DM_SD$, where $M_S$ is the principal submatrix of $M$ and $D = \mathrm{Diag}(\boldsymbol y_S)$ is invertible; hence $M_S\succeq0$. But $M_S = \kappa(A_S+I)-J$ is the matrix of the subgraph induced by $S$, which is copositive; by \ona{Corollary~\ref{cor:ch05:copos}}\onp{the corollary} that subgraph has stability number at most $\kappa$, hence less than $\kappa$, since $\kappa$ is not an integer, and then $M_S$ is strictly copositive. This contradicts $\boldsymbol x_S^\top M_S\boldsymbol x_S = \sum_{i\in S}x_i(M\boldsymbol x)_i = 0$, $\boldsymbol x_S\ge0$ being non-zero. \qed
+\end{itemize}
+\ona{This is the argument by which \citet{ahmadi2022complexity} show that it is strongly $\mathbf{NP}$-hard to decide whether a quartic polynomial has a local minimiser.}
+\end{frame}
+
+\begin{frame}\ft{From the cube to the angles}
+\onp{\footnotesize}
+\ona{\emph{Proof of Proposition~\ref{propn:ch05:trig}.} Given an instance $(G,k)$ of the stable set problem, let $q$ be as in Lemma~\ref{lem:ch05:dichotomy}, and let}
+\begin{equation}\label{eq:ch05:koh}
+    T(\phi) = \frac{1-\cos\phi}2 = \sin^2\frac\phi2, \qquad f(\boldsymbol\phi) = q\big(T(\phi_1),\dots,T(\phi_d)\big) = \sum_{i,j}M_{ij}\,T(\phi_i)\,T(\phi_j).
+\end{equation}
+\ona{Since $T(\phi) = \frac12-\frac14(e^{i\phi}+e^{-i\phi})$, $f$ is a Hermitian trigonometric polynomial of total Fourier degree at most $2$, whose coefficients are computed from the entries of $M$ in polynomial time. The map $T$ of $[0,2\pi]$ onto $[0,1]$ is an affine function of the cosine, and so, applied to each coordinate, it is a continuous open surjection of $[0,2\pi]^d$ onto $[0,1]^d$. By Lemmas~\ref{lem:ch05:open} and~\ref{lem:ch05:dichotomy}, therefore,}
+\onp{$f$ is a Hermitian trigonometric polynomial of total degree $2$, and $T$ is a continuous open surjection of $[0,2\pi]$ onto $[0,1]$. By the two lemmas:}
+\begin{itemize}\setlength\itemsep{0.1em}
+    \item if $\alpha(G)<k$, the local minimisers of $f$ are the points with $T(\phi_i) = 0$ for all $i$, that is, the points of $\{0,2\pi\}^d$;
+    \item if $\alpha(G)\ge k$, every local minimiser has $T(\phi_i) = 1$, that is, $\phi_i = \pi$, for some $i$.
+\end{itemize}
+\ona{Suppose that an algorithm returns $\boldsymbol\phi$ with $\|\boldsymbol\phi-\boldsymbol\phi^\star\|_\infty<\pi/2$ for some local minimiser $\boldsymbol\phi^\star$. In the first case every coordinate of $\boldsymbol\phi$ lies in $[0,\frac\pi2)\cup(\frac{3\pi}2,2\pi]$; in the second, some coordinate lies in $(\frac\pi2,\frac{3\pi}2)$. Inspecting the coordinates therefore decides the instance. Since $\|\cdot\|_\infty\le\|\cdot\|_p$, the same holds for every $p$. The coefficients of $f$ have polynomially bounded numerators and bounded denominators, and the hardness is strong. \qed}
+\onp{Within $\ell_\infty$-distance $\frac\pi2$ of a local minimiser, all coordinates lie in $[0,\frac\pi2)\cup(\frac{3\pi}2,2\pi]$ in the first case, and some coordinate lies in $(\frac\pi2,\frac{3\pi}2)$ in the second. And $\|\cdot\|_\infty\le\|\cdot\|_p$.}
+\end{frame}
+
+\mode<all>{\pgfplotsset{kohsurf/.style={width=\kgW,height=\kgW,view={0}{90},xmin=0,xmax=360,ymin=0,ymax=360,xtick={0,90,180,270,360},xticklabels={$0$,$\frac\pi2$,$\pi$,$\frac{3\pi}2$,$2\pi$},ytick={0,90,180,270,360},yticklabels={$0$,$\frac\pi2$,$\pi$,$\frac{3\pi}2$,$2\pi$},xlabel={$\phi_1$},ylabel={$\phi_2$},colorbar horizontal,colorbar style={at={(0.5,\kgC)},anchor=north,height=0.18cm,font=\tiny},colormap/viridis,enlargelimits=false,axis on top,clip=false}}}
+\mode<all>{\gdef\kohA#1{\begin{axis}[#1,kohsurf,point meta min=0,point meta max=2,title={\scriptsize (a) one edge: $\alpha(G) = 1<k$}]
+  \addplot3[surf,shader=interp,domain=0:360,y domain=0:360,samples=41] {0.5*((1-cos(x))/2+(1-cos(y))/2)^2};
+  \draw[white,dashed,thick] (axis cs:90,0,0) -- (axis cs:90,90,0) -- (axis cs:0,90,0);
+  \draw[white,dashed,thick] (axis cs:270,0,0) -- (axis cs:270,90,0) -- (axis cs:360,90,0);
+  \draw[white,dashed,thick] (axis cs:0,270,0) -- (axis cs:90,270,0) -- (axis cs:90,360,0);
+  \draw[white,dashed,thick] (axis cs:360,270,0) -- (axis cs:270,270,0) -- (axis cs:270,360,0);
+  \fill[red] (axis cs:0,0,0) circle (3pt);
+  \fill[red] (axis cs:360,0,0) circle (3pt);
+  \fill[red] (axis cs:0,360,0) circle (3pt);
+  \fill[red] (axis cs:360,360,0) circle (3pt);
+\end{axis}}}
+\mode<all>{\gdef\kohB#1{\begin{axis}[#1,kohsurf,point meta min=-1,point meta max=0.5,title={\scriptsize (b) no edge: $\alpha(G) = 2 = k$}]
+  \addplot3[surf,shader=interp,domain=0:360,y domain=0:360,samples=41] {0.5*((1-cos(x))/2)^2+0.5*((1-cos(y))/2)^2-2*((1-cos(x))/2)*((1-cos(y))/2)};
+  \draw[white,dashed,thick] (axis cs:90,90,0) -- (axis cs:270,90,0) -- (axis cs:270,270,0) -- (axis cs:90,270,0) -- cycle;
+  \fill[red] (axis cs:180,180,0) circle (3pt);
+\end{axis}}}
+\begin{frame}\ft{Two vertices, no stable set of size two}
+\ona{Figure~\ref{fig:ch05:kohtwo} shows the dichotomy for the smallest instances, two vertices and $k = 2$, so that $\kappa = \frac32$. If the vertices are adjacent, $\alpha(G) = 1<k$, $M = \frac12J$ and $f(\boldsymbol\phi) = \frac12\big(T(\phi_1)+T(\phi_2)\big)^2$. The local minimisers are the four corners of the square, which are global minimisers, and $f$ is largest, $2$, at $(\pi,\pi)$. If the vertices are not adjacent, $\alpha(G) = 2 = k$, $M = \frac32I-J$ and $f(\boldsymbol\phi) = \frac12T(\phi_1)^2+\frac12T(\phi_2)^2-2T(\phi_1)T(\phi_2)$. Its only local minimiser is $(\pi,\pi)$, where $f = -1$; it corresponds to the point $\boldsymbol x = (1,1)$ of the cube and to the stable set $\{1,2\}$. The corners are now saddle points: $f$ increases along the edges of the square and decreases along its diagonals. The dashed squares, which contain the points within $\ell_\infty$-distance $\pi/2$ of a local minimiser, do not meet.}
+\ona{\gdef\kgW{0.44\linewidth}\gdef\kgC{-0.3}}\onp{\gdef\kgW{5.4cm}\gdef\kgC{-0.34}}
+\ona{\begin{figure}[htb]\centering\begin{tikzpicture}\kohA{name=ka}\kohB{at={(ka.east)},anchor=west,xshift=1.3cm}\end{tikzpicture}
+\caption{The polynomial $f$ of \eqref{eq:ch05:koh} for the two graphs on two vertices, with $k = 2$. (a) One edge, an instance with $\alpha(G)<k$: the local minimisers (red) are the corners, the points of $\{0,2\pi\}^2$. (b) No edge, an instance with $\alpha(G)\ge k$: the only local minimiser is $(\pi,\pi)$. Dashed: the points within $\ell_\infty$-distance $\pi/2$ of a local minimiser, all of whose coordinates are within $\frac\pi2$ of $0$ or $2\pi$ in (a), and of $\pi$ in (b).}\label{fig:ch05:kohtwo}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\kohA{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item Two adjacent vertices and $k = 2$: $\alpha(G) = 1<k$, $M = \frac12J$, and $f(\boldsymbol\phi) = \frac12\big(T(\phi_1)+T(\phi_2)\big)^2$.
+    \item $f\ge0$, with equality only at the four corners (red): these are the local minimisers, $\{0,2\pi\}^2$, and all are global.
+    \item The maximum, $2$, is at $(\pi,\pi)$.
+    \item Dashed: the points within $\ell_\infty$-distance $\frac\pi2$ of a local minimiser. Both of their coordinates lie in $[0,\frac\pi2)\cup(\frac{3\pi}2,2\pi]$.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{Two vertices, a stable set of size two}
+\onp{\begin{columns}[c]\begin{column}{0.5\textwidth}\begin{tikzpicture}\kohB{}\end{tikzpicture}\end{column}
+\begin{column}{0.48\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item Two vertices without an edge and $k = 2$: $\alpha(G) = 2 = k$, $M = \frac32I-J$, and $f = \frac12T(\phi_1)^2+\frac12T(\phi_2)^2-2T(\phi_1)T(\phi_2)$.
+    \item The only local minimiser is $(\pi,\pi)$ (red), where $f = -1$. It corresponds to $\boldsymbol x = (1,1)$ and to the stable set $\{1,2\}$.
+    \item The corners are now saddle points: $f$ increases along the edges of the square and decreases along its diagonals.
+    \item Dashed: the points within $\frac\pi2$ of $(\pi,\pi)$, which do not meet those of the previous slide.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{A circuit for the polynomial}
+\onp{\footnotesize}
+\ona{\emph{Proof of Theorem~\ref{thm:ch05:koh}.} We construct an instance of training VQA locally whose energy is the polynomial $f$ of \eqref{eq:ch05:koh}. Take $N = 2d$ qubits and $L = d$ layers with generators $H_i = \frac12(X_i+X_{d+i})$, so that $U_i(\phi_i) = e^{-i\phi_iH_i}$ applies the rotation $R_X(\phi_i)$ to qubits $i$ and $d+i$, and the observable}
+\onp{Take $2d$ qubits, and $d$ layers $U_i(\phi_i) = e^{-i\phi_i(X_i+X_{d+i})/2}$, each of which applies $R_X(\phi_i)$ to the qubits $i$ and $d+i$, and}
+\begin{equation}
+    O \;=\; \tfrac14\sum_{i,j}M_{ij}\,(\one-Z_i)(\one-Z_{d+j}).
+\end{equation}
+\ona{The state is a product state, and $R_X(\phi)\ket0 = \cos\frac\phi2\ket0-i\sin\frac\phi2\ket1$ has $\braket{\frac12(\one-Z)} = \sin^2\frac\phi2 = T(\phi)$. Since $Z_i$ and $Z_{d+j}$ act on different qubits, also when $i = j$, the expectation of each term factorises, and}
+\onp{In the product state, $\braket{\frac12(\one-Z)} = \sin^2\frac\phi2 = T(\phi)$ on each qubit, and $Z_i$, $Z_{d+j}$ act on different qubits, so that}
+\begin{equation}
+    \braket{O(\boldsymbol\phi)} \;=\; \sum_{i,j}M_{ij}\,T(\phi_i)\,T(\phi_j) \;=\; f(\boldsymbol\phi)\qquad\text{exactly.}
+\end{equation}
+\ona{The instance has $2d$ qubits, $d$ generators and $\mathcal O(d^2)$ Pauli strings, namely $\one$, $Z_i$, $Z_{d+j}$ and $Z_iZ_{d+j}$, with polynomially bounded coefficients, and the energy is computed classically from the formula. The local minimisers of the energy, and the distances to them, are those of $f$, and Proposition~\ref{propn:ch05:trig} applies. \qed}
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item Two qubits for each angle are needed for the diagonal terms: on a single qubit $(\one-Z_i)^2 = 2(\one-Z_i)$, and $T(\phi_i)^2$ would become $T(\phi_i)$\ona{ (Exercise~\ref{exe:ch05:twoqubits})}.
+    \item As in step 2\ona{ of Section~\ref{sec:ch05:hardness}}, the circuit creates no entanglement, and the observable is diagonal. Only the observable differs: a general quadratic form in the projectors $\frac12(\one-Z)$, in place of the Ising form of MaxCut.
+\end{itemize}
+\end{frame}
+
+\mode<all>{\gdef\kohC#1{\begin{axis}[#1,width=\kdW,height=\kdH,clip=false,axis lines=left,xmin=0,xmax=360,ymin=-1.2,ymax=2.2,xtick={0,90,180,270,360},xticklabels={$0$,$\frac\pi2$,$\pi$,$\frac{3\pi}2$,$2\pi$},ytick={-1,0,1,2},xlabel={$t$},ylabel={$f(t,t)$},no markers,thick,samples=181,domain=0:360]
+  \fill[orange!12] (axis cs:90,-1.2) rectangle (axis cs:270,2.2);
+  \draw[gray,thin] (axis cs:0,0) -- (axis cs:360,0);
+  \addplot[blue!70!black] {2*((1-cos(x))/2)^2};
+  \addplot[red!70!black] {-((1-cos(x))/2)^2};
+  \node[font=\scriptsize,blue!70!black,anchor=west] at (axis cs:248,1.75) {(a)};
+  \node[font=\scriptsize,red!70!black,anchor=west] at (axis cs:248,-0.8) {(b)};
+  \ona{\node[note,anchor=west] (c1) at (axis cs:385,1.6) {(a) one edge: $2\sin^4\frac t2$,\\a local minimum at $t = 0$};}
+  \ona{\draw[notearrow] (c1.west) to[bend right=15] (axis cs:230,1.35);}
+  \ona{\node[note,anchor=west] (c2) at (axis cs:385,-0.75) {(b) no edge: $-\sin^4\frac t2$,\\not a local minimum at $t = 0$};}
+  \ona{\draw[notearrow] (c2.west) to[bend left=10] (axis cs:240,-0.56);}
+  \ona{\node[note,anchor=west] (c3) at (axis cs:8,0.95) {both flat to\\fourth order};}
+  \ona{\draw[notearrow] (c3.south) to[bend right=10] (axis cs:22,0.03);}
+  \ona{\node[note,anchor=west] (c4) at (axis cs:385,2.15) {shaded: within $\frac\pi2$ of $\pi$};}
+\end{axis}}}
+\begin{frame}\ft{Second-order conditions do not decide}
+\ona{Why should a local minimiser be hard to find, when cubic regularisation (\Chap~\chref{C.QAOA}) finds, in a number of iterations polynomial in $1/\epsilon$, a point at which the gradient is at most $\epsilon$ and the Hessian nearly positive semidefinite? The construction shows where the difference lies. Since $T(\phi) = \sin^2\frac\phi2$, the energy is $f(\boldsymbol\phi) = p(\boldsymbol y)$ with $y_i = \sin\frac{\phi_i}2$, where $p$ is the quartic form \eqref{eq:ch05:quartic}. Near the origin, therefore, $f(\boldsymbol\phi) = \frac1{16}\sum_{i,j}M_{ij}\phi_i^2\phi_j^2+\mathcal O(\|\boldsymbol\phi\|^6)$, and for every $M$ both the gradient and the Hessian of $f$ vanish at $\boldsymbol0$: the origin is a second-order point, a point with zero gradient and positive semidefinite Hessian, in both cases of the dichotomy. Since $\boldsymbol\phi\mapsto\boldsymbol y$ is a homeomorphism near the origin, the origin is a local minimiser of $f$ if and only if it is one of $p$, that is, if and only if $p\ge0$, or $M$ is copositive; by Corollary~\ref{cor:ch05:copos} this is the question whether $\alpha(G)<k$. If $S$ is a stable set of size $k$, then $f(t\boldsymbol1_S) = -\frac k2\sin^4\frac t2$, and the energy decreases from the origin along the diagonal of $S$, but only at fourth order (Fig.~\ref{fig:ch05:kohdiag}). In the second case, then, the origin is an exact second-order point at $\ell_\infty$-distance at least $\pi$ from every local minimiser. As recalled in \Chap~\chref{C.Inapprox}, deciding whether a given point is a local minimiser is $\mathbf{NP}$-hard \citep{murty1987some}, for the same reason: copositivity is hard to test. Beyond that, \citet{ahmadi2022complexity} and \citet{koh2026training} show that it is hard even to find some local minimiser, or a point near one.}
+\ona{\gdef\kdW{0.56\linewidth}\gdef\kdH{0.38\linewidth}}\onp{\gdef\kdW{6.2cm}\gdef\kdH{5.4cm}}
+\ona{\begin{figure}[htb]\centering\begin{tikzpicture}\kohC{}\end{tikzpicture}
+\caption{The polynomials of Fig.~\ref{fig:ch05:kohtwo} along the diagonal $\phi_1 = \phi_2 = t$: (a) one edge, $f(t,t) = 2\sin^4\frac t2$, in blue; (b) no edge, $f(t,t) = -\sin^4\frac t2$, in red. Both are flat to fourth order at $t = 0$, where the gradient and the Hessian vanish, but only the first has a local minimum there. Shaded: the angles within $\frac\pi2$ of $\pi$.}\label{fig:ch05:kohdiag}\end{figure}}
+\onp{\begin{columns}[c]\begin{column}{0.52\textwidth}\begin{tikzpicture}\kohC{}\end{tikzpicture}\end{column}
+\begin{column}{0.46\textwidth}\footnotesize\begin{itemize}\setlength\itemsep{0.3em}
+    \item The two polynomials along the diagonal $\phi_1 = \phi_2 = t$.
+    \item Near $\boldsymbol0$, $f(\boldsymbol\phi) = \frac1{16}\sum_{i,j}M_{ij}\phi_i^2\phi_j^2+\dots$: for every $M$, the gradient and the Hessian vanish at $\boldsymbol0$, a second-order point.
+    \item It is a local minimum if and only if $M$ is copositive, that is, if and only if $\alpha(G)<k$.
+    \item Cubic regularisation (\Chap~\chref{C.QAOA}) finds approximate second-order points efficiently, but in (b) the origin is at distance $\pi$ from the local minimiser.
+\end{itemize}\end{column}\end{columns}}
+\end{frame}
+
+\begin{frame}\ft{The scope of the local result}
+\onp{\small}
+\begin{itemize}\setlength\itemsep{0.3em}
+    \item Asking for a local rather than a global minimum does not remove the worst-case obstacle. Unless $\mathbf P = \mathbf{NP}$, no polynomial-time algorithm finds a point within $\frac\pi2$ of a local minimiser, even when the energy is computed exactly and classically.
+    \item The circuits are as simple as they can be: single-qubit rotations with shared angles, no entanglement, and a diagonal observable whose terms act on at most two qubits and commute.
+    \item The radius $\frac\pi2$ is half the least $\ell_\infty$-distance, $\pi$, between the local minimisers of the two cases, the points of $\{0,2\pi\}^d$ and those with some $\phi_i = \pi$.
+    \item As before, the result concerns the worst case. For particular families the angles can be found efficiently, as for QAOA of depth one on Ising models, under conditions on the weights \citep{Vijendran2025}, and for a constant number of angles \citep{sakos2026global}. Which restrictions on the circuits and the observables separate the tractable families from the hard ones is open \citep{koh2026training}.
+\end{itemize}
 \end{frame}
 
 \section{A second obstacle: barren plateaus}\label{sec:ch05:barren}
@@ -1620,6 +1867,19 @@ Show that the quadratic Hamiltonian with $h_0 = \one - \frac2nJ$ has a unique gr
 
 \begin{frame}\ft{Exercises, continued}
 \onp{\footnotesize}
+\begin{exe}[The path on three vertices]\label{exe:ch05:path}
+Let $G$ be the path on the vertices $1$, $2$, $3$, with edges $12$ and $23$. Verify the theorem of Motzkin and Straus for $G$. For $k = 2$, write out $M$ and show that $(\pi,0,\pi)$ is a strict local minimiser of the polynomial $f$ of \eqref{eq:ch05:koh}, at which $f = -1$; to which stable set does it correspond? For $k = 3$, show that the local minimisers of $f$ are the points of $\{0,2\pi\}^3$.
+\end{exe}
+\begin{exe}[Second-order points]\label{exe:ch05:secondorder}
+Show that for every symmetric $M$ the gradient and the Hessian of the polynomial $f$ of \eqref{eq:ch05:koh} vanish at $\boldsymbol\phi = \boldsymbol0$, and that $f(t\boldsymbol1_S) = -\frac k2\sin^4\frac t2$ if $S$ is a stable set of size $k$. Conclude that if $\alpha(G)\ge k$, the origin is a second-order point of $f$ at $\ell_\infty$-distance at least $\pi$ from every local minimiser.
+\end{exe}
+\end{frame}
+
+\begin{frame}\ft{Exercises, continued}
+\onp{\footnotesize}
+\begin{exe}[Two qubits for each angle]\label{exe:ch05:twoqubits}
+Suppose that the circuit of \ona{Theorem~\ref{thm:ch05:koh}}\onp{the local hardness theorem} used $d$ qubits only, with $R_X(\phi_i)$ on qubit $i$ and the observable $O' = \frac14\sum_{i,j}M_{ij}(\one-Z_i)(\one-Z_j)$. Compute $\braket{O'(\boldsymbol\phi)}$. For the graph with two vertices and no edge, and $k = 2$, show that the origin is then a local minimiser, although $\alpha(G)\ge k$.
+\end{exe}
 \begin{exe}[The worked example]\label{exe:ch05:c4}
 For the 4-cycle, show that $F(\beta,\gamma) = -2 + \sin4\beta\,\sin2\gamma$. (By symmetry, $F = -2 + 2\braket{Z_1Z_2}$; conjugate $Z_1Z_2$ first by $e^{-i\beta H_M}$ and then by $e^{-i\gamma H_C}$, and take the expectation in $\ket+^{\otimes4}$.)
 \end{exe}

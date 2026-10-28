@@ -49,9 +49,20 @@
 \ona{with a penalty weight $\lambda$ large compared with the entries of $\Sigma$ and $\mu$ (in \citet{egger2021warm}: $n = 6$, $B = 3$, $q = 2$, $\lambda = 3$). Then $x_i = (1 - Z_i)/2$ gives an Ising Hamiltonian $H_C$ with all-to-all $Z_iZ_j$ couplings, one qubit per asset.}
 \begin{itemize}\setlength\itemsep{0.2em}
     \item Integer lot sizes need $\lceil\log_2 K\rceil$ qubits per asset; the penalty makes $Q$ dense.
-    \item Alternatives to penalties: constraint-preserving mixers ($XY$ mixers for $\boldsymbol1^\top x = B$, \Chap~\chref{C.QAOA}), Zeno projections, recursive elimination.
+    \item Alternatives to penalties: the constraint-preserving mixers described next, Zeno projections, recursive elimination.
     \item Data: covariances and returns come from price series; in simulations, geometric Brownian motion with drifts in $[-5\%,5\%]$ and volatilities in $[-20\%,20\%]$ over 250 days.
     \item The classical competitor is CPLEX or Gurobi on the mixed-integer program, which solves $n \le 100$ instances in seconds; the convex relaxation over $[0,1]^n$ is a QP solved in milliseconds and is what warm-starts the quantum solver.
+\end{itemize}
+\end{frame}
+
+\begin{frame}\ft{The quantum alternating operator ansatz}
+\onp{\footnotesize}
+\ona{The penalty in \eqref{eq:ch13:qubo} allows one to keep the circuit of QAOA, but it enlarges the space searched from the $\binom nB$ feasible strings to all $2^n$, and it distorts the landscape: the weight $\lambda$ must be large compared with the entries of $\Sigma$ and $\mu$, and the penalty then dominates the spectrum of $H_C$. \citet{hadfield2019quantum} proposed instead to keep the state in the \emph{feasible subspace} $\mathcal F = \spn\{\ket x: x\in\{0,1\}^n,\ \boldsymbol1^\top x = B\}$. The initial state lies in $\mathcal F$; the \emph{phase separator} $e^{-i\gamma H_C}$, built from the objective without the penalty, is diagonal and so leaves $\mathcal F$ invariant; and the transverse-field mixer is replaced by a mixer that maps $\mathcal F$ into itself and, applied repeatedly with suitable angles, connects any two feasible strings. This is the \emph{quantum alternating operator ansatz} of \Chap~\chref{C.QAOA}, which shares the acronym QAOA; the convergence theorem proved there covers it when it starts from the top eigenvector of its mixer. Its principal mixers are the following.}
+\onp{The budget $\boldsymbol1^\top x = B$ without a penalty: keep the state in the feasible subspace $\mathcal F = \spn\{\ket x: \boldsymbol1^\top x = B\}$, with a diagonal phase separator and a mixer that preserves $\mathcal F$ \citep{hadfield2019quantum}. The convergence theorem of \Chap~\chref{C.QAOA} applies.}
+\begin{itemize}\setlength\itemsep{0.15em}
+    \item \ona{For a fixed number of ones, as in the budget constraint $\boldsymbol1^\top x = B$ or in one-hot encodings, the \emph{$XY$ mixers} $\sum_{ij}\frac12(X_iX_j + Y_iY_j)$, summed over the edges of a ring or of the complete graph, exchange $\ket{01}$ and $\ket{10}$ on a pair of qubits and so preserve the number of ones \citep{hadfield2019quantum,wang2019xy,cook2020vertexcover}. A natural initial state is the \emph{Dicke state}, the uniform superposition of all strings with $B$ ones, which is the top eigenvector of the complete $XY$ mixer and can be prepared by a circuit of linear depth \citep{baertschi2022shortdepth}.}\onp{$XY$ mixers $\sum_{ij}\frac12(X_iX_j+Y_iY_j)$ preserve the number of ones \citep{wang2019xy}; initial Dicke state, uniform over the strings with $B$ ones \citep{baertschi2022shortdepth}.}
+    \item \ona{For an arbitrary feasible set $F$ from which uniform superpositions can be prepared, the \emph{Grover mixer} $e^{-i\beta\ket F\!\bra F}$, where $\ket F$ is the uniform superposition of the feasible strings \citep{baertschi2020grover}.}\onp{Grover mixer $e^{-i\beta\ket F\!\bra F}$, with $\ket F$ uniform over the feasible strings \citep{baertschi2020grover}.}
+    \item \ona{For a warm start from a classical relaxation, with the penalty kept, a transverse field rotated so that the warm-start product state is its extremal eigenvector (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}).}\onp{Warm-start mixers, with the penalty kept (\Chaps~\chref{C.WSRounded}--\chref{C.WSContinuous}).}
 \end{itemize}
 \end{frame}
 
